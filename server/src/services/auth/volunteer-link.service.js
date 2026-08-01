@@ -5,8 +5,19 @@ const volunteerLinksRepo = require("../../data/volunteer-links.repo");
 /**
  * Links the volunteer row for a verified email address to a profile.
  *
- * Called on a user's first authenticated request, so it must be cheap, idempotent,
- * and must never throw for the common case of "this person never volunteered".
+ * Called on every token-cache miss, NOT once per account, so it must be cheap,
+ * idempotent, and must never throw for the common case of "this person never
+ * volunteered".
+ *
+ * READ BEFORE WRITE, deliberately. `authenticate.js` re-attempts this whenever the
+ * 60s token cache expires, so for anyone who keeps a tab open it runs once a minute
+ * for as long as they stay signed in. Claiming first meant three of the four
+ * outcomes — never volunteered, already ours, already someone else's — each paid for
+ * an UPDATE that could only ever match zero rows before the SELECT that actually
+ * decided the answer. All three are now a single SELECT.
+ *
+ * The cost is one extra round trip on a genuine first claim, which happens once per
+ * volunteer ever. That is the right side of the trade.
  *
  * WHY EMAIL AND NOT THE ACCESS TOKEN. `volunteers.access_token` is a bearer
  * capability that arrives in a forwardable link. Letting it bind an arbitrary
@@ -25,16 +36,6 @@ const volunteerLinksRepo = require("../../data/volunteer-links.repo");
 async function linkVolunteerToProfile({ profileId, email }) {
   const normalised = normaliseEmail(email);
 
-  const claimed = await volunteerLinksRepo.claimByEmail({
-    email: normalised,
-    profileId,
-  });
-
-  if (claimed) {
-    return { linked: true, volunteer: claimed };
-  }
-
-  // Zero rows updated means one of three things, and only a read can tell them apart.
   const existing = await volunteerLinksRepo.findByEmail(normalised);
 
   if (!existing) {
@@ -45,8 +46,25 @@ async function linkVolunteerToProfile({ profileId, email }) {
     return { linked: true, volunteer: existing };
   }
 
-  // Deliberately not logging the row's access_token — the schema forbids it appearing
-  // in logs anywhere.
+  if (existing.profile_id) {
+    // Deliberately not logging the row's access_token — the schema forbids it
+    // appearing in logs anywhere.
+    throw ApiError.conflict("That volunteer record is already linked to another account");
+  }
+
+  const claimed = await volunteerLinksRepo.claimByEmail({
+    email: normalised,
+    profileId,
+  });
+
+  if (claimed) {
+    return { linked: true, volunteer: claimed };
+  }
+
+  // The read above said unclaimed, so zero rows updated can now only mean a
+  // concurrent claim won the race. `.is("profile_id", null)` inside claimByEmail is
+  // still the guard that makes that safe — reading first narrows the window, it does
+  // not remove it, so this branch must stay.
   throw ApiError.conflict("That volunteer record is already linked to another account");
 }
 

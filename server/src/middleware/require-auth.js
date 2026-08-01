@@ -3,10 +3,6 @@ const authenticate = require("../services/auth/authenticate");
 /**
  * Requires any authenticated caller. Leaves `request.auth` populated.
  *
- * Express 5 auto-catches errors thrown from route handlers, but middleware must
- * still hand errors to `next()` explicitly — a synchronous throw here would not
- * reach `error-handler.js` the same way.
- *
  * @type {import("express").RequestHandler}
  */
 async function requireAuth(request, response, next) {

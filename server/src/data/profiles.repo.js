@@ -30,7 +30,7 @@ async function findById(id) {
  * (`authenticate.js` hardcodes it, and the column defaults to it) — a parameter here
  * would be the hook someone eventually passes token metadata into.
  *
- * @param {{ id: string, full_name: string|null, locale?: string }} profile
+ * @param {{ id: string, email: string, full_name: string|null, locale?: string }} profile
  * @returns {Promise<object>}
  */
 async function insertIfAbsent(profile) {

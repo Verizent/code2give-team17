@@ -68,7 +68,10 @@ async function resolveAuth(request) {
   // on it meant the link never ran for anybody, silently.
   //
   // The token cache is the throttle instead: at most one attempt per token per TTL,
-  // rather than a claim UPDATE on every authenticated request.
+  // rather than one on every authenticated request. Note that is per TTL and not per
+  // account — a signed-in tab re-attempts this once a minute indefinitely, which is
+  // why `linkVolunteerToProfile` reads before it writes and costs a single SELECT
+  // once the link is settled either way.
   if (!verified.fromCache) {
     await linkVolunteerIfProven(verified);
   }
