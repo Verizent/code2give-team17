@@ -1,36 +1,48 @@
 const { ApiError } = require("../lib/api-error");
 
 /**
- * Validates request segments with a Zod schema.
+ * Flattens a ZodError into the one-line field list `message` carries on a 400.
+ *
+ * @param {{ issues: Array<{ path: Array<string|number>, message: string }> }} error
+ * @returns {string}
+ */
+function formatIssues(error) {
+  return error.issues
+    .map((issue) => `${issue.path.join(".") || "(root)"}: ${issue.message}`)
+    .join("; ");
+}
+
+/**
+ * Runs the supplied Zod schemas and hands the parsed output to the handler, so
+ * coercion and defaults reach it rather than the raw strings a query string carries.
+ *
+ * Parsed query lands on `request.validatedQuery`, not `request.query`: in Express 5
+ * `request.query` is a getter and assigning to it throws. Handlers in this codebase
+ * read `request.validatedQuery`.
  *
  * @param {{ body?: import("zod").ZodType, query?: import("zod").ZodType, params?: import("zod").ZodType }} schemas
- * @returns {import("express").RequestHandler}
  */
-function validate(schemas) {
-  return (request, _response, next) => {
+function validate({ body, query, params } = {}) {
+  return (request, response, next) => {
     try {
-      if (schemas.params) {
-        request.params = schemas.params.parse(request.params);
+      if (params) {
+        request.validatedParams = params.parse(request.params);
       }
-
-      if (schemas.query) {
-        request.query = schemas.query.parse(request.query);
+      if (query) {
+        request.validatedQuery = query.parse(request.query);
       }
-
-      if (schemas.body) {
-        request.body = schemas.body.parse(request.body);
+      if (body) {
+        request.body = body.parse(request.body);
       }
-
       next();
     } catch (error) {
-      if (error?.name === "ZodError") {
-        next(ApiError.badRequest("Request validation failed"));
+      if (Array.isArray(error?.issues)) {
+        next(ApiError.badRequest(formatIssues(error)));
         return;
       }
-
       next(error);
     }
   };
 }
 
-module.exports = validate;
+module.exports = { validate };

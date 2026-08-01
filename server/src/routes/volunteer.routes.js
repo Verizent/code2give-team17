@@ -1,7 +1,6 @@
 const express = require("express");
-const validate = require("../middleware/validate");
-const requireAuth = require("../middleware/require-auth");
-const { optionalAuth } = require("../middleware/require-auth");
+const { validate } = require("../middleware/validate");
+const { requireAuth, optionalAuth } = require("../middleware/require-auth");
 const volunteerContext = require("../middleware/volunteer-context");
 const signupsService = require("../services/volunteering/signups.service");
 const interestsService = require("../services/volunteering/interests.service");

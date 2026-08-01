@@ -6,7 +6,9 @@
   "scripts": {
     "start": "node index.js",
     "dev": "node --watch index.js",
-    "test": "node --test --test-concurrency=1 \"test/**/*.test.js\"",
+    "seed": "node db/seed/seed.js",
+    "test": "node --test --test-concurrency=1",
+    "test:coverage": "node --test --experimental-test-coverage",
     "test:schema": "node --test --test-concurrency=1 \"test/schema/**/*.test.js\""
   },
   "keywords": [],
@@ -20,6 +22,6 @@
     "@supabase/supabase-js": "^2.57.4",
     "dotenv": "^17.2.2",
     "express": "^5.2.1",
-    "zod": "^3.25.76"
+    "zod": "^4.4.3"
   }
 }

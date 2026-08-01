@@ -1,6 +1,6 @@
 const express = require("express");
-const validate = require("../middleware/validate");
-const requireAuth = require("../middleware/require-auth");
+const { validate } = require("../middleware/validate");
+const { requireAuth } = require("../middleware/require-auth");
 const volunteersService = require("../services/volunteering/volunteers.service");
 const {
   createVolunteerBodySchema,

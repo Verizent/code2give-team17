@@ -1,6 +1,38 @@
 node_modules/
+
+# Secrets. Every real .env stays local; only the .example files are tracked.
 .env
 .env.*
 !.env.example
-*.log
+
+# Build output
 dist/
+dist-ssr/
+
+# Logs
+*.log
+
+# Test and coverage output
+coverage/
+.nyc_output/
+playwright-report/
+test-results/
+
+# Claude Code local state — no Claude-generated docs or config are shared.
+# Each developer keeps their own CLAUDE.md, CONTEXT.md, and .claude/ (rules, plans,
+# TDD notes, per-machine permission grants). Nothing under .claude/ is tracked.
+.claude/
+CLAUDE.md
+CONTEXT.md
+
+# OS cruft
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor directories
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.swp
+*.swo

@@ -1,5 +1,5 @@
 const express = require("express");
-const validate = require("../middleware/validate");
+const { validate } = require("../middleware/validate");
 const rateLimit = require("../middleware/rate-limit");
 const emailVerificationService = require("../services/volunteering/email-verification.service");
 const {

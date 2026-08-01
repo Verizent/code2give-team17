@@ -9,6 +9,11 @@ function toInt(value, fallback) {
 }
 
 /**
+ * Normalises `?page=` / `?limit=` into the inclusive bounds Supabase's `.range()` wants.
+ *
+ * An out-of-range limit is clamped rather than rejected: a stray `?limit=100` from a
+ * shared link should return 50 rows, not a 400 the visitor cannot act on.
+ *
  * @param {{ page?: unknown, limit?: unknown }} query
  * @returns {{ page: number, limit: number, from: number, to: number }}
  */
@@ -23,6 +28,7 @@ function parsePaging(query = {}) {
 /**
  * @param {number} total
  * @param {{ page: number, limit: number }} paging
+ * @returns {{ total: number, page: number, limit: number }}
  */
 function buildMeta(total, paging) {
   return { total, page: paging.page, limit: paging.limit };

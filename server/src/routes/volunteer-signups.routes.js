@@ -1,5 +1,5 @@
 const express = require("express");
-const validate = require("../middleware/validate");
+const { validate } = require("../middleware/validate");
 const volunteerContext = require("../middleware/volunteer-context");
 const signupsService = require("../services/volunteering/signups.service");
 const { envelope } = require("../lib/envelope");

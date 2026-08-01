@@ -1,57 +1,37 @@
-const { ApiError } = require("../lib/api-error");
+const authenticate = require("../services/auth/authenticate");
 
 /**
- * Attaches `request.auth` from a Supabase JWT or AUTH_MODE=stub headers.
+ * Requires any authenticated caller. Leaves `request.auth` populated.
  *
  * @type {import("express").RequestHandler}
  */
-function requireAuth(request, _response, next) {
-  const mode = process.env.AUTH_MODE || "stub";
-
-  if (mode === "stub") {
-    const userId = request.get("X-Stub-User-Id");
-    const role = request.get("X-Stub-Role");
-
-    if (!userId) {
-      next(ApiError.unauthenticated());
-      return;
-    }
-
-    request.auth = {
-      userId,
-      role: role || "volunteer",
-    };
-    request.user = { id: userId, email: request.get("X-Stub-User-Email") };
+async function requireAuth(request, response, next) {
+  try {
+    await authenticate.resolveAuth(request);
     next();
-    return;
+  } catch (error) {
+    next(error);
   }
-
-  next(ApiError.unauthenticated("JWT authentication is not configured yet"));
 }
 
 /**
- * Continues as guest when no stub headers or JWT are present.
+ * Populates `request.auth` when a usable token is present, and does nothing when it
+ * is not.
+ *
+ * The swallow is deliberate: on a route that is public but personalises when signed
+ * in, a stale or expired token must not break the page for a visitor who could have
+ * seen it anonymously.
  *
  * @type {import("express").RequestHandler}
  */
-function optionalAuth(request, _response, next) {
-  const mode = process.env.AUTH_MODE || "stub";
-
-  if (mode === "stub") {
-    const userId = request.get("X-Stub-User-Id");
-    if (userId) {
-      request.auth = {
-        userId,
-        role: request.get("X-Stub-Role") || "volunteer",
-      };
-      request.user = { id: userId, email: request.get("X-Stub-User-Email") };
-    }
-    next();
-    return;
+async function optionalAuth(request, response, next) {
+  try {
+    await authenticate.resolveAuth(request);
+  } catch {
+    // Intentionally ignored — see above.
   }
 
   next();
 }
 
-module.exports = requireAuth;
-module.exports.optionalAuth = optionalAuth;
+module.exports = { requireAuth, optionalAuth };
