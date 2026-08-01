@@ -27,7 +27,7 @@ export async function getImpact(locale = 'en') {
  * fake URL into a real table. Mock mode just resolves — no pending queue.
  * Throws ApiError on failure; the dialog is responsible for showing it.
  */
-export async function submitVoice({ authorName, relationship, story, website }) {
+export async function submitVoice({ authorName, relationship, story, contactEmail, website }) {
   if (API_MODE !== 'real') {
     return { id: 'mock-post', submitted_at: new Date().toISOString() }
   }
@@ -39,6 +39,7 @@ export async function submitVoice({ authorName, relationship, story, website }) 
       relationship,
       story,
       consent_given: true,
+      ...(contactEmail ? { contact_email: contactEmail } : {}),
       ...(website ? { website } : {}),
     }),
   })

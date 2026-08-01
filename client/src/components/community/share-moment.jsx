@@ -9,6 +9,8 @@ import { cn } from '@/lib/utils'
 // Matches MIN_STORY_LENGTH in server/src/schemas/community-post.schema.js —
 // enforced here too so mock and real mode behave the same.
 const MIN_STORY_LENGTH = 40
+// Loose check only — empty is allowed (contact_email is optional on the API).
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 export function ShareMomentButton({ className }) {
   const { t } = useSite()
@@ -36,6 +38,7 @@ function ShareMomentDialog({ onClose }) {
   const { locale, t } = useSite()
   const titleId = useId()
   const [authorName, setAuthorName] = useState(DEMO_SIGNED_IN_PROFILE.name[locale])
+  const [contactEmail, setContactEmail] = useState('')
   const [line, setLine] = useState('')
   const [hasPhoto, setHasPhoto] = useState(false)
   const [relationship, setRelationship] = useState(RELATIONSHIP_OPTIONS[0])
@@ -58,14 +61,27 @@ function ShareMomentDialog({ onClose }) {
     }
   }, [onClose])
 
+  const emailTrimmed = contactEmail.trim()
+  const emailOk = emailTrimmed === '' || EMAIL_RE.test(emailTrimmed)
   const storyReady = line.trim().length >= MIN_STORY_LENGTH
-  const canSubmit = consent && storyReady && authorName.trim().length > 0 && !submitting
+  const canSubmit =
+    consent && storyReady && authorName.trim().length > 0 && emailOk && !submitting
 
   async function handleSubmit() {
     setError(null)
+    if (!emailOk) {
+      setError(t.community.shareEmailInvalid)
+      return
+    }
     setSubmitting(true)
     try {
-      await submitVoice({ authorName: authorName.trim(), relationship, story: line.trim(), website })
+      await submitVoice({
+        authorName: authorName.trim(),
+        relationship,
+        story: line.trim(),
+        contactEmail: emailTrimmed || undefined,
+        website,
+      })
       setSent(true)
     } catch (err) {
       console.error('submitVoice failed', err)
@@ -117,6 +133,19 @@ function ShareMomentDialog({ onClose }) {
               value={authorName}
               onChange={(e) => setAuthorName(e.target.value)}
               placeholder={t.community.shareAuthorPlaceholder}
+              autoComplete="name"
+              className="mt-2 w-full rounded-xl border border-border bg-card px-4 py-3 text-base text-ink outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            />
+          </label>
+
+          <label className="block">
+            <span className="kicker text-teal">{t.community.shareEmailLabel}</span>
+            <input
+              type="email"
+              value={contactEmail}
+              onChange={(e) => setContactEmail(e.target.value)}
+              placeholder={t.community.shareEmailPlaceholder}
+              autoComplete="email"
               className="mt-2 w-full rounded-xl border border-border bg-card px-4 py-3 text-base text-ink outline-none focus-visible:ring-2 focus-visible:ring-ring"
             />
           </label>
