@@ -13,7 +13,8 @@ app.use((request, response, next) => {
   response.set({
     "Access-Control-Allow-Origin": CLIENT_ORIGIN,
     "Access-Control-Allow-Methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    "Access-Control-Allow-Headers":
+      "Content-Type, Authorization, X-Volunteer-Token, X-Stub-User-Id, X-Stub-Role",
   });
 
   if (request.method === "OPTIONS") {
