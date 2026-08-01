@@ -112,6 +112,65 @@ async function findOpenById(id) {
 }
 
 /**
+ * Admin listing — every status, paginated. Public `listOpen` only surfaces open/full.
+ *
+ * @param {{ from: number, to: number, programme?: string, source?: string, status?: string }} options
+ */
+async function listForAdmin({ from, to, programme, source, status }) {
+  const db = getServiceClient();
+  let query = db
+    .from("volunteer_opportunities")
+    .select(LIST_COLUMNS, { count: "exact" })
+    .order("starts_at", { ascending: false })
+    .range(from, to);
+
+  if (programme) {
+    query = query.eq("programme", programme);
+  }
+
+  if (source) {
+    query = query.eq("source", source);
+  }
+
+  if (status) {
+    query = query.eq("status", status);
+  }
+
+  const { data, error, count } = await query;
+  throwIfDbError(error);
+
+  return { rows: data || [], total: count ?? 0 };
+}
+
+/**
+ * @param {object} data
+ */
+async function createOpportunity(data) {
+  const db = getServiceClient();
+  const { data: inserted, error } = await db
+    .from("volunteer_opportunities")
+    .insert(data)
+    .select(LIST_COLUMNS)
+    .single();
+
+  throwIfDbError(error);
+  return inserted;
+}
+
+/**
+ * @param {string} id
+ */
+async function deleteOpportunity(id) {
+  const db = getServiceClient();
+  const { error } = await db
+    .from("volunteer_opportunities")
+    .delete()
+    .eq("id", id);
+
+  throwIfDbError(error);
+}
+
+/**
  * @param {string} id
  * @param {object} patch
  */
@@ -182,9 +241,12 @@ async function countLocalSignupsByOpportunity(opportunityIds) {
 module.exports = {
   listOpportunities,
   listOpen,
+  listForAdmin,
   findOpportunityById,
   findOpenById,
+  createOpportunity,
   updateOpportunity,
+  deleteOpportunity,
   countInterestsByOpportunity,
   countLocalSignupsByOpportunity,
 };
