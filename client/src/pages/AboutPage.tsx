@@ -9,9 +9,9 @@ import { cn } from '@/lib/utils'
 const T = (en: string, zh: string) => ({ en, zh })
 
 const HERO_IMAGES = [
-  'https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=2400&q=85',
-  'https://images.unsplash.com/photo-1546519638-68e109498ffc?auto=format&fit=crop&w=2400&q=85',
-  'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=2400&q=85',
+  '/brand/story.jpg',
+  '/brand/sports.jpeg',
+  '/brand/activity.jpg',
 ]
 
 const MILESTONES = [
@@ -25,19 +25,18 @@ const MILESTONES = [
 const BOARD = ['Carol Chan', 'Eleni Symeonidou', 'Jeff Sayed', 'Matthew Hosford', 'Kevin Wong', 'Young-Sook Stewart', 'Lobo Cheung', 'Dan Maley', 'Edith Chen', 'James Barrett', 'Raymond Tam', 'Dr. Ruby Ng']
 
 const PROGRAMMES = [
-  { id: 'sports', icon: '✦', eyebrow: T('Programme 01', '活動 01'), title: T('Sports', '運動'), body: T('Our sports programme is designed without limitations — a comprehensive range of activities, from football and basketball to surfing and trampoline, alongside strength training, coordination, and mental health support. We run 8+ weekly classes and 50+ activities in total.', '我們的運動計劃不設界限，提供足球、籃球、衝浪、彈床，以及力量、協調和心理健康支援等多元活動。'), action: T('Explore programme', '探索活動'), href: '/programmes/sports', image: 'https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=2200&q=85' },
-  { id: 'nutrition', icon: '●', eyebrow: T('Programme 02', '活動 02'), title: T('Nutrition', '營養'), body: T('Sport alone is not enough to meaningfully extend life expectancy. Our nutrition programme pairs one-on-one guidance with regular cooking and food-prep lessons, so families can build lasting, healthy habits together.', '單靠運動不足以顯著延長預期壽命。我們的營養計劃結合一對一指導、烹飪及食材準備課堂，讓家庭建立長久健康習慣。'), action: T('Explore programme', '探索活動'), href: '/programmes/nutrition', image: 'https://images.unsplash.com/photo-1498837167922-ddd27525d352?auto=format&fit=crop&w=2200&q=85' },
-  { id: 'family', icon: '♥', eyebrow: T('Programme 03', '活動 03'), title: T('Family', '家庭'), body: T('Family is central to everything we do. Parents play a huge role in our classes, and we offer specialty sessions just for them, alongside plenty of chances to join their children’s activities.', '家庭是我們所有工作的核心。家長在課堂中擔當重要角色，我們亦提供專為他們而設的課堂及參與子女活動的機會。'), action: T('Explore programme', '探索活動'), href: '/programmes/family', image: 'https://images.unsplash.com/photo-1602030028438-4cf153cbae9e?auto=format&fit=crop&w=2200&q=85' },
-  { id: 'counselling', icon: '○', eyebrow: T('Programme 04', '活動 04'), title: T('Counselling', '輔導'), body: T('We recently expanded into one-on-one counselling support for the parents of our community — because supporting a family well means supporting everyone in it.', '我們最近為社群家長擴展一對一輔導支援，因為好好支援一個家庭，就是支援其中每一位成員。'), action: T('Explore programme', '探索活動'), href: '/programmes/counselling', image: 'https://images.unsplash.com/photo-1511632765486-a01980e01a18?auto=format&fit=crop&w=2200&q=85' },
-  { id: 'csr', icon: '◎', eyebrow: T('Programme 05', '活動 05'), title: T('Corporate Social Responsibility', '企業社會責任'), body: T('Our beneficiaries are rarely seen and often misunderstood. Our CSR programme brings your team into a circuit-training session alongside our members — an afternoon that shows just how much ability this community has.', '我們的服務對象鮮有被看見，也常被誤解。我們的企業社會責任計劃讓團隊與會員一起參與循環訓練，親身感受這個社群的無限能力。'), action: T('Partner with us', '與我們合作'), href: 'mailto:jeff@love21foundation.com?subject=CSR%20programme', image: 'https://images.unsplash.com/photo-1559027615-cd4628902d4a?auto=format&fit=crop&w=2200&q=85' },
+  { id: 'sports', icon: '✦', eyebrow: T('Programme 01', '活動 01'), title: T('Sports', '運動'), body: T('Our sports programme is designed without limitations — a comprehensive range of activities, from football and basketball to surfing and trampoline, alongside strength training, coordination, and mental health support. We run 8+ weekly classes and 50+ activities in total.', '我們的運動計劃不設界限，提供足球、籃球、衝浪、彈床，以及力量、協調和心理健康支援等多元活動。'), action: T('Explore programme', '探索活動'), href: '/programmes/sports', image: '/brand/sports.jpeg' },
+  { id: 'nutrition', icon: '●', eyebrow: T('Programme 02', '活動 02'), title: T('Nutrition', '營養'), body: T('Sport alone is not enough to meaningfully extend life expectancy. Our nutrition programme pairs one-on-one guidance with regular cooking and food-prep lessons, so families can build lasting, healthy habits together.', '單靠運動不足以顯著延長預期壽命。我們的營養計劃結合一對一指導、烹飪及食材準備課堂，讓家庭建立長久健康習慣。'), action: T('Explore programme', '探索活動'), href: '/programmes/nutrition', image: '/brand/nutrition.jpeg'  },
+  { id: 'family', icon: '♥', eyebrow: T('Programme 03', '活動 03'), title: T('Family', '家庭'), body: T('Family is central to everything we do. Parents play a huge role in our classes, and we offer specialty sessions just for them, alongside plenty of chances to join their children’s activities.', '家庭是我們所有工作的核心。家長在課堂中擔當重要角色，我們亦提供專為他們而設的課堂及參與子女活動的機會。'), action: T('Explore programme', '探索活動'), href: '/programmes/family', image: '/brand/family.jpg'  },
+  { id: 'csr', icon: '◎', eyebrow: T('Programme 04', '活動 04'), title: T('Corporate Social Responsibility', '企業社會責任'), body: T('Our beneficiaries are rarely seen and often misunderstood. Our CSR programme brings your team into a circuit-training session alongside our members — an afternoon that shows just how much ability this community has.', '我們的服務對象鮮有被看見，也常被誤解。我們的企業社會責任計劃讓團隊與會員一起參與循環訓練，親身感受這個社群的無限能力。'), action: T('Partner with us', '與我們合作'), href: 'mailto:jeff@love21foundation.com?subject=CSR%20programme', image: '/brand/csr.jpg' },
 ]
 
 const GALLERY = [
-  'https://images.unsplash.com/photo-1511632765486-a01980e01a18?auto=format&fit=crop&w=1400&q=85',
-  'https://images.unsplash.com/photo-1546519638-68e109498ffc?auto=format&fit=crop&w=1400&q=85',
-  'https://images.unsplash.com/photo-1498837167922-ddd27525d352?auto=format&fit=crop&w=1400&q=85',
-  'https://images.unsplash.com/photo-1559027615-cd4628902d4a?auto=format&fit=crop&w=1400&q=85',
-  'https://images.unsplash.com/photo-1517457373958-b7bdd4587205?auto=format&fit=crop&w=1400&q=85',
+  '/brand/activity.jpg',
+  '/brand/class.jpg',
+  '/brand/csr.jpg',
+  '/brand/family.jpg',
+  '/brand/nutrition.jpeg',
 ]
 
 const STATS = [{ value: 600, prefix: '', suffix: '+', label: T('Families supported today', '現時支援的家庭') }, { value: 350, prefix: '', suffix: '+', label: T('Families supported in 2023', '2023 年支援的家庭') }, { value: 1000, prefix: '~', suffix: '', label: T('Free sessions provided monthly', '每月提供的免費課堂') }, { value: 50, prefix: '', suffix: '+', label: T('Activities and programmes on offer', '提供的活動及課程') }]
