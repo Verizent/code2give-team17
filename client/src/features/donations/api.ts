@@ -9,10 +9,15 @@ import {
   type DonateProgramme,
 } from '@/features/donations/fixtures'
 import {
-  listCampaigns,
+  listApprovedCampaigns,
+  listMyCampaigns,
   getCampaign,
   saveCampaign,
   addDemoDonation,
+  listPendingCampaigns,
+  moderateCampaign,
+  type Campaign,
+  type CampaignStatus,
   type LocalCampaign,
 } from '@/features/donations/campaign-store'
 
@@ -38,10 +43,13 @@ export function coverOptions() {
 
 export {
   demoAccountExists,
-  listCampaigns,
+  listApprovedCampaigns,
+  listMyCampaigns,
   getCampaign,
   saveCampaign,
   addDemoDonation,
+  listPendingCampaigns,
+  moderateCampaign,
 }
 
-export type { WishlistItem, DonateProgramme, LocalCampaign }
+export type { WishlistItem, DonateProgramme, Campaign, CampaignStatus, LocalCampaign }

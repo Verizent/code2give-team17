@@ -11,21 +11,29 @@ export function CampaignForm() {
   const g = t.give
   const covers = coverOptions()
   const [cover, setCover] = useState(covers[0])
+  const [error, setError] = useState<string | null>(null)
+  const [working, setWorking] = useState(false)
 
-  function submit(event: FormEvent<HTMLFormElement>) {
+  async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    setError(null)
+    setWorking(true)
     const data = new FormData(event.currentTarget)
-    const campaign = saveCampaign({
-      title: String(data.get('title')),
-      story: String(data.get('story')),
-      goal_hkd: Number(data.get('goal_hkd')),
-      end_date: String(data.get('end_date')),
-      cover,
-    })
-    // DEMO-ONLY — POST /api/campaigns later
-    trackEvent('campaign_create', { slug: campaign.slug, goal: campaign.goal_hkd })
-    console.log('[DEMO-ONLY] campaign created', campaign)
-    navigate(`/c/${campaign.slug}`)
+    try {
+      const campaign = await saveCampaign({
+        title: String(data.get('title')),
+        story: String(data.get('story')),
+        goal_hkd: Number(data.get('goal_hkd')),
+        end_date: String(data.get('end_date')),
+        cover,
+      })
+      trackEvent('campaign_create', { slug: campaign.slug, goal: campaign.goal_hkd })
+      navigate(`/c/${campaign.slug}`)
+    } catch {
+      setError(g.formError)
+    } finally {
+      setWorking(false)
+    }
   }
 
   const field =
@@ -59,7 +67,7 @@ export function CampaignForm() {
       </div>
       <fieldset>
         <legend className="text-sm font-semibold text-navy">{g.formCover}</legend>
-        <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <div className="mt-3 grid gap-3 grid-cols-2 sm:grid-cols-3">
           {covers.map((option) => (
             <button
               type="button"
@@ -76,11 +84,17 @@ export function CampaignForm() {
           ))}
         </div>
       </fieldset>
+      {error && (
+        <p role="alert" className="rounded-md bg-red/10 px-3 py-2 text-sm font-medium text-red">
+          {error}
+        </p>
+      )}
       <button
         type="submit"
-        className="inline-flex min-h-12 w-full items-center justify-center rounded-md bg-red px-6 font-semibold text-white sm:w-auto"
+        disabled={working}
+        className="inline-flex min-h-12 w-full items-center justify-center rounded-md bg-red px-6 font-semibold text-white disabled:opacity-60 sm:w-auto"
       >
-        {g.formSubmit}
+        {working ? g.formWorking : g.formSubmit}
       </button>
     </form>
   )

@@ -17,6 +17,7 @@ export function OpportunityCard({
 }) {
   const { locale, t } = useSite()
   const v = t.volunteer
+  const isFull = opportunity.spots_filled >= opportunity.capacity
 
   return (
     <Link
@@ -29,11 +30,15 @@ export function OpportunityCard({
           alt=""
           className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
         />
-        {opportunity.recruiting && (
+        {opportunity.recruiting && !isFull ? (
           <span className="absolute top-3 left-3 rounded-full bg-yellow px-3 py-1 text-xs font-bold text-navy">
             {v.recruiting}
           </span>
-        )}
+        ) : isFull ? (
+          <span className="absolute top-3 left-3 rounded-full bg-navy px-3 py-1 text-xs font-bold text-white">
+            {v.fullBadge}
+          </span>
+        ) : null}
       </div>
       <div className="flex flex-1 flex-col p-5 sm:p-6">
         <div className="flex flex-wrap items-center gap-2">

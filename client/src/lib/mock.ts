@@ -1,4 +1,5 @@
 import type { Locale } from '@/lib/strings'
+import { formatSessionWhen, nextWeekday } from '@/lib/session-when'
 
 /**
  * Mock data layer. Everything the home page renders comes from here so it can
@@ -81,7 +82,7 @@ export const activities: Activity[] = [
       'zh-Hant': '週六舞蹈班',
       'zh-Hans': '周六舞蹈班',
     },
-    date: { en: 'Sat 9 Aug · 10:00', 'zh-Hant': '8月9日（六）· 10:00', 'zh-Hans': '8月9日（六）· 10:00' },
+    date: formatSessionWhen(nextWeekday(6, 2), '10:00'),
     place: { en: 'Kennedy Town studio', 'zh-Hant': '堅尼地城工作室', 'zh-Hans': '坚尼地城工作室' },
     category: { en: 'Movement', 'zh-Hant': '律動', 'zh-Hans': '律动' },
     recruiting: true,
@@ -94,7 +95,7 @@ export const activities: Activity[] = [
       'zh-Hant': '社區咖啡店當值',
       'zh-Hans': '社区咖啡店当值',
     },
-    date: { en: 'Tue 12 Aug · 14:00', 'zh-Hant': '8月12日（二）· 14:00', 'zh-Hans': '8月12日（二）· 14:00' },
+    date: formatSessionWhen(nextWeekday(2, 2), '14:00'),
     place: { en: 'Sai Ying Pun', 'zh-Hant': '西營盤', 'zh-Hans': '西营盘' },
     category: { en: 'Work skills', 'zh-Hant': '工作技能', 'zh-Hans': '工作技能' },
     recruiting: true,
@@ -107,7 +108,7 @@ export const activities: Activity[] = [
       'zh-Hant': '龍舟訓練',
       'zh-Hans': '龙舟训练',
     },
-    date: { en: 'Sun 17 Aug · 08:30', 'zh-Hant': '8月17日（日）· 08:30', 'zh-Hans': '8月17日（日）· 08:30' },
+    date: formatSessionWhen(nextWeekday(0, 3), '08:30'),
     place: { en: 'Stanley Main Beach', 'zh-Hant': '赤柱正灘', 'zh-Hans': '赤柱正滩' },
     category: { en: 'Sport', 'zh-Hant': '運動', 'zh-Hans': '运动' },
     recruiting: false,
@@ -120,7 +121,7 @@ export const activities: Activity[] = [
       'zh-Hant': '烹飪共享午餐',
       'zh-Hans': '烹饪共享午餐',
     },
-    date: { en: 'Thu 21 Aug · 11:00', 'zh-Hant': '8月21日（四）· 11:00', 'zh-Hans': '8月21日（四）· 11:00' },
+    date: formatSessionWhen(nextWeekday(4, 4), '11:00'),
     place: { en: 'Wan Chai kitchen', 'zh-Hant': '灣仔廚房', 'zh-Hans': '湾仔厨房' },
     category: { en: 'Life skills', 'zh-Hant': '生活技能', 'zh-Hans': '生活技能' },
     recruiting: true,
@@ -133,7 +134,7 @@ export const activities: Activity[] = [
       'zh-Hant': '開放藝術工作室',
       'zh-Hans': '开放艺术工作室',
     },
-    date: { en: 'Fri 22 Aug · 15:00', 'zh-Hant': '8月22日（五）· 15:00', 'zh-Hans': '8月22日（五）· 15:00' },
+    date: formatSessionWhen(nextWeekday(5, 3), '15:00'),
     place: { en: 'Sheung Wan', 'zh-Hant': '上環', 'zh-Hans': '上环' },
     category: { en: 'Art', 'zh-Hant': '藝術', 'zh-Hans': '艺术' },
     recruiting: false,

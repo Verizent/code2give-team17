@@ -111,7 +111,6 @@ type Strings = {
     title: string
     subhead: string
     communityLink: string
-    demoMatch: string
     modeTitle: string
     individualTag: string
     individualTitle: string
@@ -134,9 +133,17 @@ type Strings = {
       string
     >
     clearSkills: string
+    filterMySkills: string
+    filterMySkillsHint: string
+    filterMySkillsEmpty: string
+    filterMySkillsEdit: string
+    filterMySkillsLogin: string
     listTitle: string
     emptyList: string
+    emptyListNoSessions: string
+    loadError: string
     recruiting: string
+    fullBadge: string
     spots: string
     sourceLove21: string
     sourceHandson: string
@@ -150,10 +157,27 @@ type Strings = {
     completeHandson: string
     joinSession: string
     formIntro: string
+    interestFormIntroLoggedIn: string
+    shortFormIntro: string
+    shortFormIntroLoggedIn: string
+    joiningAs: string
+    joiningAsEdit: string
+    shortName: string
+    shortSubmit: string
+    safeguardAck: string
+    emergencyName: string
+    emergencyPhone: string
+    fullError: string
+    signupError: string
+    signupDuplicate: string
     interestChineseName: string
     interestEnglishName: string
     interestAgeGroup: string
-    ageGroups: Record<'age14_15' | 'age16_17' | 'age18', string>
+    ageGroupHint: string
+    ageGroups: Record<
+      'youth14_18' | 'age19_29' | 'age30_44' | 'age45_59' | 'age60_plus',
+      string
+    >
     interestGender: string
     genders: Record<'female' | 'male' | 'prefer_not', string>
     interestEmail: string
@@ -167,9 +191,15 @@ type Strings = {
     interestDiscoveryOther: string
     interestSubmit: string
     interestCancel: string
+    interestDuplicate: string
+    interestError: string
     hubSignupTitle: string
     hubSignupSubhead: string
     hubSignupCta: string
+    hubCreateAccountCta: string
+    hubSignedInTitle: string
+    hubSignedInSubhead: string
+    hubSignedInCta: string
     joinConfirmTitle: string
     joinConfirmBody: string
     joinConfirmYes: string
@@ -178,6 +208,16 @@ type Strings = {
     successBody: string
     successGiveCta: string
     successHome: string
+    successBriefingCta: string
+    successSaveCta: string
+    briefingKicker: string
+    briefingTitle: string
+    briefingArrive: string
+    briefingMeet: string
+    briefingWear: string
+    briefingDo: string
+    briefingEmergency: string
+    briefingCancel: string
     corporatePanelTitle: string
     corporateBullets: string[]
     corporateFormTitle: string
@@ -193,7 +233,6 @@ type Strings = {
     kicker: string
     title: string
     subhead: string
-    demoBanner: string
     tabMoney: string
     tabWishlist: string
     tabFundraise: string
@@ -220,7 +259,27 @@ type Strings = {
     trustStrip: string
     emailLabel: string
     emailHint: string
+    emailRequiredJourney: string
+    receiptTitle: string
+    receiptUseAccount: string
+    receiptUseAccountHint: string
+    receiptNameLabel: string
+    receiptEmailLabel: string
+    receiptEmailHint: string
+    receiptForOther: string
+    receiptForOtherHint: string
+    receiptRequired: string
+    applyCustom: string
+    journeyOptInLabel: string
+    journeyOptInHelper: string
+    journeyTitle: string
+    journeyReceived: string
+    journeyMatched: string
+    journeySession: string
+    journeyEmailNote: string
+    journeyAdvance: string
     donateCta: string
+    donateWorking: string
     wishlistTitle: string
     wishlistSubhead: string
     needed: string
@@ -236,8 +295,9 @@ type Strings = {
     fundraiseTitle: string
     fundraiseSubhead: string
     fundraiseSteps: string[]
-    fundraisePendingNote: string
     createCampaignCta: string
+    liveCampaigns: string
+    noLiveCampaigns: string
     yourCampaigns: string
     noCampaigns: string
     formTitle: string
@@ -246,12 +306,17 @@ type Strings = {
     formCover: string
     formEnd: string
     formSubmit: string
+    formWorking: string
+    formError: string
     campaignProgress: string
     campaignShare: string
     campaignShareDone: string
     campaignDonate: string
     campaignPending: string
+    campaignApproved: string
+    campaignRejected: string
     campaignNotFound: string
+    campaignAwaitingApproval: string
     stickyDonate: string
     thanksAck: string
     thanksNotifyLabel: string
@@ -268,6 +333,95 @@ type Strings = {
     thanksVolunteer: string
     thanksShareCampaign: string
     thanksHome: string
+    thanksSaveImpact: string
+  }
+  login: {
+    kicker: string
+    signInTitle: string
+    signUpTitle: string
+    subhead: string
+    modeLabel: string
+    signInTab: string
+    signUpTab: string
+    fullName: string
+    chineseName: string
+    phone: string
+    volunteerProfileHint: string
+    email: string
+    password: string
+    signInCta: string
+    signUpCta: string
+    working: string
+    genericError: string
+    notConfigured: string
+    checkEmail: string
+    backToMe: string
+  }
+  me: {
+    kicker: string
+    title: string
+    subhead: string
+    tabVolunteer: string
+    tabGiving: string
+    loading: string
+    gateTitle: string
+    gateBody: string
+    gateCta: string
+    hello: string
+    logOut: string
+    volunteerKicker: string
+    volunteerTitle: string
+    volunteerEmpty: string
+    volunteerCta: string
+    volunteerMoreCta: string
+    volunteerHoursNote: string
+    skillsTitle: string
+    skillsHint: string
+    skillsSave: string
+    skillsSaved: string
+    skillsNeedEmail: string
+    statSessions: string
+    statHours: string
+    statProgrammes: string
+    sessionsTitle: string
+    interestsTitle: string
+    interestsLead: string
+    interestRegistered: string
+    sessionConfirmed: string
+    openBriefing: string
+    badgesTitle: string
+    badgesSubhead: string
+    badgeEarned: string
+    badgeLocked: string
+    giveCta: string
+    givingTitle: string
+    givingSubhead: string
+    givingEmpty: string
+    viewGift: string
+    journeyReceived: string
+    journeyMatched: string
+    journeySession: string
+    journeyStatusDone: string
+    journeyStatusProcessing: string
+    journeyStatusWaiting: string
+    journeyGrowthLabel: string
+    journeyGrowthCumulativeTitle: string
+    journeyGrowthCumulativeBody: string
+    journeyGrowthCumulativeLabel: string
+    journeyGrowthTotalGiven: string
+    journeyGrowthGiftCount: string
+    journeyGrowthSessions: string
+    journeyDetailReceivedDone: string
+    journeyDetailReceivedProcessing: string
+    journeyDetailReceivedWaiting: string
+    journeyDetailMatchedDone: string
+    journeyDetailMatchedProcessing: string
+    journeyDetailMatchedWaiting: string
+    journeyDetailSessionDone: string
+    journeyDetailSessionDoneNamed: string
+    journeyDetailSessionProcessing: string
+    journeyDetailSessionWaiting: string
+    loadSampleGifts: string
   }
 }
 
@@ -394,13 +548,12 @@ export const STRINGS: Record<Locale, Strings> = {
       sliderReal: 'The real figure',
       emptyFilter: 'No moments in this program yet — try another filter.',
     },
-volunteer: {
+    volunteer: {
       kicker: 'Take part',
       title: 'Show up. Meet them.',
       subhead:
         'Stigma shrinks face to face. Pick a session, bring your energy, and take part — not from the sidelines.',
       communityLink: 'See the community first',
-      demoMatch: 'DEMO-ONLY — skill filters are local fixtures, not live AI matching.',
       modeTitle: 'How do you want to take part?',
       individualTag: 'Individual',
       individualTitle: 'Book or assist a class',
@@ -411,7 +564,7 @@ volunteer: {
       corporateBody: 'Group volunteering — drumming, Zumba, cooking, art. Contact us; we plan together.',
       corporateCta: 'Contact for CSR',
       skillsTitle: 'What can you bring?',
-      skillsHint: 'Optional — tap to filter. DEMO-ONLY matching.',
+      skillsHint: 'Optional — tap to filter.',
       skills: {
         patient: 'Patient',
         sports: 'Sports',
@@ -422,9 +575,19 @@ volunteer: {
         cantonese: 'Cantonese optional',
       },
       clearSkills: 'Clear filters',
+      filterMySkills: 'Filter by my skills',
+      filterMySkillsHint: 'Show sessions that match skills saved on your profile.',
+      filterMySkillsEmpty: 'Add skills on My Impact first, then filter the list here.',
+      filterMySkillsEdit: 'Edit my skills',
+      filterMySkillsLogin: 'Log in to filter by your saved skills',
       listTitle: 'Open sessions',
       emptyList: 'No sessions match those skills — try clearing a filter.',
+      emptyListNoSessions:
+        'No open sessions right now. Check back soon, or ask Love 21 about upcoming classes.',
+      loadError:
+        'Could not load sessions from the server. Check that the API is running, then refresh.',
       recruiting: 'Recruiting',
+      fullBadge: 'Full',
       spots: '{filled}/{capacity} spots',
       sourceLove21: 'Love 21',
       sourceHandson: 'HandsOn',
@@ -437,18 +600,38 @@ volunteer: {
       handsonCapacity:
         'HandsOn: {filled}/{capacity} booked · {interested} interested here',
       registerInterest: 'Register interest',
-      completeHandson: 'Complete booking on HandsOn',
+      completeHandson: 'Also book on HandsOn (optional)',
       joinSession: 'Join session',
       formIntro:
         'Love 21 is looking for passionate volunteers to join sports, nutrition and holistic programmes for our Down syndrome, autistic and neurodiverse community.',
+      interestFormIntroLoggedIn:
+        'You’re signed in — we’ll use your saved volunteer details. Confirm the safeguard note to register interest.',
+      shortFormIntro:
+        'Quick signup — you’re confirmed for this session if a spot is open. No staff wait.',
+      shortFormIntroLoggedIn:
+        'You’re signed in — confirm age and the safeguard note to take this spot.',
+      joiningAs: 'Joining as {name} · {email}',
+      joiningAsEdit: 'Update profile',
+      shortName: 'Full name',
+      shortSubmit: 'Confirm my spot',
+      safeguardAck:
+        'I understand I will be an active helper, coaches are on site, and I will follow the class briefing (including emergency steps).',
+      emergencyName: 'Emergency contact name',
+      emergencyPhone: 'Emergency contact phone',
+      fullError: 'This session is full — try another class.',
+      signupError: 'We could not save your signup. Please try again.',
+      signupDuplicate: 'You’re already signed up for this session.',
       interestChineseName: 'Chinese full name',
       interestEnglishName: 'English full name',
-      interestAgeGroup: 'Age group',
+      interestAgeGroup: 'Age / demographic',
       ageGroups: {
-        age14_15: '14–15 years old',
-        age16_17: '16–17 years old',
-        age18: '18 or above',
+        youth14_18: 'Youth volunteer (14–18)',
+        age19_29: '19–29',
+        age30_44: '30–44',
+        age45_59: '45–59',
+        age60_plus: '60+',
       },
+      ageGroupHint: 'Helps Love 21 understand who is volunteering — not used for marketing.',
       interestGender: 'Gender',
       genders: {
         female: 'Female',
@@ -477,17 +660,35 @@ volunteer: {
       interestDiscoveryOther: 'Please specify',
       interestSubmit: 'Submit volunteer signup',
       interestCancel: 'Cancel',
+      interestDuplicate: 'You already registered interest for this session.',
+      interestError: 'Could not save your interest. Check the API is running, then try again.',
       hubSignupTitle: 'Sign up as a Love 21 volunteer',
-      hubSignupSubhead: 'Same fields as our current volunteer form — DEMO-ONLY until wired to staff email.',
+      hubSignupSubhead: 'Pick a session above for the shortest path — or use the full interest form here.',
       hubSignupCta: 'Open signup form',
+      hubCreateAccountCta: 'Create an account instead',
+      hubSignedInTitle: 'You’re signed in',
+      hubSignedInSubhead:
+        'Pick a class above to join with your saved details. Update your volunteer profile anytime on My Impact.',
+      hubSignedInCta: 'My volunteer profile',
       joinConfirmTitle: 'Join this session?',
-      joinConfirmBody: 'We’ll hold your spot and email confirmation details. DEMO-ONLY — no real booking yet.',
+      joinConfirmBody: 'We’ll hold your spot and open your class briefing.',
       joinConfirmYes: 'Yes, I’m in',
       joinConfirmNo: 'Not yet',
       successTitle: 'You’re down for {session}.',
-      successBody: 'Thanks for showing up. Want this every week?',
+      successBody:
+        'Your spot is confirmed. Open the short briefing before you go — then support a class with a gift if you like.',
       successGiveCta: 'Support with a gift',
       successHome: 'Back to home',
+      successBriefingCta: 'Open class briefing',
+      successSaveCta: 'Save sessions to My Impact',
+      briefingKicker: 'Before you go',
+      briefingTitle: 'Your class briefing',
+      briefingArrive: 'Arrive by',
+      briefingMeet: 'Meeting point',
+      briefingWear: 'What to wear / bring',
+      briefingDo: 'What you’ll do',
+      briefingEmergency: 'Emergencies',
+      briefingCancel: 'If you cannot come',
       corporatePanelTitle: 'Corporate volunteering',
       corporateBullets: [
         'African drumming workshops',
@@ -501,14 +702,13 @@ volunteer: {
       corporateEmail: 'Work email',
       corporateMessage: 'What are you hoping to do?',
       corporateSubmit: 'Send enquiry',
-      corporateThanks: 'Thanks — we’ll reply by email. DEMO-ONLY; nothing was sent.',
+      corporateThanks: 'Thanks — we’ll reply by email.',
       changeMode: 'Choose a different path',
     },
     give: {
       kicker: 'Support',
       title: 'Give with meaning',
       subhead: 'Money, things, or a campaign friends can join — your gift keeps programmes free for members.',
-      demoBanner: 'Demo — no real payments. Stripe test mode later.',
       tabMoney: 'Money',
       tabWishlist: 'Wishlist',
       tabFundraise: 'Fundraise',
@@ -539,8 +739,30 @@ volunteer: {
       section88: 'Donations of HK$100 or more are tax-deductible under Section 88.',
       trustStrip: '~86% of funds go to programmes (Annual Report).',
       emailLabel: 'Email for updates',
-      emailHint: 'Needed so we can tell you when this gift was used. No password required to give.',
+      emailHint: 'Needed if you opt in to gift-journey updates (stands in for Stripe checkout email).',
+      emailRequiredJourney: 'Add an email to opt in to journey updates.',
+      receiptTitle: 'Official receipt (Section 88)',
+      receiptUseAccount: 'Use my account details for the receipt',
+      receiptUseAccountHint: 'We’ll email the receipt to your login address.',
+      receiptNameLabel: 'Full name on receipt',
+      receiptEmailLabel: 'Email for receipt',
+      receiptEmailHint: 'We’ll send the official receipt here. Same address can get gift-journey updates if you opt in.',
+      receiptForOther: 'Issue the receipt in someone else’s name',
+      receiptForOtherHint:
+        'For a different taxpayer (e.g. a partner or company). The name on the receipt should match who claims the deduction.',
+      receiptRequired: 'Add the name and email for the official receipt.',
+      applyCustom: 'Apply',
+      journeyOptInLabel: 'Email me as this gift goes through',
+      journeyOptInHelper:
+        'Received → matched to programmes → when a session happens. Gift-use updates only — not a newsletter.',
+      journeyTitle: 'Where your gift is going',
+      journeyReceived: 'Received',
+      journeyMatched: 'Matched to programmes',
+      journeySession: 'Session update',
+      journeyEmailNote: 'When there’s news, we’ll email {email}.',
+      journeyAdvance: 'See next update',
       donateCta: 'Donate',
+      donateWorking: 'Working…',
       wishlistTitle: 'Wishlist',
       wishlistSubhead: 'Pledge items our programmes need — we’ll email how to send or drop off.',
       needed: 'Needed {n}',
@@ -550,7 +772,7 @@ volunteer: {
       pledgeQty: 'Quantity',
       pledgeNote: 'Note (optional)',
       pledgeSubmit: 'Send pledge',
-      pledgeSuccess: 'We’ll email how to send or drop off — DEMO-ONLY.',
+      pledgeSuccess: 'We’ll email how to send or drop off.',
       pledgeClose: 'Close',
       wishlistEmpty: 'Nothing on the wishlist right now.',
       fundraiseTitle: 'Create a fundraiser',
@@ -560,9 +782,9 @@ volunteer: {
         'We review (approval)',
         'Share & see progress',
       ],
-      fundraisePendingNote:
-        'DEMO-ONLY: campaigns may go live without staff review in this build.',
       createCampaignCta: 'Start a campaign',
+      liveCampaigns: 'Live campaigns',
+      noLiveCampaigns: 'No approved fundraisers yet.',
       yourCampaigns: 'Your campaigns (this browser)',
       noCampaigns: 'No campaigns yet — create one above.',
       formTitle: 'Campaign title',
@@ -570,20 +792,26 @@ volunteer: {
       formGoal: 'Goal (HKD)',
       formCover: 'Cover image',
       formEnd: 'End date',
-      formSubmit: 'Create campaign',
+      formSubmit: 'Submit for approval',
+      formWorking: 'Submitting…',
+      formError: 'Couldn’t create the campaign. Please try again.',
       campaignProgress: 'HK${raised} of HK${goal}',
       campaignShare: 'Copy link',
       campaignShareDone: 'Link copied',
       campaignDonate: 'Donate to this campaign',
       campaignPending: 'Pending approval',
+      campaignApproved: 'Approved',
+      campaignRejected: 'Rejected',
       campaignNotFound: 'We couldn’t find that campaign.',
+      campaignAwaitingApproval:
+        'This fundraiser is waiting for Love 21 approval before donations open.',
       stickyDonate: 'Donate',
       thanksAck: 'Thank you. Your gift helps keep programmes free for members.',
       thanksNotifyLabel: 'Email me when there’s news on how this gift was used.',
       thanksNotifyHelper:
         'Only when something real happened — e.g. a session ran. No newsletter spam.',
       thanksEmail: 'Email',
-      thanksNotifyToast: 'You’ll get updates at {email} (DEMO-ONLY)',
+      thanksNotifyToast: 'You’ll get updates at {email}',
       thanksSampleUpdate:
         'Sample update: “Your gift helped make Saturday’s dance class possible.”',
       thanksCreateAccount: 'Want gifts and volunteer hours in one place?',
@@ -596,6 +824,114 @@ volunteer: {
       thanksVolunteer: 'Volunteer',
       thanksShareCampaign: 'Share a campaign',
       thanksHome: 'Home',
+      thanksSaveImpact: 'Save my gifts to My Impact',
+    },
+    login: {
+      kicker: 'Welcome back',
+      signInTitle: 'Log in',
+      signUpTitle: 'Create an account',
+      subhead:
+        'See your volunteer sessions and gifts in one place. Donating never requires an account.',
+      modeLabel: 'Account mode',
+      signInTab: 'Log in',
+      signUpTab: 'Sign up',
+      fullName: 'English full name',
+      chineseName: 'Chinese full name',
+      phone: 'Contact number',
+      volunteerProfileHint:
+        'We save this on your volunteer profile so class signups stay short.',
+      email: 'Email',
+      password: 'Password',
+      signInCta: 'Log in',
+      signUpCta: 'Create account',
+      working: 'Working…',
+      genericError: 'Something went wrong. Try again.',
+      notConfigured: 'Supabase Auth is not configured in this environment.',
+      checkEmail:
+        'Account created. Confirm the email link from Supabase, then log in. (For demo: Authentication → Providers → Email → disable Confirm email.)',
+      backToMe: 'Back to My Impact',
+    },
+    me: {
+      kicker: 'Stay involved',
+      title: 'Your impact',
+      subhead: 'Sessions you’ve signed up for, recognition you’ve earned, and gifts you’ve given.',
+      tabVolunteer: 'Volunteering',
+      tabGiving: 'Giving',
+      loading: 'Loading your profile…',
+      gateTitle: 'Log in to see your impact',
+      gateBody:
+        'Create a free account to keep your sessions and gifts in one place. You can still donate without logging in.',
+      gateCta: 'Log in',
+      hello: 'Signed in as',
+      logOut: 'Log out',
+      volunteerKicker: 'Volunteer profile',
+      volunteerTitle: 'Your volunteering',
+      volunteerEmpty:
+        'No sessions yet. Sign up for a class and your hours and recognition will show up here.',
+      volunteerCta: 'Find a session',
+      volunteerMoreCta: 'Join another session',
+      volunteerHoursNote:
+        'Hours here come from Love 21 session signups on this site — not HandsOn bookings.',
+      skillsTitle: 'Your skills',
+      skillsHint:
+        'Saved to your profile. On Volunteer, turn on “Filter by my skills” to match open sessions.',
+      skillsSave: 'Save skills',
+      skillsSaved: 'Skills saved',
+      skillsNeedEmail: 'Sign in with an email to save skills permanently.',
+      statSessions: 'Sessions',
+      statHours: 'Hours',
+      statProgrammes: 'Programmes',
+      sessionsTitle: 'Your sessions',
+      interestsTitle: 'Your interests',
+      interestsLead:
+        'HandsOn leads you registered here — still finish booking on HandsOn if the listing is external.',
+      interestRegistered: 'Interest registered',
+      sessionConfirmed: 'Confirmed',
+      openBriefing: 'Class briefing',
+      badgesTitle: 'Recognition',
+      badgesSubhead:
+        'Recognition for showing up — useful for CVs and CSR, not a points game.',
+      badgeEarned: 'Earned',
+      badgeLocked: 'Next',
+      giveCta: 'Give',
+      givingTitle: 'Your giving',
+      givingSubhead: 'Gifts linked to your email — journey updates when you opt in.',
+      givingEmpty: 'No gifts yet. Every dollar helps keep programmes free for members.',
+      viewGift: 'View gift',
+      journeyReceived: 'Gift received',
+      journeyMatched: 'Rooted in a programme',
+      journeySession: 'A session grew',
+      journeyStatusDone: 'Done',
+      journeyStatusProcessing: 'Still growing',
+      journeyStatusWaiting: 'Not yet',
+      journeyGrowthLabel: 'Growth {n} of 3',
+      journeyGrowthCumulativeTitle: 'Your impact growth',
+      journeyGrowthCumulativeBody:
+        'All your gifts, grown together — helping members realise their abilities through sport, nutrition and care.',
+      journeyGrowthCumulativeLabel: 'Cumulative growth {n} of 4',
+      journeyGrowthTotalGiven: 'Given',
+      journeyGrowthGiftCount: 'Gifts',
+      journeyGrowthSessions: 'Sessions',
+      journeyDetailReceivedDone:
+        'Love 21 has recorded your gift. It sits ready to be allocated into programme funds.',
+      journeyDetailReceivedProcessing:
+        'Confirming the payment landed — usually within a day of checkout.',
+      journeyDetailReceivedWaiting: 'Waiting for the gift to be recorded.',
+      journeyDetailMatchedDone:
+        'Allocated into the {programme} programme fund — coaches, venue and materials so members can attend free.',
+      journeyDetailMatchedProcessing:
+        'Staff are placing this gift into the {programme} fund this fortnight (about 80–86% of gifts go straight to programmes).',
+      journeyDetailMatchedWaiting:
+        'Once received, this gift will be rooted into {programme} — not a general newsletter opt-in.',
+      journeyDetailSessionDone:
+        'A {programme} session ran for members. Your gift helped keep that day free for the community.',
+      journeyDetailSessionDoneNamed:
+        '{title} ran on {when}. Your gift helped keep that session free for members.',
+      journeyDetailSessionProcessing:
+        'Waiting for the next {programme} session on the calendar — you’ll get a gift-use note when it runs, not a newsletter.',
+      journeyDetailSessionWaiting:
+        'After matching, you’ll hear when a {programme} session that this gift supported actually runs.',
+      loadSampleGifts: 'Load sample gifts (demo)',
     },
   },
   'zh-Hant': {
@@ -719,12 +1055,11 @@ volunteer: {
       sliderReal: '真實數字',
       emptyFilter: '此項目暫無時刻——試試其他篩選。',
     },
-volunteer: {
+    volunteer: {
       kicker: '參與',
       title: '現身。認識他們。',
       subhead: '面對面，偏見才會縮小。選一節課，帶上你的能量——一起參與，不是旁觀。',
       communityLink: '先看看社群',
-      demoMatch: '僅示範 — 技能篩選為本地假資料，並非即時 AI 配對。',
       modeTitle: '你想怎樣參與？',
       individualTag: '個人',
       individualTitle: '報名或協助課堂',
@@ -735,7 +1070,7 @@ volunteer: {
       corporateBody: '團隊義工——非洲鼓、Zumba、烹飪、藝術。聯絡我們，一起策劃。',
       corporateCta: '企業查詢',
       skillsTitle: '你能帶來什麼？',
-      skillsHint: '可選 — 點選篩選。僅示範配對。',
+      skillsHint: '可選 — 點選篩選。',
       skills: {
         patient: '有耐心',
         sports: '運動',
@@ -746,9 +1081,17 @@ volunteer: {
         cantonese: '粵語（可選）',
       },
       clearSkills: '清除篩選',
+      filterMySkills: '按我的技能篩選',
+      filterMySkillsHint: '顯示符合你個人檔案已儲存技能的課堂。',
+      filterMySkillsEmpty: '請先在「我的影響力」加入技能，再回來篩選。',
+      filterMySkillsEdit: '編輯我的技能',
+      filterMySkillsLogin: '登入後可按已儲存技能篩選',
       listTitle: '開放課堂',
       emptyList: '沒有符合這些技能的課堂——試試清除篩選。',
+      emptyListNoSessions: '目前沒有開放課堂。稍後再看，或向 Love 21 查詢即將舉行的班。',
+      loadError: '無法從伺服器載入課堂。請確認 API 正在運行，然後重新整理。',
       recruiting: '招募中',
+      fullBadge: '已滿',
       spots: '{filled}/{capacity} 名額',
       sourceLove21: 'Love 21',
       sourceHandson: 'HandsOn',
@@ -761,18 +1104,35 @@ volunteer: {
       handsonCapacity:
         'HandsOn：已訂 {filled}/{capacity} · 此處有興趣 {interested} 人',
       registerInterest: '登記興趣',
-      completeHandson: '前往 HandsOn 完成報名',
+      completeHandson: '亦可在 HandsOn 報名（可選）',
       joinSession: '加入課堂',
       formIntro:
         'Love 21 為香港註冊慈善機構，致力透過運動、營養及全方位支援計劃，支持唐氏綜合症、自閉症及神經多樣性社群。我們現正尋找充滿熱誠的義工！',
+      interestFormIntroLoggedIn:
+        '你已登入——我們會使用你已儲存的義工資料。確認安全守則即可登記興趣。',
+      shortFormIntro: '快速報名——有位即確認，無需職員審批。',
+      shortFormIntroLoggedIn: '你已登入——確認年齡組別及安全守則即可預留名額。',
+      joiningAs: '以 {name} · {email} 報名',
+      joiningAsEdit: '更新個人資料',
+      shortName: '全名',
+      shortSubmit: '確認我的名額',
+      safeguardAck: '我明白會以主動幫手身份參與，現場有教練，並會跟從課堂簡介（包括緊急步驟）。',
+      emergencyName: '緊急聯絡人姓名',
+      emergencyPhone: '緊急聯絡人電話',
+      fullError: '此課堂已滿——請選其他班。',
+      signupError: '未能儲存報名，請再試。',
+      signupDuplicate: '你已報名此課堂。',
       interestChineseName: '中文全名',
       interestEnglishName: '英文全名',
-      interestAgeGroup: '年齡組別',
+      interestAgeGroup: '年齡／人口組別',
       ageGroups: {
-        age14_15: '14–15 歲',
-        age16_17: '16–17 歲',
-        age18: '18 歲或以上',
+        youth14_18: '青年義工（14–18）',
+        age19_29: '19–29 歲',
+        age30_44: '30–44 歲',
+        age45_59: '45–59 歲',
+        age60_plus: '60 歲或以上',
       },
+      ageGroupHint: '幫助 Love 21 了解義工人口結構——不用作推廣。',
       interestGender: '性別',
       genders: {
         female: '女',
@@ -801,17 +1161,34 @@ volunteer: {
       interestDiscoveryOther: '請註明',
       interestSubmit: '提交義工報名',
       interestCancel: '取消',
+      interestDuplicate: '你已對此課堂登記興趣。',
+      interestError: '無法儲存你的興趣。請確認 API 正在運行，然後再試。',
       hubSignupTitle: 'Love 21 義工報名',
-      hubSignupSubhead: '欄位與現有義工表格一致 — 僅示範，稍後才接職員電郵。',
+      hubSignupSubhead: '上方選課堂最快捷——或在此使用完整興趣表格。',
       hubSignupCta: '打開報名表格',
+      hubCreateAccountCta: '改為建立帳戶',
+      hubSignedInTitle: '你已登入',
+      hubSignedInSubhead:
+        '在上方選一節課，用你已儲存的資料報名。可隨時在「我的影響力」更新義工檔案。',
+      hubSignedInCta: '我的義工檔案',
       joinConfirmTitle: '加入這個課堂？',
-      joinConfirmBody: '我們會為你預留名額並電郵確認。僅示範 — 尚未真實報名。',
+      joinConfirmBody: '我們會為你確認名額並開啟課堂簡介。',
       joinConfirmYes: '好，我參加',
       joinConfirmNo: '先不要',
       successTitle: '你已報名「{session}」。',
-      successBody: '多謝現身。想每星期都支持？',
+      successBody: '名額已確認。出發前請打開簡短簡介——如想支持課堂也可捐助。',
       successGiveCta: '以捐助支持',
       successHome: '返回首頁',
+      successBriefingCta: '打開課堂簡介',
+      successSaveCta: '儲存課堂到「我的影響」',
+      briefingKicker: '出發前',
+      briefingTitle: '你的課堂簡介',
+      briefingArrive: '到達時間',
+      briefingMeet: '集合點',
+      briefingWear: '穿著／攜帶',
+      briefingDo: '你會做什麼',
+      briefingEmergency: '緊急情況',
+      briefingCancel: '若不能出席',
       corporatePanelTitle: '企業義工',
       corporateBullets: [
         '非洲鼓工作坊',
@@ -825,14 +1202,13 @@ volunteer: {
       corporateEmail: '公司電郵',
       corporateMessage: '你們希望做什麼？',
       corporateSubmit: '送出查詢',
-      corporateThanks: '謝謝——我們會以電郵回覆。僅示範；實際未發送。',
+      corporateThanks: '謝謝——我們會以電郵回覆。',
       changeMode: '選擇另一條路',
     },
     give: {
       kicker: '支持',
       title: '有意義的捐助',
       subhead: '金錢、物資，或讓朋友一起參與的籌款——你的捐助讓會員計劃保持免費。',
-      demoBanner: '示範 — 並無真實付款。稍後接 Stripe 測試模式。',
       tabMoney: '捐款',
       tabWishlist: '心願清單',
       tabFundraise: '籌款',
@@ -863,8 +1239,28 @@ volunteer: {
       section88: '港幣 100 元或以上捐款可根據第 88 條申請扣稅。',
       trustStrip: '約 86% 資金用於計劃（年度報告）。',
       emailLabel: '接收更新的電郵',
-      emailHint: '以便告知這筆捐款何時被使用。捐款無需密碼。',
+      emailHint: '若選擇禮物旅程更新則需要（代替 Stripe 結帳電郵）。',
+      emailRequiredJourney: '請填寫電郵以選擇旅程更新。',
+      receiptTitle: '正式收據（第 88 條）',
+      receiptUseAccount: '使用我的帳戶資料開立收據',
+      receiptUseAccountHint: '收據會電郵至你的登入電郵。',
+      receiptNameLabel: '收據上的全名',
+      receiptEmailLabel: '收據電郵',
+      receiptEmailHint: '正式收據會寄至此電郵。若選擇旅程更新，也會寄到此地址。',
+      receiptForOther: '以他人名義開立收據',
+      receiptForOtherHint: '適用於不同納稅人（例如配偶或公司）。收據姓名應與申請扣稅者一致。',
+      receiptRequired: '請填寫正式收據所需的姓名與電郵。',
+      applyCustom: '套用',
+      journeyOptInLabel: '電郵通知我這筆捐款的去向',
+      journeyOptInHelper: '已收到 → 配對計劃 → 課堂發生時。只限捐款用途更新，不是通訊。',
+      journeyTitle: '你的捐款去向',
+      journeyReceived: '已收到',
+      journeyMatched: '已配對計劃',
+      journeySession: '課堂更新',
+      journeyEmailNote: '有消息時會電郵 {email}。',
+      journeyAdvance: '查看下一則更新',
       donateCta: '捐款',
+      donateWorking: '處理中…',
       wishlistTitle: '心願清單',
       wishlistSubhead: '認捐計劃所需物資——我們會電郵說明如何送交或自取。',
       needed: '需要 {n}',
@@ -874,14 +1270,15 @@ volunteer: {
       pledgeQty: '數量',
       pledgeNote: '備註（可選）',
       pledgeSubmit: '送出認捐',
-      pledgeSuccess: '我們會電郵說明如何送交或自取 — 僅示範。',
+      pledgeSuccess: '我們會電郵說明如何送交或自取。',
       pledgeClose: '關閉',
       wishlistEmpty: '目前心願清單沒有項目。',
       fundraiseTitle: '發起籌款',
       fundraiseSubhead: '三步：建立、等候審批，然後分享並查看進度。',
       fundraiseSteps: ['建立頁面', '我們審批', '分享並查看進度'],
-      fundraisePendingNote: '僅示範：此版本中籌款活動可能未經職員審核即上線。',
       createCampaignCta: '開始籌款',
+      liveCampaigns: '進行中的籌款',
+      noLiveCampaigns: '尚未有已批准的籌款。',
       yourCampaigns: '你的籌款（此瀏覽器）',
       noCampaigns: '尚未有籌款——請在上方建立。',
       formTitle: '籌款標題',
@@ -889,19 +1286,24 @@ volunteer: {
       formGoal: '目標（港幣）',
       formCover: '封面圖片',
       formEnd: '結束日期',
-      formSubmit: '建立籌款',
+      formSubmit: '提交審批',
+      formWorking: '提交中…',
+      formError: '無法建立籌款，請再試一次。',
       campaignProgress: '已籌 HK${raised}／目標 HK${goal}',
       campaignShare: '複製連結',
       campaignShareDone: '已複製連結',
       campaignDonate: '捐給此籌款',
       campaignPending: '等候審批',
+      campaignApproved: '已批准',
+      campaignRejected: '已拒絕',
       campaignNotFound: '找不到此籌款。',
+      campaignAwaitingApproval: '此籌款正等候 Love 21 審批，通過後才可接受捐款。',
       stickyDonate: '捐款',
       thanksAck: '謝謝你。你的捐助幫助會員計劃保持免費。',
       thanksNotifyLabel: '有這筆捐款如何被使用的消息時，電郵通知我。',
       thanksNotifyHelper: '只在真實事情發生時——例如一節課舉行了。不會濫發電郵。',
       thanksEmail: '電郵',
-      thanksNotifyToast: '你會在 {email} 收到更新（僅示範）',
+      thanksNotifyToast: '你會在 {email} 收到更新',
       thanksSampleUpdate: '示範更新：「你的捐助幫助週六舞蹈班得以舉行。」',
       thanksCreateAccount: '想把捐助與義工時數放在同一處？',
       thanksCreateAccountBody: '用此電郵建立免費帳戶——我們會自動附上這筆捐助。',
@@ -912,6 +1314,100 @@ volunteer: {
       thanksVolunteer: '做義工',
       thanksShareCampaign: '分享籌款',
       thanksHome: '首頁',
+      thanksSaveImpact: '儲存捐助到「我的影響」',
+    },
+    login: {
+      kicker: '歡迎回來',
+      signInTitle: '登入',
+      signUpTitle: '建立帳戶',
+      subhead: '在同一處查看義工課堂與捐助。捐款不必先登入。',
+      modeLabel: '帳戶模式',
+      signInTab: '登入',
+      signUpTab: '註冊',
+      fullName: '英文全名',
+      chineseName: '中文全名',
+      phone: '聯絡電話',
+      volunteerProfileHint: '會儲存到義工檔案，之後課堂報名更簡短。',
+      email: '電郵',
+      password: '密碼',
+      signInCta: '登入',
+      signUpCta: '建立帳戶',
+      working: '處理中…',
+      genericError: '出了點問題，請再試一次。',
+      notConfigured: '此環境尚未設定 Supabase Auth。',
+      checkEmail:
+        '帳戶已建立。請先確認 Supabase 電郵連結，然後登入。（演示可在 Authentication → Providers → Email 關閉 Confirm email。）',
+      backToMe: '返回我的影響',
+    },
+    me: {
+      kicker: '持續參與',
+      title: '你的影響',
+      subhead: '你報名的課堂、獲得的認可，以及你的捐助。',
+      tabVolunteer: '義工',
+      tabGiving: '捐助',
+      loading: '正在載入個人資料…',
+      gateTitle: '登入以查看你的影響',
+      gateBody: '建立免費帳戶，把課堂與捐助放在同一處。捐款仍可不登入。',
+      gateCta: '登入',
+      hello: '已登入',
+      logOut: '登出',
+      volunteerKicker: '義工檔案',
+      volunteerTitle: '你的義工服務',
+      volunteerEmpty: '尚未有課堂。報名後，時數與認可會顯示在此。',
+      volunteerCta: '尋找課堂',
+      volunteerMoreCta: '再參加一節',
+      volunteerHoursNote: '此處時數來自本站 Love 21 課堂報名——不是 HandsOn 預約。',
+      skillsTitle: '你的技能',
+      skillsHint: '會儲存到個人檔案。在義工頁可開啟「按我的技能篩選」配對課堂。',
+      skillsSave: '儲存技能',
+      skillsSaved: '已儲存技能',
+      skillsNeedEmail: '請用電郵登入以永久儲存技能。',
+      statSessions: '課堂',
+      statHours: '時數',
+      statProgrammes: '計劃',
+      sessionsTitle: '你的課堂',
+      interestsTitle: '你的興趣登記',
+      interestsLead: '你在此登記的 HandsOn 興趣——若為外部課堂，仍須在 HandsOn 完成報名。',
+      interestRegistered: '已登記興趣',
+      sessionConfirmed: '已確認',
+      openBriefing: '課堂簡介',
+      badgesTitle: '認可',
+      badgesSubhead: '為出席而設——有助履歷與 CSR，不是積分遊戲。',
+      badgeEarned: '已獲得',
+      badgeLocked: '下一步',
+      giveCta: '捐助',
+      givingTitle: '你的捐助',
+      givingSubhead: '與你電郵連結的捐助——選擇後可收到旅程更新。',
+      givingEmpty: '尚未有捐助。每一元都幫助會員計劃保持免費。',
+      viewGift: '查看捐助',
+      journeyReceived: '已收到捐助',
+      journeyMatched: '已扎根於計劃',
+      journeySession: '課堂已成長',
+      journeyStatusDone: '完成',
+      journeyStatusProcessing: '仍在成長',
+      journeyStatusWaiting: '尚未開始',
+      journeyGrowthLabel: '成長 {n}／3',
+      journeyGrowthCumulativeTitle: '你的影響成長',
+      journeyGrowthCumulativeBody:
+        '所有捐助合起來成長——透過運動、營養與關懷，幫助會員發揮自己的能力。',
+      journeyGrowthCumulativeLabel: '累積成長 {n}／4',
+      journeyGrowthTotalGiven: '已捐',
+      journeyGrowthGiftCount: '筆數',
+      journeyGrowthSessions: '課堂',
+      journeyDetailReceivedDone: 'Love 21 已記錄你的捐助，正待分配至計劃基金。',
+      journeyDetailReceivedProcessing: '正在確認付款到帳——通常於結帳後一天內完成。',
+      journeyDetailReceivedWaiting: '等候記錄捐助。',
+      journeyDetailMatchedDone:
+        '已撥入「{programme}」計劃基金——用於教練、場地與物資，讓會員可免費參加。',
+      journeyDetailMatchedProcessing:
+        '職員正於本雙週把這筆捐助撥入「{programme}」基金（約 80–86% 直接用於計劃）。',
+      journeyDetailMatchedWaiting: '收到後會把這筆捐助扎根於「{programme}」——不是一般電子報。',
+      journeyDetailSessionDone: '已舉行一節「{programme}」會員課堂。你的捐助有助該日保持免費。',
+      journeyDetailSessionDoneNamed: '「{title}」已於 {when} 舉行。你的捐助有助該課堂保持免費。',
+      journeyDetailSessionProcessing:
+        '等候下一節「{programme}」課堂——舉行時會收到捐助用途通知，不是電子報。',
+      journeyDetailSessionWaiting: '配對後，當這筆捐助支持的「{programme}」課堂實際舉行時會通知你。',
+      loadSampleGifts: '載入示範捐助',
     },
   },
   'zh-Hans': {
@@ -1035,12 +1531,11 @@ volunteer: {
       sliderReal: '真实数字',
       emptyFilter: '此项目暂无时刻——试试其他筛选。',
     },
-volunteer: {
+    volunteer: {
       kicker: '参与',
       title: '现身。认识他们。',
       subhead: '面对面，偏见才会缩小。选一节课，带上你的能量——一起参与，不是旁观。',
       communityLink: '先看看社群',
-      demoMatch: '仅演示 — 技能筛选为本地假数据，并非即时 AI 配对。',
       modeTitle: '你想怎样参与？',
       individualTag: '个人',
       individualTitle: '报名或协助课堂',
@@ -1051,7 +1546,7 @@ volunteer: {
       corporateBody: '团队义工——非洲鼓、Zumba、烹饪、艺术。联系我们，一起策划。',
       corporateCta: '企业查询',
       skillsTitle: '你能带来什么？',
-      skillsHint: '可选 — 点选筛选。仅演示配对。',
+      skillsHint: '可选 — 点选筛选。',
       skills: {
         patient: '有耐心',
         sports: '运动',
@@ -1062,9 +1557,17 @@ volunteer: {
         cantonese: '粤语（可选）',
       },
       clearSkills: '清除筛选',
+      filterMySkills: '按我的技能筛选',
+      filterMySkillsHint: '显示符合你个人档案已保存技能的课堂。',
+      filterMySkillsEmpty: '请先在「我的影响力」加入技能，再回来筛选。',
+      filterMySkillsEdit: '编辑我的技能',
+      filterMySkillsLogin: '登录后可按已保存技能筛选',
       listTitle: '开放课堂',
       emptyList: '没有符合这些技能的课堂——试试清除筛选。',
+      emptyListNoSessions: '目前没有开放课堂。稍后再看，或向 Love 21 查询即将举行的班。',
+      loadError: '无法从服务器加载课堂。请确认 API 正在运行，然后刷新。',
       recruiting: '招募中',
+      fullBadge: '已满',
       spots: '{filled}/{capacity} 名额',
       sourceLove21: 'Love 21',
       sourceHandson: 'HandsOn',
@@ -1077,18 +1580,35 @@ volunteer: {
       handsonCapacity:
         'HandsOn：已订 {filled}/{capacity} · 此处有兴趣 {interested} 人',
       registerInterest: '登记兴趣',
-      completeHandson: '前往 HandsOn 完成报名',
+      completeHandson: '亦可在 HandsOn 报名（可选）',
       joinSession: '加入课堂',
       formIntro:
         'Love 21 为香港注册慈善机构，致力透过运动、营养及全方位支援计划，支持唐氏综合症、自闭症及神经多样性社群。我们现正寻找充满热诚的义工！',
+      interestFormIntroLoggedIn:
+        '你已登录——我们会使用你已保存的义工资料。确认安全守则即可登记兴趣。',
+      shortFormIntro: '快速报名——有位即确认，无需职员审批。',
+      shortFormIntroLoggedIn: '你已登录——确认年龄组别及安全守则即可预留名额。',
+      joiningAs: '以 {name} · {email} 报名',
+      joiningAsEdit: '更新个人资料',
+      shortName: '全名',
+      shortSubmit: '确认我的名额',
+      safeguardAck: '我明白会以主动帮手身份参与，现场有教练，并会跟从课堂简介（包括紧急步骤）。',
+      emergencyName: '紧急联络人姓名',
+      emergencyPhone: '紧急联络人电话',
+      fullError: '此课堂已满——请选其他班。',
+      signupError: '未能保存报名，请再试。',
+      signupDuplicate: '你已报名此课堂。',
       interestChineseName: '中文全名',
       interestEnglishName: '英文全名',
-      interestAgeGroup: '年龄组别',
+      interestAgeGroup: '年龄／人口组别',
       ageGroups: {
-        age14_15: '14–15 岁',
-        age16_17: '16–17 岁',
-        age18: '18 岁或以上',
+        youth14_18: '青年义工（14–18）',
+        age19_29: '19–29 岁',
+        age30_44: '30–44 岁',
+        age45_59: '45–59 岁',
+        age60_plus: '60 岁或以上',
       },
+      ageGroupHint: '帮助 Love 21 了解义工人口结构——不用作推广。',
       interestGender: '性别',
       genders: {
         female: '女',
@@ -1117,17 +1637,34 @@ volunteer: {
       interestDiscoveryOther: '请注明',
       interestSubmit: '提交义工报名',
       interestCancel: '取消',
+      interestDuplicate: '你已对此课堂登记兴趣。',
+      interestError: '无法保存你的兴趣。请确认 API 正在运行，然后再试。',
       hubSignupTitle: 'Love 21 义工报名',
-      hubSignupSubhead: '栏位与现有义工表格一致 — 仅演示，稍后才接职员电邮。',
+      hubSignupSubhead: '上方选课堂最快捷——或在此使用完整兴趣表格。',
       hubSignupCta: '打开报名表格',
+      hubCreateAccountCta: '改为创建账户',
+      hubSignedInTitle: '你已登录',
+      hubSignedInSubhead:
+        '在上方选一节课，用你已保存的资料报名。可随时在「我的影响力」更新义工档案。',
+      hubSignedInCta: '我的义工档案',
       joinConfirmTitle: '加入这个课堂？',
-      joinConfirmBody: '我们会为你预留名额并电邮确认。仅演示 — 尚未真实报名。',
+      joinConfirmBody: '我们会为你确认名额并开启课堂简介。',
       joinConfirmYes: '好，我参加',
       joinConfirmNo: '先不要',
       successTitle: '你已报名「{session}」。',
-      successBody: '多谢现身。想每星期都支持？',
+      successBody: '名额已确认。出发前请打开简短简介——如想支持课堂也可捐助。',
       successGiveCta: '以捐助支持',
       successHome: '返回首页',
+      successBriefingCta: '打开课堂简介',
+      successSaveCta: '保存课堂到「我的影响」',
+      briefingKicker: '出发前',
+      briefingTitle: '你的课堂简介',
+      briefingArrive: '到达时间',
+      briefingMeet: '集合点',
+      briefingWear: '穿着／携带',
+      briefingDo: '你会做什么',
+      briefingEmergency: '紧急情况',
+      briefingCancel: '若不能出席',
       corporatePanelTitle: '企业义工',
       corporateBullets: [
         '非洲鼓工作坊',
@@ -1141,14 +1678,13 @@ volunteer: {
       corporateEmail: '公司电邮',
       corporateMessage: '你们希望做什么？',
       corporateSubmit: '送出查询',
-      corporateThanks: '谢谢——我们会以电邮回复。仅演示；实际未发送。',
+      corporateThanks: '谢谢——我们会以电邮回复。',
       changeMode: '选择另一条路',
     },
     give: {
       kicker: '支持',
       title: '有意义的捐助',
       subhead: '金钱、物资，或让朋友一起参与的筹款——你的捐助让会员计划保持免费。',
-      demoBanner: '演示 — 并无真实付款。稍后接 Stripe 测试模式。',
       tabMoney: '捐款',
       tabWishlist: '心愿清单',
       tabFundraise: '筹款',
@@ -1179,8 +1715,28 @@ volunteer: {
       section88: '港币 100 元或以上捐款可根据第 88 条申请扣税。',
       trustStrip: '约 86% 资金用于计划（年度报告）。',
       emailLabel: '接收更新的电邮',
-      emailHint: '以便告知这笔捐款何时被使用。捐款无需密码。',
+      emailHint: '若选择礼物旅程更新则需要（代替 Stripe 结账电邮）。',
+      emailRequiredJourney: '请填写电邮以选择旅程更新。',
+      receiptTitle: '正式收据（第 88 条）',
+      receiptUseAccount: '使用我的账户资料开立收据',
+      receiptUseAccountHint: '收据会电邮至你的登录电邮。',
+      receiptNameLabel: '收据上的全名',
+      receiptEmailLabel: '收据电邮',
+      receiptEmailHint: '正式收据会寄至此电邮。若选择旅程更新，也会寄到此地址。',
+      receiptForOther: '以他人名义开立收据',
+      receiptForOtherHint: '适用于不同纳税人（例如配偶或公司）。收据姓名应与申请扣税者一致。',
+      receiptRequired: '请填写正式收据所需的姓名与电邮。',
+      applyCustom: '套用',
+      journeyOptInLabel: '电邮通知我这笔捐款的去向',
+      journeyOptInHelper: '已收到 → 配对计划 → 课堂发生时。只限捐款用途更新，不是通讯。',
+      journeyTitle: '你的捐款去向',
+      journeyReceived: '已收到',
+      journeyMatched: '已配对计划',
+      journeySession: '课堂更新',
+      journeyEmailNote: '有消息时会电邮 {email}。',
+      journeyAdvance: '查看下一则更新',
       donateCta: '捐款',
+      donateWorking: '处理中…',
       wishlistTitle: '心愿清单',
       wishlistSubhead: '认捐计划所需物资——我们会电邮说明如何送交或自取。',
       needed: '需要 {n}',
@@ -1190,14 +1746,15 @@ volunteer: {
       pledgeQty: '数量',
       pledgeNote: '备注（可选）',
       pledgeSubmit: '送出认捐',
-      pledgeSuccess: '我们会电邮说明如何送交或自取 — 仅演示。',
+      pledgeSuccess: '我们会电邮说明如何送交或自取。',
       pledgeClose: '关闭',
       wishlistEmpty: '目前心愿清单没有项目。',
       fundraiseTitle: '发起筹款',
       fundraiseSubhead: '三步：建立、等候审批，然后分享并查看进度。',
       fundraiseSteps: ['建立页面', '我们审批', '分享并查看进度'],
-      fundraisePendingNote: '仅演示：此版本中筹款活动可能未经职员审核即上线。',
       createCampaignCta: '开始筹款',
+      liveCampaigns: '进行中的筹款',
+      noLiveCampaigns: '尚未有已批准的筹款。',
       yourCampaigns: '你的筹款（此浏览器）',
       noCampaigns: '尚未有筹款——请在上方建立。',
       formTitle: '筹款标题',
@@ -1205,19 +1762,24 @@ volunteer: {
       formGoal: '目标（港币）',
       formCover: '封面图片',
       formEnd: '结束日期',
-      formSubmit: '建立筹款',
+      formSubmit: '提交审批',
+      formWorking: '提交中…',
+      formError: '无法建立筹款，请再试一次。',
       campaignProgress: '已筹 HK${raised}／目标 HK${goal}',
       campaignShare: '复制链接',
       campaignShareDone: '已复制链接',
       campaignDonate: '捐给此筹款',
       campaignPending: '等候审批',
+      campaignApproved: '已批准',
+      campaignRejected: '已拒绝',
       campaignNotFound: '找不到此筹款。',
+      campaignAwaitingApproval: '此筹款正等候 Love 21 审批，通过后才可接受捐款。',
       stickyDonate: '捐款',
       thanksAck: '谢谢你。你的捐助帮助会员计划保持免费。',
       thanksNotifyLabel: '有这笔捐款如何被使用的消息时，电邮通知我。',
       thanksNotifyHelper: '只在真实事情发生时——例如一节课举行了。不会滥发电邮。',
       thanksEmail: '电邮',
-      thanksNotifyToast: '你会在 {email} 收到更新（仅演示）',
+      thanksNotifyToast: '你会在 {email} 收到更新',
       thanksSampleUpdate: '演示更新：「你的捐助帮助周六舞蹈班得以举行。」',
       thanksCreateAccount: '想把捐助与义工时数放在同一处？',
       thanksCreateAccountBody: '用此电邮建立免费账户——我们会自动附上这笔捐助。',
@@ -1228,6 +1790,100 @@ volunteer: {
       thanksVolunteer: '做义工',
       thanksShareCampaign: '分享筹款',
       thanksHome: '首页',
+      thanksSaveImpact: '保存捐助到「我的影响」',
+    },
+    login: {
+      kicker: '欢迎回来',
+      signInTitle: '登录',
+      signUpTitle: '创建账户',
+      subhead: '在同一处查看义工课堂与捐助。捐款不必先登录。',
+      modeLabel: '账户模式',
+      signInTab: '登录',
+      signUpTab: '注册',
+      fullName: '英文全名',
+      chineseName: '中文全名',
+      phone: '联络电话',
+      volunteerProfileHint: '会保存到义工档案，之后课堂报名更简短。',
+      email: '电邮',
+      password: '密码',
+      signInCta: '登录',
+      signUpCta: '创建账户',
+      working: '处理中…',
+      genericError: '出了点问题，请再试一次。',
+      notConfigured: '此环境尚未设置 Supabase Auth。',
+      checkEmail:
+        '账户已创建。请先确认 Supabase 电邮链接，然后登录。（演示可在 Authentication → Providers → Email 关闭 Confirm email。）',
+      backToMe: '返回我的影响',
+    },
+    me: {
+      kicker: '持续参与',
+      title: '你的影响',
+      subhead: '你报名的课堂、获得的认可，以及你的捐助。',
+      tabVolunteer: '义工',
+      tabGiving: '捐助',
+      loading: '正在加载个人资料…',
+      gateTitle: '登录以查看你的影响',
+      gateBody: '创建免费账户，把课堂与捐助放在同一处。捐款仍可不登录。',
+      gateCta: '登录',
+      hello: '已登录',
+      logOut: '登出',
+      volunteerKicker: '义工档案',
+      volunteerTitle: '你的义工服务',
+      volunteerEmpty: '尚未有课堂。报名后，时数与认可会显示在此。',
+      volunteerCta: '寻找课堂',
+      volunteerMoreCta: '再参加一节',
+      volunteerHoursNote: '此处时数来自本站 Love 21 课堂报名——不是 HandsOn 预约。',
+      skillsTitle: '你的技能',
+      skillsHint: '会保存到个人档案。在义工页可开启「按我的技能筛选」配对课堂。',
+      skillsSave: '保存技能',
+      skillsSaved: '已保存技能',
+      skillsNeedEmail: '请用电邮登录以永久保存技能。',
+      statSessions: '课堂',
+      statHours: '时数',
+      statProgrammes: '计划',
+      sessionsTitle: '你的课堂',
+      interestsTitle: '你的兴趣登记',
+      interestsLead: '你在此登记的 HandsOn 兴趣——若为外部课堂，仍须在 HandsOn 完成报名。',
+      interestRegistered: '已登记兴趣',
+      sessionConfirmed: '已确认',
+      openBriefing: '课堂简介',
+      badgesTitle: '认可',
+      badgesSubhead: '为出席而设——有助履历与 CSR，不是积分游戏。',
+      badgeEarned: '已获得',
+      badgeLocked: '下一步',
+      giveCta: '捐助',
+      givingTitle: '你的捐助',
+      givingSubhead: '与你电邮链接的捐助——选择后可收到旅程更新。',
+      givingEmpty: '尚未有捐助。每一元都帮助会员计划保持免费。',
+      viewGift: '查看捐助',
+      journeyReceived: '已收到捐助',
+      journeyMatched: '已扎根于计划',
+      journeySession: '课堂已成长',
+      journeyStatusDone: '完成',
+      journeyStatusProcessing: '仍在成长',
+      journeyStatusWaiting: '尚未开始',
+      journeyGrowthLabel: '成长 {n}／3',
+      journeyGrowthCumulativeTitle: '你的影响成长',
+      journeyGrowthCumulativeBody:
+        '所有捐助合起来成长——透过运动、营养与关怀，帮助会员发挥自己的能力。',
+      journeyGrowthCumulativeLabel: '累积成长 {n}／4',
+      journeyGrowthTotalGiven: '已捐',
+      journeyGrowthGiftCount: '笔数',
+      journeyGrowthSessions: '课堂',
+      journeyDetailReceivedDone: 'Love 21 已记录你的捐助，正待分配至计划基金。',
+      journeyDetailReceivedProcessing: '正在确认付款到账——通常于结账后一天内完成。',
+      journeyDetailReceivedWaiting: '等候记录捐助。',
+      journeyDetailMatchedDone:
+        '已拨入「{programme}」计划基金——用于教练、场地与物资，让会员可免费参加。',
+      journeyDetailMatchedProcessing:
+        '职员正于本双周把这笔捐助拨入「{programme}」基金（约 80–86% 直接用于计划）。',
+      journeyDetailMatchedWaiting: '收到后会把这笔捐助扎根于「{programme}」——不是一般电子报。',
+      journeyDetailSessionDone: '已举行一节「{programme}」会员课堂。你的捐助有助该日保持免费。',
+      journeyDetailSessionDoneNamed: '「{title}」已于 {when} 举行。你的捐助有助该课堂保持免费。',
+      journeyDetailSessionProcessing:
+        '等候下一节「{programme}」课堂——举行时会收到捐助用途通知，不是电子报。',
+      journeyDetailSessionWaiting: '配对后，当这笔捐助支持的「{programme}」课堂实际举行时会通知你。',
+      loadSampleGifts: '加载示范捐助',
     },
   },
 }
@@ -1348,7 +2004,6 @@ const EASY_READ_EN: DeepPartial<Strings> = {
     kicker: 'Give',
     title: 'Give to Love 21',
     subhead: 'Give money. Or give things. Or raise money with friends.',
-    demoBanner: 'This is a demo. No real money is taken.',
     tabMoney: 'Money',
     tabWishlist: 'Things we need',
     tabFundraise: 'Raise money',

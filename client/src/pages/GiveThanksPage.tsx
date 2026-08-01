@@ -5,44 +5,81 @@ import { SiteFooter } from '@/components/site-footer'
 import { SkipLink } from '@/components/skip-link'
 import { useSite } from '@/components/site-provider'
 import { trackEvent } from '@/lib/analytics'
-import { DemoBanner } from '@/features/donations/components/demo-banner'
-import { addDemoDonation, demoAccountExists } from '@/features/donations/api'
+import { addDemoDonation } from '@/features/donations/api'
+import { requestGiftJourneyNotify } from '@/features/donations/checkout'
+import {
+  advanceDonationStage,
+  getDonation,
+  updateDonationNotify,
+  type JourneyStage,
+  type StoredDonation,
+} from '@/features/donations/donation-store'
+import { cn } from '@/lib/utils'
+
+const STAGES: JourneyStage[] = ['received', 'matched', 'session_update']
 
 export function GiveThanksPage() {
   const { t } = useSite()
   const g = t.give
   const [params] = useSearchParams()
-  const initialEmail = params.get('email') || ''
-  const amount = params.get('amount')
+  const donationId = params.get('donation') || ''
+  const legacyAmount = params.get('amount')
   const campaign = params.get('campaign')
 
-  const [email, setEmail] = useState(initialEmail)
-  const [notify, setNotify] = useState(true)
+  const [donation, setDonation] = useState<StoredDonation | undefined>(() =>
+    donationId ? getDonation(donationId) : undefined,
+  )
+  const [email, setEmail] = useState(donation?.email || params.get('email') || '')
+  const [notify, setNotify] = useState(donation?.journey_opt_in ?? true)
   const [toast, setToast] = useState<string | null>(null)
-  const [dismissedAccount, setDismissedAccount] = useState(false)
-
-  const hasAccount = demoAccountExists(email)
 
   useEffect(() => {
-    if (campaign && amount) {
-      addDemoDonation(campaign, Number(amount) || 0)
+    if (campaign && legacyAmount) {
+      addDemoDonation(campaign, Number(legacyAmount) || 0)
     }
-  }, [campaign, amount])
+  }, [campaign, legacyAmount])
 
   useEffect(() => {
-    if (notify && email) {
-      trackEvent('notify_opt_in', { email })
-      setToast(g.thanksNotifyToast.replace('{email}', email))
-    } else {
+    if (!donation || !notify || !email.trim()) {
       setToast(null)
+      return
     }
-  }, [notify, email, g.thanksNotifyToast])
+    let cancelled = false
+    void (async () => {
+      trackEvent('notify_opt_in', { email, donationId: donation.id })
+      updateDonationNotify(donation.id, true, email)
+      const result = await requestGiftJourneyNotify({
+        email: email.trim().toLowerCase(),
+        donation_id: donation.id,
+        stage: donation.stage,
+      })
+      if (cancelled) return
+      setToast(
+        result === 'sent'
+          ? g.thanksNotifyToast.replace('{email}', email)
+          : g.journeyEmailNote.replace('{email}', email),
+      )
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [donation, notify, email, g.thanksNotifyToast, g.journeyEmailNote])
 
-  useEffect(() => {
-    if (!dismissedAccount && !hasAccount && email) {
-      trackEvent('account_prompt_shown', { email })
-    }
-  }, [dismissedAccount, hasAccount, email])
+  function stageLabel(stage: JourneyStage) {
+    if (stage === 'received') return g.journeyReceived
+    if (stage === 'matched') return g.journeyMatched
+    return g.journeySession
+  }
+
+  function advance() {
+    if (!donation) return
+    const next = advanceDonationStage(donation.id)
+    if (next) setDonation({ ...next })
+  }
+
+  const amount = donation?.amount_hkd ?? (legacyAmount ? Number(legacyAmount) : undefined)
+  const showJourney = Boolean(donation?.journey_opt_in && notify)
+  const stageIndex = donation ? STAGES.indexOf(donation.stage) : 0
 
   const field =
     'mt-1 w-full rounded-md border border-black/12 bg-white px-3 py-3 text-[15px] text-navy outline-none focus:border-navy'
@@ -51,24 +88,31 @@ export function GiveThanksPage() {
     <div className="min-h-screen bg-paper">
       <SkipLink />
       <SiteHeader />
-      <DemoBanner />
       <main id="main" className="mx-auto max-w-xl px-4 py-14 sm:px-6 sm:py-20">
         <p className="kicker text-teal">{g.kicker}</p>
         <h1 className="mt-3 font-display text-[clamp(1.75rem,5vw,2.5rem)] font-semibold text-navy">
           {g.thanksAck}
         </h1>
+        {amount ? (
+          <p className="mt-3 text-lg font-semibold text-navy/70">
+            HK${amount.toLocaleString()}
+          </p>
+        ) : null}
 
         <label className="mt-10 flex cursor-pointer gap-3 rounded-xl border border-black/8 bg-white p-4">
           <input
             type="checkbox"
             checked={notify}
-            onChange={(e) => setNotify(e.target.checked)}
+            onChange={(e) => {
+              setNotify(e.target.checked)
+              if (donation) updateDonationNotify(donation.id, e.target.checked, email)
+            }}
             className="mt-1 h-5 w-5 accent-teal"
           />
           <span>
-            <span className="block text-[15px] font-semibold text-navy">{g.thanksNotifyLabel}</span>
+            <span className="block text-[15px] font-semibold text-navy">{g.journeyOptInLabel}</span>
             <span className="mt-1 block text-[13px] leading-relaxed text-navy/60">
-              {g.thanksNotifyHelper}
+              {g.journeyOptInHelper}
             </span>
           </span>
         </label>
@@ -87,62 +131,54 @@ export function GiveThanksPage() {
         </div>
 
         {toast && (
-          <p role="status" className="mt-4 rounded-md bg-teal/10 px-4 py-3 text-[14px] font-medium text-teal">
+          <p
+            role="status"
+            className="mt-4 rounded-md bg-teal/10 px-4 py-3 text-[14px] font-medium text-teal"
+          >
             {toast}
           </p>
         )}
 
-        {notify && (
-          <div className="mt-6 rounded-xl border border-dashed border-navy/20 bg-amber/50 p-4">
-            <p className="text-[14px] leading-relaxed text-navy/80">{g.thanksSampleUpdate}</p>
-            <p className="mt-2 text-[11px] font-semibold tracking-wide text-navy/40 uppercase">
-              DEMO-ONLY
-            </p>
-          </div>
-        )}
-
-        {/* Soft account — never blocks giving */}
-        {!dismissedAccount && email && (
-          <div className="mt-10 rounded-xl border border-black/8 bg-white p-5 sm:p-6">
-            {hasAccount ? (
-              <>
-                <p className="text-[15px] leading-relaxed text-navy/85">{g.thanksExistingBody}</p>
-                <Link
-                  to="/me"
-                  className="mt-4 inline-flex min-h-11 items-center font-semibold text-teal underline-offset-4 hover:underline"
-                >
-                  {g.thanksViewGiving} →
-                </Link>
-              </>
-            ) : (
-              <>
-                <p className="font-display text-lg font-semibold text-navy">{g.thanksCreateAccount}</p>
-                <p className="mt-2 text-[14px] leading-relaxed text-navy/70">
-                  {g.thanksCreateAccountBody}
-                </p>
-                <button
-                  type="button"
-                  onClick={() => {
-                    console.log('[DEMO-ONLY] create account with', email)
-                    setDismissedAccount(true)
-                  }}
-                  className="mt-4 inline-flex min-h-11 items-center justify-center rounded-md border border-navy px-5 text-[14px] font-semibold text-navy"
-                >
-                  {g.thanksCreateCta}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setDismissedAccount(true)}
-                  className="mt-3 block min-h-11 text-[14px] font-medium text-navy/55 underline-offset-4 hover:underline"
-                >
-                  {g.thanksNoThanks}
-                </button>
-              </>
+        {showJourney && donation && (
+          <section className="mt-8 rounded-xl border border-navy/10 bg-white p-5">
+            <h2 className="font-display text-xl font-semibold text-navy">{g.journeyTitle}</h2>
+            <ol className="mt-5 space-y-3">
+              {STAGES.map((stage, index) => {
+                const done = index <= stageIndex
+                return (
+                  <li key={stage} className="flex items-center gap-3 text-sm font-semibold">
+                    <span
+                      className={cn(
+                        'flex h-8 w-8 items-center justify-center rounded-full text-xs',
+                        done ? 'bg-teal text-white' : 'bg-navy/10 text-navy/40',
+                      )}
+                    >
+                      {done ? '✓' : index + 1}
+                    </span>
+                    <span className={done ? 'text-navy' : 'text-navy/40'}>{stageLabel(stage)}</span>
+                  </li>
+                )
+              })}
+            </ol>
+            {donation.stage !== 'session_update' && (
+              <button
+                type="button"
+                onClick={advance}
+                className="mt-5 inline-flex min-h-11 items-center rounded-md border border-navy px-4 text-sm font-semibold text-navy"
+              >
+                {g.journeyAdvance}
+              </button>
             )}
-          </div>
+          </section>
         )}
 
         <nav className="mt-12 flex flex-wrap gap-x-6 gap-y-3 text-[14px] font-semibold">
+          <Link
+            to={`/login?redirect=${encodeURIComponent('/me?tab=giving')}&email=${encodeURIComponent(email)}`}
+            className="text-navy underline-offset-4 hover:underline"
+          >
+            {g.thanksSaveImpact}
+          </Link>
           <Link to="/volunteer" className="text-navy underline-offset-4 hover:underline">
             {g.thanksVolunteer}
           </Link>

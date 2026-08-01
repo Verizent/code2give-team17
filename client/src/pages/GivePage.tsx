@@ -1,18 +1,37 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { BrandPatternBand, LovePatternBg } from '@/components/brand-pattern'
 import { SiteFooter } from '@/components/site-footer'
 import { SiteHeader } from '@/components/site-header'
 import { useSite } from '@/components/site-provider'
 import { SkipLink } from '@/components/skip-link'
-import { DemoBanner } from '@/features/donations/components/demo-banner'
 import { ImpactLadder } from '@/features/donations/components/impact-ladder'
 import { WishlistGrid } from '@/features/donations/components/wishlist-grid'
-import { listCampaigns } from '@/features/donations/api'
+import {
+  listApprovedCampaigns,
+  listMyCampaigns,
+  type Campaign,
+  type CampaignStatus,
+} from '@/features/donations/api'
 import { trackEvent } from '@/lib/analytics'
 import { cn } from '@/lib/utils'
 
 type GiveTab = 'money' | 'wishlist' | 'fundraise'
+
+function statusLabel(
+  status: CampaignStatus,
+  g: { campaignPending: string; campaignApproved: string; campaignRejected: string },
+) {
+  if (status === 'approved') return g.campaignApproved
+  if (status === 'rejected') return g.campaignRejected
+  return g.campaignPending
+}
+
+function statusClass(status: CampaignStatus) {
+  if (status === 'approved') return 'bg-teal/15 text-teal'
+  if (status === 'rejected') return 'bg-red/10 text-red'
+  return 'bg-amber text-navy'
+}
 
 export function GivePage() {
   const navigate = useNavigate()
@@ -22,10 +41,36 @@ export function GivePage() {
   const requestedTab = searchParams.get('tab')
   const tab: GiveTab =
     requestedTab === 'wishlist' || requestedTab === 'fundraise' ? requestedTab : 'money'
-  const campaigns = listCampaigns()
+  const [liveCampaigns, setLiveCampaigns] = useState<Campaign[]>([])
+  const [myCampaigns, setMyCampaigns] = useState<Campaign[]>([])
 
   useEffect(() => {
     trackEvent('give_view', { tab })
+  }, [tab])
+
+  useEffect(() => {
+    if (tab !== 'fundraise') return
+    let cancelled = false
+    void (async () => {
+      try {
+        const [live, mine] = await Promise.all([
+          listApprovedCampaigns(),
+          listMyCampaigns(),
+        ])
+        if (!cancelled) {
+          setLiveCampaigns(live)
+          setMyCampaigns(mine)
+        }
+      } catch {
+        if (!cancelled) {
+          setLiveCampaigns([])
+          setMyCampaigns([])
+        }
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
   }, [tab])
 
   const tabs: { id: GiveTab; label: string }[] = [
@@ -38,7 +83,6 @@ export function GivePage() {
     <div className="min-h-screen overflow-x-hidden bg-white">
       <SkipLink />
       <SiteHeader />
-      <DemoBanner />
       <main id="main">
         <LovePatternBg variant="red">
           <div className="mx-auto max-w-[1120px] px-4 py-14 sm:px-8 sm:py-20">
@@ -46,7 +90,7 @@ export function GivePage() {
             <h1 className="mt-3 max-w-3xl font-display text-[clamp(2.25rem,6vw,3.75rem)] font-semibold text-white">
               {g.title}
             </h1>
-            <p className="mt-5 max-w-xl text-base leading-relaxed text-white/80 sm:text-lg">
+            <p className="section-lede section-lede-on-dark mt-5 max-w-xl text-base leading-relaxed text-white sm:text-lg">
               {g.subhead}
             </p>
           </div>
@@ -81,11 +125,8 @@ export function GivePage() {
         <div className="mx-auto max-w-[1120px] px-4 py-10 sm:px-8 sm:py-14">
           {tab === 'money' && (
             <ImpactLadder
-              onDonate={({ amount, email, frequency, programme }) => {
-                trackEvent('donate_click', { amount, frequency, programme })
-                const params = new URLSearchParams({ amount: String(amount) })
-                if (email) params.set('email', email)
-                navigate(`/give/thanks?${params}`)
+              onDonated={(donationId) => {
+                navigate(`/give/thanks?donation=${donationId}`)
               }}
             />
           )}
@@ -110,12 +151,13 @@ export function GivePage() {
               >
                 {g.createCampaignCta}
               </Link>
+
               <h3 className="mt-14 font-display text-2xl font-semibold text-navy">
-                {g.yourCampaigns}
+                {g.liveCampaigns}
               </h3>
-              {campaigns.length ? (
+              {liveCampaigns.length ? (
                 <div className="mt-5 grid gap-4 sm:grid-cols-2">
-                  {campaigns.map((campaign) => (
+                  {liveCampaigns.map((campaign) => (
                     <Link
                       key={campaign.slug}
                       to={`/c/${campaign.slug}`}
@@ -139,6 +181,46 @@ export function GivePage() {
                   ))}
                 </div>
               ) : (
+                <p className="mt-5 rounded-2xl bg-white p-5 text-navy/70">{g.noLiveCampaigns}</p>
+              )}
+
+              <h3 className="mt-14 font-display text-2xl font-semibold text-navy">
+                {g.yourCampaigns}
+              </h3>
+              {myCampaigns.length ? (
+                <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                  {myCampaigns.map((campaign) => (
+                    <Link
+                      key={campaign.slug}
+                      to={`/c/${campaign.slug}`}
+                      className="flex gap-4 rounded-2xl bg-white p-4"
+                    >
+                      <img
+                        src={campaign.cover}
+                        alt=""
+                        className="h-24 w-28 rounded-xl object-cover"
+                      />
+                      <div>
+                        <p
+                          className={cn(
+                            'inline-flex rounded-md px-2.5 py-1 text-[12px] font-semibold',
+                            statusClass(campaign.status),
+                          )}
+                        >
+                          {statusLabel(campaign.status, g)}
+                        </p>
+                        <p className="mt-2 font-display text-lg font-semibold text-navy">
+                          {campaign.title}
+                        </p>
+                        <p className="mt-2 text-sm text-navy/65">
+                          HK${campaign.raised_hkd.toLocaleString()} / HK$
+                          {campaign.goal_hkd.toLocaleString()}
+                        </p>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
                 <p className="mt-5 rounded-2xl bg-white p-5 text-navy/70">{g.noCampaigns}</p>
               )}
             </section>
@@ -149,4 +231,3 @@ export function GivePage() {
     </div>
   )
 }
-

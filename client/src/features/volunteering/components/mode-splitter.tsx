@@ -50,10 +50,10 @@ export function ModeSplitter({
               aria-pressed={selected}
               onClick={() => onChange(mode.id)}
               className={cn(
-                'min-h-44 rounded-2xl border p-6 text-left transition sm:p-8',
+                'easy-choice-card min-h-44 rounded-2xl border p-6 text-left transition sm:p-8',
                 selected
                   ? 'border-navy bg-paper shadow-[0_10px_30px_rgba(20,40,75,0.10)]'
-                  : 'border-navy/10 bg-white hover:border-navy/30',
+                  : 'border-navy/25 bg-white hover:border-navy/50',
               )}
             >
               <span

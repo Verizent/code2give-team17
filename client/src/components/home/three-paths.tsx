@@ -47,7 +47,7 @@ export function ThreePaths() {
         >
           {t.paths.title}
         </h2>
-        <p className="section-lede mt-3 max-w-xl text-lg leading-relaxed font-medium text-white/85 sm:text-xl">
+        <p className="section-lede section-lede-on-dark mt-3 max-w-xl text-lg leading-relaxed font-medium text-white sm:text-xl">
           {t.paths.subhead}
         </p>
 

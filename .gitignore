@@ -5,9 +5,10 @@ node_modules/
 .next/
 out/
 
-# production
+# Build output
 build/
 dist/
+dist-ssr/
 
 # logs
 *.log
@@ -16,7 +17,7 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env
+# Secrets. Every real .env stays local; only the .example files are tracked.
 .env
 .env.*
 !.env.example
@@ -25,3 +26,25 @@ yarn-error.log*
 .vercel
 *.tsbuildinfo
 next-env.d.ts
+
+# Test and coverage output
+coverage/
+.nyc_output/
+playwright-report/
+test-results/
+
+# Claude Code local state — per-machine permission grants, not shared.
+# .claude/rules/ IS tracked; only this file is ignored.
+.claude/settings.local.json
+
+# OS cruft
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor directories
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.swp
+*.swo

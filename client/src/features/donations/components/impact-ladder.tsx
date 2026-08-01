@@ -1,28 +1,38 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useSite } from '@/components/site-provider'
+import { useAuth } from '@/features/auth/AuthProvider'
 import { describeImpact, impactLadder, type DonateProgramme } from '@/features/donations/api'
+import { startDonationCheckout } from '@/features/donations/checkout'
+import type { GiftFrequency } from '@/features/donations/donation-store'
 import { trackEvent } from '@/lib/analytics'
 import { cn } from '@/lib/utils'
 
-type Frequency = 'once' | 'weekly' | 'monthly'
-
 export function ImpactLadder({
-  onDonate,
+  onDonated,
+  campaignSlug,
 }: {
-  onDonate: (gift: {
-    amount: number
-    email: string
-    frequency: Frequency
-    programme: DonateProgramme
-  }) => void
+  onDonated: (donationId: string) => void
+  campaignSlug?: string
 }) {
   const { locale, t } = useSite()
+  const auth = useAuth()
   const g = t.give
+  const accountEmail = auth.user?.email?.trim().toLowerCase() || ''
+  const accountName =
+    (auth.user?.user_metadata?.full_name as string | undefined)?.trim() || ''
+
   const [amount, setAmount] = useState(500)
   const [customDraft, setCustomDraft] = useState('')
-  const [frequency, setFrequency] = useState<Frequency>('once')
+  const [frequency, setFrequency] = useState<GiftFrequency>('once')
   const [programme, setProgramme] = useState<DonateProgramme>('where_needed')
-  const [email, setEmail] = useState('')
+  const [useAccountReceipt, setUseAccountReceipt] = useState(Boolean(accountEmail))
+  const [receiptForOther, setReceiptForOther] = useState(false)
+  const [receiptName, setReceiptName] = useState('')
+  const [receiptEmail, setReceiptEmail] = useState('')
+  const [journeyOptIn, setJourneyOptIn] = useState(true)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
   const presets = impactLadder().map((step) => step.amount)
   const programmes: DonateProgramme[] = [
     'sports',
@@ -31,6 +41,16 @@ export function ImpactLadder({
     'family',
     'where_needed',
   ]
+
+  const showReceiptFields =
+    !accountEmail || !useAccountReceipt || receiptForOther
+
+  useEffect(() => {
+    if (accountEmail) {
+      setUseAccountReceipt(true)
+      setReceiptForOther(false)
+    }
+  }, [accountEmail])
 
   function changeAmount(next: number) {
     const safe = Math.max(1, Math.round(next) || 1)
@@ -49,6 +69,54 @@ export function ImpactLadder({
     amount < 200 ? g.impactSmall : describeImpact(amount)[locale]
 
   const sliderValue = Math.min(5000, Math.max(100, amount))
+
+  async function donate() {
+    setError(null)
+
+    const usingAccount = Boolean(accountEmail && useAccountReceipt && !receiptForOther)
+    const email = usingAccount ? accountEmail : receiptEmail.trim().toLowerCase()
+    const name = usingAccount
+      ? accountName || receiptName.trim() || email.split('@')[0] || 'Donor'
+      : receiptName.trim()
+
+    if (!email || !name || (!usingAccount && (!receiptName.trim() || !receiptEmail.trim()))) {
+      setError(g.receiptRequired)
+      return
+    }
+
+    setBusy(true)
+    try {
+      trackEvent('donate_click', {
+        amount,
+        frequency,
+        programme,
+        journeyOptIn,
+        receiptForOther: !usingAccount,
+      })
+      const result = await startDonationCheckout({
+        amount_hkd: amount,
+        frequency,
+        programme,
+        email,
+        receipt_name: name,
+        receipt_for_other: !usingAccount && (receiptForOther || Boolean(accountEmail)),
+        journey_opt_in: journeyOptIn,
+        campaign_slug: campaignSlug,
+      })
+      if (result.mode === 'stripe') {
+        window.location.href = result.url
+        return
+      }
+      onDonated(result.donation.id)
+    } catch {
+      setError('Could not start checkout. Please try again.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const fieldClass =
+    'mt-2 min-h-12 w-full rounded-md border border-navy/20 bg-white px-4 text-navy outline-none focus:border-navy'
 
   return (
     <div className="space-y-10">
@@ -123,7 +191,7 @@ export function ImpactLadder({
                 onClick={applyCustomDraft}
                 className="inline-flex min-h-12 shrink-0 items-center rounded-md border border-navy px-4 text-sm font-semibold text-navy"
               >
-                OK
+                {g.applyCustom}
               </button>
             </div>
             <p className="mt-2 text-xs leading-relaxed text-navy/60">{g.customAmountHint}</p>
@@ -132,7 +200,7 @@ export function ImpactLadder({
           <fieldset className="mt-7">
             <legend className="sr-only">Donation frequency</legend>
             <div className="inline-flex flex-wrap rounded-full bg-paper p-1">
-              {(['once', 'weekly', 'monthly'] as Frequency[]).map((option) => (
+              {(['once', 'weekly', 'monthly'] as GiftFrequency[]).map((option) => (
                 <button
                   key={option}
                   type="button"
@@ -177,28 +245,113 @@ export function ImpactLadder({
           <p className="mt-3 font-display text-2xl leading-snug font-semibold text-navy sm:text-3xl">
             {impactCopy}
           </p>
-          <div className="mt-8">
-            <label htmlFor="donor-email" className="text-sm font-semibold text-navy">
-              {g.emailLabel}
+
+          <div className="mt-8 rounded-xl border border-navy/10 bg-white/80 p-4">
+            <p className="text-sm font-semibold text-navy">{g.receiptTitle}</p>
+            <p className="mt-1 text-xs leading-relaxed text-navy/60">{g.section88}</p>
+
+            {accountEmail ? (
+              <label className="mt-4 flex cursor-pointer gap-3">
+                <input
+                  type="checkbox"
+                  checked={useAccountReceipt && !receiptForOther}
+                  onChange={(e) => {
+                    const on = e.target.checked
+                    setUseAccountReceipt(on)
+                    if (on) setReceiptForOther(false)
+                  }}
+                  className="mt-1 h-5 w-5 accent-teal"
+                />
+                <span>
+                  <span className="block text-sm font-semibold text-navy">
+                    {g.receiptUseAccount}
+                  </span>
+                  <span className="mt-1 block text-xs leading-relaxed text-navy/60">
+                    {g.receiptUseAccountHint}{' '}
+                    <span className="font-semibold text-navy/80">{accountEmail}</span>
+                    {accountName ? ` · ${accountName}` : ''}
+                  </span>
+                </span>
+              </label>
+            ) : null}
+
+            <label className="mt-4 flex cursor-pointer gap-3">
+              <input
+                type="checkbox"
+                checked={receiptForOther}
+                onChange={(e) => {
+                  const on = e.target.checked
+                  setReceiptForOther(on)
+                  if (on) setUseAccountReceipt(false)
+                }}
+                className="mt-1 h-5 w-5 accent-teal"
+              />
+              <span>
+                <span className="block text-sm font-semibold text-navy">
+                  {g.receiptForOther}
+                </span>
+                <span className="mt-1 block text-xs leading-relaxed text-navy/60">
+                  {g.receiptForOtherHint}
+                </span>
+              </span>
             </label>
-            <input
-              id="donor-email"
-              type="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              className="mt-2 min-h-12 w-full rounded-md border border-navy/20 bg-white px-4 text-navy outline-none focus:border-navy"
-            />
-            <p className="mt-2 text-xs leading-relaxed text-navy/65">{g.emailHint}</p>
+
+            {showReceiptFields ? (
+              <div className="mt-4 space-y-4 border-t border-navy/10 pt-4">
+                <label className="block text-sm font-semibold text-navy">
+                  {g.receiptNameLabel} *
+                  <input
+                    type="text"
+                    autoComplete="name"
+                    value={receiptName}
+                    onChange={(e) => setReceiptName(e.target.value)}
+                    className={fieldClass}
+                  />
+                </label>
+                <label className="block text-sm font-semibold text-navy">
+                  {g.receiptEmailLabel} *
+                  <input
+                    type="email"
+                    autoComplete="email"
+                    value={receiptEmail}
+                    onChange={(e) => setReceiptEmail(e.target.value)}
+                    className={fieldClass}
+                  />
+                </label>
+                <p className="text-xs leading-relaxed text-navy/65">{g.receiptEmailHint}</p>
+              </div>
+            ) : null}
           </div>
-          <p className="mt-6 text-sm text-navy/70">{g.section88}</p>
-          <p className="mt-2 text-sm leading-relaxed text-navy/65">{g.receiptNote}</p>
+
+          <label className="mt-5 flex cursor-pointer gap-3 rounded-xl border border-navy/10 bg-white/70 p-4">
+            <input
+              type="checkbox"
+              checked={journeyOptIn}
+              onChange={(e) => setJourneyOptIn(e.target.checked)}
+              className="mt-1 h-5 w-5 accent-teal"
+            />
+            <span>
+              <span className="block text-sm font-semibold text-navy">{g.journeyOptInLabel}</span>
+              <span className="mt-1 block text-xs leading-relaxed text-navy/60">
+                {g.journeyOptInHelper}
+              </span>
+            </span>
+          </label>
+
+          <p className="mt-6 text-sm leading-relaxed text-navy/65">{g.receiptNote}</p>
           <p className="mt-2 text-sm font-semibold text-teal">{g.trustStrip}</p>
+          {error && (
+            <p role="alert" className="mt-4 text-sm font-medium text-red">
+              {error}
+            </p>
+          )}
           <button
             type="button"
-            onClick={() => onDonate({ amount, email, frequency, programme })}
-            className="mt-6 inline-flex min-h-12 items-center justify-center rounded-md bg-red px-6 font-semibold text-white hover:bg-red/90"
+            disabled={busy}
+            onClick={() => void donate()}
+            className="mt-6 inline-flex min-h-12 items-center justify-center rounded-md bg-red px-6 font-semibold text-white hover:bg-red/90 disabled:opacity-60"
           >
-            {g.donateCta} HK${amount.toLocaleString()}
+            {busy ? g.donateWorking : `${g.donateCta} HK$${amount.toLocaleString()}`}
           </button>
         </div>
       </section>
@@ -214,3 +367,5 @@ export function ImpactLadder({
     </div>
   )
 }
+
+export type { GiftFrequency }
