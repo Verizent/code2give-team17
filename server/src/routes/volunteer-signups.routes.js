@@ -2,12 +2,19 @@ const express = require("express");
 const { validate } = require("../middleware/validate");
 const volunteerContext = require("../middleware/volunteer-context");
 const signupsService = require("../services/volunteering/signups.service");
+const feedbackService = require("../services/volunteering/signup-feedback.service");
+const signupsRepo = require("../data/volunteer-signups.repo");
 const { envelope } = require("../lib/envelope");
+const { ApiError } = require("../lib/api-error");
 const {
   createSignupBodySchema,
   listSignupsQuerySchema,
   signupIdParamsSchema,
 } = require("../schemas/volunteering.schema");
+const {
+  patchSignupBodySchema,
+  signupIdParamsSchema: patchSignupIdParamsSchema,
+} = require("../schemas/signup-feedback.schema");
 
 const router = express.Router();
 
@@ -39,6 +46,30 @@ router.get(
         opportunityId: request.query.opportunity_id,
       });
       response.json(envelope({ items }));
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+// PATCH /:id — capture §23 discovery + feedback fields on a signup.
+// Owner-checked: the caller's resolved volunteer must own the row. Prevents a
+// stray token from writing motivation/rating on someone else's signup.
+router.patch(
+  "/:id",
+  volunteerContext,
+  validate({ params: patchSignupIdParamsSchema, body: patchSignupBodySchema }),
+  async (request, response, next) => {
+    try {
+      const existing = await signupsRepo.findSignupById(request.params.id);
+      if (!existing) {
+        throw ApiError.notFound("Signup not found");
+      }
+      if (existing.volunteer_id !== request.volunteer.id) {
+        throw ApiError.forbidden("You cannot modify a signup you do not own");
+      }
+      const updated = await feedbackService.patchSignup(request.params.id, request.body);
+      response.json(envelope(updated));
     } catch (error) {
       next(error);
     }
