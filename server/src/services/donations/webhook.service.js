@@ -3,6 +3,7 @@ const { normalizeEmail } = require("../../lib/normalize");
 const donationsRepo = require("../../data/donations.repo");
 const stripeEventsRepo = require("../../data/stripe-events.repo");
 const donorsService = require("../donors.service");
+const allocationService = require("./allocation.service");
 
 /**
  * Stripe webhook handling (CONTEXT.md §15, §17).
@@ -73,19 +74,42 @@ async function handleCheckoutCompleted(session) {
     trackingOptIn: donation.tracking_opt_in ?? true,
   });
 
+  const eventsCredited = creditFor(donation.amount_hkd);
+
   await donationsRepo.updateDonation(donation.id, {
     donor_id: donor.id,
     stripe_payment_intent:
       typeof session.payment_intent === "string" ? session.payment_intent : null,
-    events_credited: creditFor(donation.amount_hkd),
+    events_credited: eventsCredited,
     cost_per_event_at_donation: COST_PER_EVENT_HKD,
     status: "succeeded",
   });
 
+  // Attach to real sessions (§15). Runs synchronously in the webhook path so a demo-day
+  // walk sees allocations by the time the thanks page loads — a background job would be
+  // nicer under load but this is small work and blocks nothing else Stripe cares about.
+  // Wrapped in its own try/catch: a query error here must not stop us from returning
+  // 200 to Stripe, or we get a retry loop that never converges.
+  let allocationOutcome = null;
+  try {
+    allocationOutcome = await allocationService.allocateForDonation({
+      ...donation,
+      donor_id: donor.id,
+      events_credited: eventsCredited,
+      cost_per_event_at_donation: COST_PER_EVENT_HKD,
+      tracking_opt_in: donation.tracking_opt_in ?? true,
+      created_at: donation.created_at ?? new Date().toISOString(),
+    });
+  } catch (allocationError) {
+    // The pending-retry job (§16) will pick this up next tick.
+    allocationOutcome = { error: allocationError.message };
+  }
+
   return {
     donation_id: donation.id,
     donor_id: donor.id,
-    events_credited: creditFor(donation.amount_hkd),
+    events_credited: eventsCredited,
+    allocation: allocationOutcome,
   };
 }
 
