@@ -102,6 +102,8 @@ export function SiteHeader() {
     { href: '/community', label: t.nav.community },
     { href: '/volunteer', label: t.nav.volunteer },
     { href: '/give', label: t.nav.give },
+    { href: '/about', label: t.nav.about },
+    { href: '/news', label: t.nav.news },
   ]
 
   return (
