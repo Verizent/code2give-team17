@@ -66,4 +66,63 @@ async function findOpenById(id) {
   return data;
 }
 
-module.exports = { listOpen, findOpenById };
+/**
+ * Sessions in a date window (admin attendance). Includes full/open; skips draft/cancelled.
+ *
+ * @param {{ fromIso: string, toIso: string }} range
+ * @returns {Promise<object[]>}
+ */
+async function listInRange({ fromIso, toIso }) {
+  const { data, error } = await getSupabase()
+    .from("volunteer_opportunities")
+    .select(LIST_COLUMNS)
+    .gte("starts_at", fromIso)
+    .lte("starts_at", toIso)
+    .in("status", ["open", "full"])
+    .order("starts_at", { ascending: true });
+  assertOk(error);
+  return data ?? [];
+}
+
+/**
+ * @returns {Promise<{ upcoming: number, spots_open: number }>}
+ */
+async function summariseOpen() {
+  const { data, error } = await getSupabase()
+    .from("volunteer_opportunities")
+    .select("id, capacity, spots_filled, starts_at, status")
+    .in("status", ["open", "full"]);
+  assertOk(error);
+
+  const now = Date.now();
+  let upcoming = 0;
+  let spots_open = 0;
+  for (const row of data ?? []) {
+    if (new Date(row.starts_at).getTime() >= now) upcoming += 1;
+    const open = Math.max(0, (row.capacity ?? 0) - (row.spots_filled ?? 0));
+    spots_open += open;
+  }
+  return { upcoming, spots_open };
+}
+
+/**
+ * @param {string} id
+ * @returns {Promise<object | null>}
+ */
+async function findById(id) {
+  const { data, error } = await getSupabase()
+    .from("volunteer_opportunities")
+    .select(LIST_COLUMNS)
+    .eq("id", id)
+    .maybeSingle();
+  assertOk(error);
+  return data;
+}
+
+module.exports = {
+  listOpen,
+  findOpenById,
+  listInRange,
+  summariseOpen,
+  findById,
+};

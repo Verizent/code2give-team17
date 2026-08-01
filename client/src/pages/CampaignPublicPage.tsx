@@ -84,6 +84,11 @@ export function CampaignPublicPage() {
               {g.campaignApproved}
             </p>
           )}
+          {campaign.status === 'rejected' && (
+            <p className="mb-4 inline-flex rounded-md bg-red/10 px-3 py-1.5 text-[13px] font-semibold text-red">
+              {g.campaignRejected}
+            </p>
+          )}
           <h1 className="font-display text-[clamp(1.85rem,5vw,3rem)] font-semibold text-navy">
             {campaign.title}
           </h1>

@@ -75,7 +75,10 @@ export async function listApprovedCampaigns(): Promise<Campaign[]> {
   return (data ?? []).map(mapCampaign)
 }
 
-/** Campaigns created in this browser, with live status from Supabase. */
+/**
+ * Campaigns the visitor created this session (slug list in sessionStorage),
+ * with live status from the API — including pending and rejected.
+ */
 export async function listMyCampaigns(): Promise<Campaign[]> {
   const slugs = readMineSlugs()
   if (!slugs.length) return []

@@ -1,8 +1,8 @@
 -- Profiles privileges for the Express service-role client.
--- Without this, `requireRole` cannot read `profiles.role` and falls back to
--- `auth.users.app_metadata.role` (also service-role only).
+-- Prefer the fuller migration `20260801_1120_profiles_volunteer_prefs.sql`,
+-- which also adds volunteer-pref columns, the signup trigger, and grants.
 --
--- Apply in the Supabase SQL editor once.
+-- Apply in the Supabase SQL editor once if you only need SELECT today.
 
 grant select on table public.profiles to service_role;
 

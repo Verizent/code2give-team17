@@ -69,8 +69,20 @@ async function listByVolunteerId(volunteerId) {
   return data ?? [];
 }
 
+/**
+ * @returns {Promise<number>}
+ */
+async function countAll() {
+  const { count, error } = await getSupabase()
+    .from("volunteer_interests")
+    .select("id", { count: "exact", head: true });
+  assertOk(error);
+  return count ?? 0;
+}
+
 module.exports = {
   insert,
   countByOpportunityIds,
   listByVolunteerId,
+  countAll,
 };

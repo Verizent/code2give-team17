@@ -33,3 +33,5 @@ create index if not exists community_posts_queue_idx
   on public.community_posts (status, submitted_at desc);
 
 alter table public.community_posts enable row level security;
+
+grant select, insert, update, delete on table public.community_posts to service_role;

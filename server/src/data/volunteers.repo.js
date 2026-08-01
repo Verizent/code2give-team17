@@ -48,6 +48,20 @@ async function findByProfileId(profileId) {
 }
 
 /**
+ * @param {string} id
+ * @returns {Promise<object | null>}
+ */
+async function findById(id) {
+  const { data, error } = await getSupabase()
+    .from("volunteers")
+    .select(COLUMNS)
+    .eq("id", id)
+    .maybeSingle();
+  assertOk(error);
+  return data;
+}
+
+/**
  * @param {{ email: string, full_name: string, phone?: string | null, locale?: string, profile_id?: string | null }} input
  * @returns {Promise<object>}
  */
@@ -111,6 +125,7 @@ async function updateBasics(volunteerId, patch) {
 module.exports = {
   findByEmail,
   findByProfileId,
+  findById,
   insert,
   claim,
   updateBasics,

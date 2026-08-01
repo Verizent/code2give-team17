@@ -22,14 +22,14 @@ export function SiteFooter() {
           <div className="grid grid-cols-2 gap-8 md:col-span-2">
             <div className="flex flex-col gap-1">
               <p className="mb-3 text-[11px] font-semibold tracking-[0.08em] text-yellow uppercase">
-                Explore
+                {t.footer.explore}
               </p>
               {[
                 ['/', t.nav.home],
                 ['/community', t.nav.community],
                 ['/volunteer', t.nav.volunteer],
                 ['/give', t.nav.give],
-                ['/me', 'My Impact'],
+                ['/me', t.nav.myImpact],
               ].map(([to, label]) => (
                 <Link
                   key={to}
@@ -43,7 +43,7 @@ export function SiteFooter() {
 
             <div className="flex flex-col gap-1">
               <p className="mb-3 text-[11px] font-semibold tracking-[0.08em] text-yellow uppercase">
-                More
+                {t.footer.more}
               </p>
               <Link
                 to="/support"
@@ -57,7 +57,7 @@ export function SiteFooter() {
                 rel="noreferrer"
                 className="min-h-[40px] py-1 text-sm font-medium text-white/85 hover:text-yellow"
               >
-                About Love 21 ↗
+                {t.footer.aboutLove21}
               </a>
               <a
                 href="https://love21foundation.com/wp-content/uploads/2026/04/Annualreport_final.pdf"
@@ -65,13 +65,13 @@ export function SiteFooter() {
                 rel="noreferrer"
                 className="min-h-[40px] py-1 text-sm font-medium text-white/85 hover:text-yellow"
               >
-                Annual Report ↗
+                {t.footer.annualReport}
               </a>
               <Link
                 to="/admin"
                 className="min-h-[40px] py-1 text-sm font-medium text-white/50 hover:text-yellow"
               >
-                Admin Studio
+                {t.nav.admin}
               </Link>
             </div>
           </div>

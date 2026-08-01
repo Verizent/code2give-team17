@@ -33,14 +33,15 @@ async function listForAdmin(query) {
 }
 
 /**
- * Public slug read. Rejected campaigns 404; pending is returned so the creator
- * can see the waiting state on `/c/:slug` after create.
+ * Slug read for detail + "Your campaigns". Pending and rejected are returned so
+ * the creator can see status; only missing rows 404. The public directory still
+ * lists approved fundraisers only (`listApproved`).
  *
  * @param {string} slug
  */
 async function getBySlug(slug) {
   const campaign = await campaignsRepo.findBySlug(slug);
-  if (!campaign || campaign.status === "rejected") {
+  if (!campaign) {
     throw ApiError.notFound("Campaign not found");
   }
   return campaign;

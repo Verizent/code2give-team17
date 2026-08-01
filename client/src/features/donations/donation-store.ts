@@ -26,10 +26,33 @@ export type StoredDonation = {
   session_when?: string
 }
 
-const KEY = 'love21-demo-donations'
+const KEY = 'love21-donations'
+const LEGACY_KEY = 'love21-demo-donations'
+
+/** Former sample gift ids — purge on read so they never drive garden / giving. */
+const LEGACY_SAMPLE_IDS = new Set([
+  'gift_sample_received',
+  'gift_sample_matched',
+  'gift_sample_session',
+])
+
+/** One-time: move `love21-demo-donations` → `love21-donations`, then drop the old key. */
+function migrateLegacyKey() {
+  try {
+    const legacy = localStorage.getItem(LEGACY_KEY)
+    if (legacy == null) return
+    if (localStorage.getItem(KEY) == null) {
+      localStorage.setItem(KEY, legacy)
+    }
+    localStorage.removeItem(LEGACY_KEY)
+  } catch {
+    /* ignore quota / private-mode */
+  }
+}
 
 function readAll(): StoredDonation[] {
   try {
+    migrateLegacyKey()
     const raw = localStorage.getItem(KEY)
     if (!raw) return []
     return JSON.parse(raw) as StoredDonation[]
@@ -47,7 +70,10 @@ function id() {
 }
 
 export function listDonations(): StoredDonation[] {
-  return readAll()
+  const all = readAll()
+  const cleaned = all.filter((d) => !LEGACY_SAMPLE_IDS.has(d.id))
+  if (cleaned.length !== all.length) writeAll(cleaned)
+  return cleaned
 }
 
 export function getDonation(donationId: string): StoredDonation | undefined {
@@ -113,66 +139,4 @@ export function updateDonationNotify(
   }
   writeAll(list)
   return list[idx]
-}
-
-/**
- * Inject sample gifts at each journey stage for the given email (local demo only).
- * Idempotent — skips if sample ids already exist.
- */
-export function seedSampleGifts(email: string): StoredDonation[] {
-  const normalised = email.trim().toLowerCase()
-  if (!normalised) return listDonations()
-
-  const samples: StoredDonation[] = [
-    {
-      id: 'gift_sample_received',
-      amount_hkd: 500,
-      frequency: 'once',
-      programme: 'sports',
-      email: normalised,
-      receipt_name: '',
-      receipt_for_other: false,
-      journey_opt_in: true,
-      stage: 'received',
-      created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-    },
-    {
-      id: 'gift_sample_matched',
-      amount_hkd: 1000,
-      frequency: 'monthly',
-      programme: 'nutrition',
-      email: normalised,
-      receipt_name: '',
-      receipt_for_other: false,
-      journey_opt_in: true,
-      stage: 'matched',
-      created_at: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
-    },
-    {
-      id: 'gift_sample_session',
-      amount_hkd: 2500,
-      frequency: 'once',
-      programme: 'sports',
-      email: normalised,
-      receipt_name: '',
-      receipt_for_other: false,
-      journey_opt_in: true,
-      stage: 'session_update',
-      session_title: 'Saturday sports club',
-      session_when: '12 July 2026',
-      created_at: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString(),
-    },
-  ]
-
-  const existing = readAll()
-  const sampleIds = new Set(samples.map((s) => s.id))
-  const merged = [
-    ...samples.map((s) => {
-      const prev = existing.find((d) => d.id === s.id)
-      return prev ? { ...prev, ...s, email: normalised } : s
-    }),
-    ...existing.filter((d) => !sampleIds.has(d.id)),
-  ]
-  writeAll(merged)
-  return merged
 }
