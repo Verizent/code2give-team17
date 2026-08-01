@@ -1,7 +1,7 @@
 const express = require("express");
 // One line per domain, kept alphabetical: routes/index.js is where all six tracks
 // collide, and an alphabetical list merges more cleanly than an ad-hoc one.
-const adminCommunityPostsRoutes = require("./admin/community-posts.routes");
+const adminRoutes = require("./admin");
 const articlesRoutes = require("./articles.routes");
 const communityPostsRoutes = require("./community-posts.routes");
 const healthRoutes = require("./health.routes");
@@ -16,7 +16,9 @@ router.get("/api", (request, response) => {
   });
 });
 
-router.use("/api/admin/community-posts", adminCommunityPostsRoutes);
+// One mount for every admin surface. The requireRole('admin') guard lives in
+// ./admin/index.js so a new admin router inherits it by construction.
+router.use("/api/admin", adminRoutes);
 router.use("/api/articles", articlesRoutes);
 router.use("/api/community-posts", communityPostsRoutes);
 router.use("/api/health", healthRoutes);
