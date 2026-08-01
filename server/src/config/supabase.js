@@ -17,6 +17,40 @@ function getSupabaseConfig() {
   return { url, anonKey };
 }
 
+let serviceClient;
+
+/**
+ * The client every query should use. §9: the frontend never queries Supabase directly, the server
+ * holds the service-role key, and RLS is applied to every table as defence in depth.
+ *
+ * That last part is why this exists: our tables have RLS enabled with **no policies**, so the
+ * anon client above reaches nothing at all. Anything touching a table needs this client.
+ *
+ * @returns {import("@supabase/supabase-js").SupabaseClient}
+ */
+function getServiceClient() {
+  if (serviceClient) {
+    return serviceClient;
+  }
+
+  const url = process.env.SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!url || !serviceRoleKey) {
+    const error = new Error(
+      "SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set in server/.env",
+    );
+    error.status = 503;
+    throw error;
+  }
+
+  serviceClient = createClient(url, serviceRoleKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+
+  return serviceClient;
+}
+
 function getSupabase() {
   if (!supabase) {
     const { url, anonKey } = getSupabaseConfig();
@@ -49,5 +83,5 @@ async function checkSupabaseConnection() {
   return true;
 }
 
-module.exports = { getSupabase, checkSupabaseConnection };
+module.exports = { getSupabase, getServiceClient, checkSupabaseConnection };
 
