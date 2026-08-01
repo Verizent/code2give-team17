@@ -22,19 +22,24 @@ async function listVoices(query = {}) {
  *
  * The `website` field is the honeypot. When it is filled, we return a fake 201 and write
  * nothing — telling a bot it was caught (with a 400) would reveal which field to omit.
- * This reads like a bug; it is deliberate.
+ * The honeypot must run before any actor-aware logic so a signed-in bot gets the same
+ * treatment as an anonymous one. This reads like a bug; it is deliberate.
  *
  * @param {{ author_name: string, relationship: string, story: string, photo_url?: string, contact_email?: string, consent_given: true, website?: string }} body
+ * @param {{ userId?: string } | undefined} actor - `request.auth` from optionalAuth; absent for anonymous submissions
  * @returns {Promise<{ id: string | null, submitted_at: string }>}
  */
-async function submitVoice(body) {
+async function submitVoice(body, actor) {
   const { website, ...postData } = body;
 
   if (website) {
     return { id: null, submitted_at: new Date().toISOString() };
   }
 
-  return communityPostsRepo.create(postData);
+  return communityPostsRepo.create({
+    ...postData,
+    submitted_by: actor?.userId ?? null,
+  });
 }
 
 /**
