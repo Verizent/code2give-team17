@@ -121,6 +121,47 @@ async function listUpcomingSignups(volunteerId) {
 }
 
 /**
+ * Attended signups only — used by badge evaluation to sum hours, count distinct
+ * programmes, and count signups. Includes the joined programme so callers do not
+ * have to round-trip for it.
+ *
+ * @param {string} volunteerId
+ */
+async function listAttendedForVolunteer(volunteerId) {
+  const db = getServiceClient();
+  const { data, error } = await db
+    .from("volunteer_signups")
+    .select(
+      "id, volunteer_id, status, hours_logged, attended_at, volunteer_opportunities(programme)",
+    )
+    .eq("volunteer_id", volunteerId)
+    .eq("status", "attended");
+
+  throwIfDbError(error);
+  return data || [];
+}
+
+/**
+ * Admin attendance-mark write path — sets `status`, `hours_logged`, `attended_at`
+ * (server-side stamp). Returns the updated row for the caller.
+ *
+ * @param {string} signupId
+ * @param {{ status: string, hours_logged: number, attended_at: string }} patch
+ */
+async function markAttendance(signupId, patch) {
+  const db = getServiceClient();
+  const { data, error } = await db
+    .from("volunteer_signups")
+    .update(patch)
+    .eq("id", signupId)
+    .select(SIGNUP_COLUMNS)
+    .single();
+
+  throwIfDbError(error);
+  return data;
+}
+
+/**
  * @param {string} volunteerId
  */
 async function sumHoursForVolunteer(volunteerId) {
@@ -139,6 +180,8 @@ module.exports = {
   createSignup,
   findSignupById,
   listSignupsForVolunteer,
+  listAttendedForVolunteer,
+  markAttendance,
   cancelSignup,
   deleteSignup,
   listUpcomingSignups,

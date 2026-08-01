@@ -3,6 +3,7 @@ const { requireAuth } = require("../middleware/require-auth");
 const { requireRole } = require("../middleware/require-role");
 // One line per domain, kept alphabetical: routes/index.js is where all six tracks
 // collide, and an alphabetical list merges more cleanly than an ad-hoc one.
+const adminAttendanceRoutes = require("./admin/attendance.routes");
 const adminCommunityPostsRoutes = require("./admin/community-posts.routes");
 const adminPostingsRoutes = require("./admin/postings.routes");
 const articlesRoutes = require("./articles.routes");
@@ -33,6 +34,7 @@ router.get("/api", (request, response) => {
   });
 });
 
+router.use("/api/admin/attendance", adminGuard, adminAttendanceRoutes);
 router.use("/api/admin/community-posts", adminGuard, adminCommunityPostsRoutes);
 router.use("/api/admin/postings", adminGuard, adminPostingsRoutes);
 router.use("/api/articles", articlesRoutes);
