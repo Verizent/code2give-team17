@@ -375,9 +375,9 @@ request
         ├──► data access    (supabase service-role client)
         └──► integrations   (stripe / resend / instagram)
         ▼
-   the resource   or   throw ApiError(status, code, message)
+   the resource   or   throw an error carrying .status
         ▼
-   error middleware ──► { error, message, code }  (§29)
+   error middleware ──► { error, message }  (§29)
 ```
 
 > **The `express.raw()` line is the one to get right the first time.** `express.json()` is
@@ -389,10 +389,10 @@ request
 Routes stay thin deliberately. Business logic in services means cron jobs and the admin "run now" endpoints call the same code path as a normal request — no duplicated logic between scheduled and manual triggers.
 
 The existing `not-found` and `error-handler` implement the §29 error envelope, so new code
-should **throw `ApiError` from `lib/api-error.js`** and let the handler format it, rather than
-calling `response.status(...).json(...)` per route. Two places formatting errors is how the
-envelope drifts — and a hand-rolled one will forget `code`, which is the field clients branch
-on.
+should **throw an error carrying a `.status` property** and let the handler format it, rather
+than calling `response.status(...).json(...)` per route. Two places formatting errors is how
+the envelope drifts. `config/supabase.js` already does exactly this — it sets `error.status =
+503` and throws, and `health.routes.js` passes it to `next(error)`.
 
 ### Donation flow
 
@@ -968,6 +968,7 @@ Out of scope for the hackathon; required before any real use.
 - [ ] Prerendering or SSR so social scrapers read OG tags (§18.12)
 - [ ] `audit_log` viewer — the table exists in §13 and nothing reads it
 - [ ] Native-speaker pass over all zh-Hant copy, especially Instagram captions, which publish under the charity's name and cannot be quietly corrected
+- [ ] Replace the seeded content in `server/db/seed/` with staff-authored records through the admin path. The 14 articles, 4 Voices and the 2024–25 impact row stand in for a real CMS and real reporting: **name and photo consent is unconfirmed for every story** (§18.5), and which stat set is current is unconfirmed (§20.1). Six of the fourteen articles have no zh-Hant translation and fall back to English
 
 ---
 
@@ -1573,7 +1574,7 @@ code is the contract.
 |---|---|
 | **Envelope** | The resource itself, unwrapped. No `data` key |
 | **Lists** | `{ items: [...], meta: { total, page, limit } }` |
-| **Errors** | `{ error, message, code }` — `error` is the HTTP status label, `message` the human detail, `code` the machine-readable value clients branch on |
+| **Errors** | `{ error, message }` — `error` is the HTTP status label, `message` the human detail. **Clients branch on the HTTP status**, not on the body |
 | **Naming** | `snake_case`, matching Postgres, so there is no mapping layer |
 | **Dates** | ISO 8601 UTC. The client formats; the server never sends display strings |
 | **Money** | `amount_hkd` is **integer dollars**. Stripe wants cents; that ×100 lives server-side and never crosses this API |
@@ -1585,8 +1586,7 @@ GET /api/health   →  200  { "status": "ok", "timestamp": "2026-07-31T…" }
 GET /api/impact   →  200  { "families_supported": 490, "total_sessions": 6859, … }
 GET /api/articles →  200  { "items": [ … ], "meta": { "total": 12, … } }
 GET /api/nope     →  404  { "error": "Not Found",
-                            "message": "No route exists for GET /api/nope",
-                            "code": "NOT_FOUND" }
+                            "message": "No route exists for GET /api/nope" }
 ```
 
 Two notes on where that came from. **Only the single-resource and error shapes are set by
@@ -1596,28 +1596,39 @@ collection shape is an extension chosen to sit consistently alongside them; the 
 list endpoint to ship fixes it, so if it needs to be something else, change it there and
 change it here in the same PR.
 
-**Three fields, three jobs.** `error` stays the HTTP status label — `"Not Found"`,
-`"Internal Server Error"` — because that is what the existing middleware already sends and
-changing it would break anything reading it. `message` is human-facing detail. **`code` is the
-only field a client may branch on.**
+**Two fields, and the status carries the meaning.** `error` is the HTTP status label —
+`"Not Found"`, `"Unprocessable Content"` — derived from `node:http`'s `STATUS_CODES`, so it
+tracks the status automatically. `message` is human-facing detail.
 
-- Never branch on `message`. It is prose, it will be reworded, and it is **absent entirely in
+**Clients branch on the HTTP status, never on the response body.**
+
+- Never branch on `message`. It is prose, it will be reworded, and it is **absent on 5xx in
   production** (below).
-- Never branch on `error`. It is a status label, so every 400 looks alike.
-- `code` survives the production suppression. That is the whole reason it exists: without it a
-  production client has nothing in the body to act on.
+- Never branch on `error`. It is derived from the status, so it carries nothing the status
+  does not already give you — and it is one `STATUS_CODES` lookup away from being reworded
+  by Node itself.
+- Where a client must tell two failures with the same status apart, that is a signal the two
+  deserve **different statuses** — a validation failure is 422, a conflict is 409. If they
+  genuinely cannot be separated that way, add a field to the resource shape and record it
+  here, rather than reintroducing a general-purpose `code`.
 
-A thrower may set `error.code` explicitly to distinguish two errors sharing a status — a
-validation failure against a conflict, say. Otherwise the handler derives it from the status.
+> **A machine-readable `code` field was specified here and has been removed (1 Aug 2026).**
+> Earlier drafts of this section, and a `lib/api-error.js` carrying an `ApiError` class and a
+> status→code map, made `code` the only field a client could branch on. **Do not rebuild
+> either.** The status line already carries that signal, `fetch` exposes it as
+> `response.status`, and a second parallel taxonomy is one more thing to keep in sync across
+> six people. If a reader finds a stale reference to `ApiError` or to `code`, this paragraph
+> is what is current.
 
 > The money rule is worth the emphasis. Converting in both directions cancels out in testing
 > and only surfaces as a 100× error in front of an audience.
 
-`error-handler.js` also omits `message` entirely when `NODE_ENV=production`, sending only the
-label. Deliberate — it keeps stack details and driver strings out of responses. Anything the
-user genuinely needs to read must therefore be thrown as a **handled** error with its own
-status, not left to fall through to the 500 path, or it will be silent in production and
-verbose in development, which is the reverse of what is wanted.
+`error-handler.js` omits `message` for **5xx only** when `NODE_ENV=production`, sending just
+the label. Deliberate — it keeps stack details and driver strings out of responses, while 4xx
+messages survive, because those are strings we wrote on purpose and a form has to be able to
+show them. Anything the user genuinely needs to read must therefore be thrown as a **handled**
+error with its own 4xx status, not left to fall through to the 500 path, or it will be silent
+in production and verbose in development, which is the reverse of what is wanted.
 
 Endpoints, against the §14 surface reduced to the §27 scope:
 
@@ -1627,28 +1638,34 @@ Endpoints, against the §14 surface reduced to the §27 scope:
 - **Admin** (all `requireRole('admin')`, server-side) — articles CRUD · `POST /api/admin/community-posts/:id/moderate` · `GET /api/admin/sessions` · `POST /api/admin/sessions/attendance/bulk` · impact · `GET /api/admin/dashboard` · `POST /api/admin/demo/advance-donation/:id`
 - **Analytics** — `POST /api/events`, unauthenticated by design (§18.10), batched and rate limited
 
-### `code` values
+### Error statuses
 
-A closed set. **Adding one is a contract change — add it here first, then in the handler.**
+A closed set. **Adding one is a contract change — add it here first.** Throw an error with
+`.status` set to one of these; the handler turns it into the label and the body.
 
-| `code` | Status | Meaning |
+| Status | `error` label | Meaning |
 |---|---|---|
-| `VALIDATION_FAILED` | 400 | Body, query or params failed the schema |
-| `UNAUTHENTICATED` | 401 | No JWT, or an invalid one |
-| `FORBIDDEN` | 403 | Authenticated, but not permitted — a non-admin on `/api/admin/*` |
-| `NOT_FOUND` | 404 | No such route, or no such record |
-| `CONFLICT` | 409 | Duplicate signup, already-moderated post |
-| `RATE_LIMITED` | 429 | Recovery form, `POST /api/events` |
-| `INTERNAL` | 500 | Anything unhandled. `message` is suppressed in production |
+| 400 | `Bad Request` | Malformed request — unparseable body, missing required param |
+| 401 | `Unauthorized` | No JWT, or an invalid one |
+| 403 | `Forbidden` | Authenticated, but not permitted — a non-admin on `/api/admin/*` |
+| 404 | `Not Found` | No such route, or no such record |
+| 409 | `Conflict` | Duplicate signup, already-moderated post |
+| 422 | `Unprocessable Content` | Body, query or params failed the Zod schema |
+| 429 | `Too Many Requests` | Recovery form, `POST /api/events` |
+| 500 | `Internal Server Error` | Anything unhandled. `message` is suppressed in production |
 
-The handler maps status → `code` from this table, so a route that throws with a status and no
-code still gets the right one. Only set `code` explicitly when two errors share a status and
-the client genuinely needs to tell them apart.
+A route that throws with no `.status` gets 500, which is the right default for an unhandled
+error — so **anything the user should read needs an explicit 4xx**, per the suppression rule
+above.
 
-**Four of these have no producer yet** — `VALIDATION_FAILED`, `UNAUTHENTICATED`, `FORBIDDEN`
-and `RATE_LIMITED` wait on Zod, `requireAuth`, `requireRole` and rate limiting, none of which
-are built (§28). The map exists now so they arrive consistent rather than each inventing a
-spelling.
+**Validation is 422, not 400.** The two are separated deliberately: 400 means we could not
+parse the request, 422 means we parsed it and it failed the schema. A client that needs to
+render field-level errors is looking for 422, and collapsing both into 400 is exactly the
+ambiguity the removed `code` field existed to resolve.
+
+**Five of these have no producer yet** — 400, 401, 403, 422 and 429 wait on Zod, `requireAuth`,
+`requireRole` and rate limiting, none of which are built (§28). The table exists now so they
+arrive consistent rather than each inventing a status.
 
 Of that surface, **`GET /api` and `GET /api/health` are the only things answering today**
 (§28). Everything else is the target.
