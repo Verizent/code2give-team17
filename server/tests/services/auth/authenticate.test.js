@@ -63,6 +63,31 @@ test("provisions a missing profile as volunteer, ignoring hostile metadata", asy
   assert.equal(request.auth.role, "volunteer");
 });
 
+test("provisions with a normalised email", async (t) => {
+  // profiles.email is NOT NULL and carries check (email = lower(btrim(email))).
+  // Omitting it fails the insert outright; sending it raw fails the constraint.
+  stubAll(t, {
+    token: { ...hostileToken(), email: "  Bob@Example.COM " },
+    profile: null,
+  });
+
+  await resolveAuth(requestWith("Bearer abc.def.ghi"));
+
+  const inserted = profilesRepo.insertIfAbsent.mock.calls[0].arguments[0];
+  assert.equal(inserted.email, "bob@example.com");
+});
+
+test("provisions with an empty email when the account has none", async (t) => {
+  stubAll(t, { token: { ...hostileToken(), email: null }, profile: null });
+
+  await resolveAuth(requestWith("Bearer abc.def.ghi"));
+
+  // Mirrors handle_new_user's coalesce(new.email, ''): the column is NOT NULL, so
+  // null is not an option, and '' satisfies the normalisation check.
+  const inserted = profilesRepo.insertIfAbsent.mock.calls[0].arguments[0];
+  assert.equal(inserted.email, "");
+});
+
 test("reads role from the profile row, not the token", async (t) => {
   stubAll(t, {
     token: { ...hostileToken(), userMetadata: { role: "volunteer" } },
