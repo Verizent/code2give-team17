@@ -77,7 +77,17 @@ These four are **unwrapped** — no `data:` envelope, as they are probes, not re
 |---|---|---|---|
 | `GET` | `/api/articles` | None | Paginated article list |
 | `GET` | `/api/articles/:slug` | None | Single article by slug |
+| `GET` | `/api/community-posts` | None | Approved Voices posts, paginated |
+| `POST` | `/api/community-posts` | None | Submit a Voices post (goes to moderation queue) |
 | `GET` | `/api/impact` | None | Current impact period figures |
+| `GET` | `/api/admin/community-posts` | Admin¹ | Moderation queue (all pending posts) |
+| `POST` | `/api/admin/community-posts/:id/moderate` | Admin¹ | Approve or reject a Voices post |
+
+> ¹ **DEMO-ONLY: admin routes have no auth guard yet.** `requireRole('admin')` will be added
+> once BE1 ships the `profiles` table and auth middleware (CONTEXT.md §30).
+
+> **DEMO-ONLY: `POST /api/community-posts` has no rate limit.** Real version needs
+> `express-rate-limit` (adds to the shared lockfile — flag in the PR).
 
 **`GET /api/articles`** query parameters:
 
@@ -124,15 +134,11 @@ alphabetically when built.
 
 | Method | Path | Auth | Description |
 |---|---|---|---|
-| `GET` | `/api/community-posts` | None | Approved Voices posts, paginated |
-| `POST` | `/api/community-posts` | None | Submit a new Voices post (pending moderation) |
 | `POST` | `/api/events` | None | Batch article view events (`sendBeacon`) |
 | `GET` | `/api/admin/articles` | Admin | List all articles (including drafts) |
 | `POST` | `/api/admin/articles` | Admin | Create article |
 | `PATCH` | `/api/admin/articles/:id` | Admin | Update article |
 | `DELETE` | `/api/admin/articles/:id` | Admin | Delete article |
-| `GET` | `/api/admin/community-posts` | Admin | Moderation queue |
-| `POST` | `/api/admin/community-posts/:id/moderate` | Admin | Approve or reject a Voices post |
 | `GET` | `/api/admin/impact` | Admin | List all impact periods |
 | `POST` | `/api/admin/impact` | Admin | Create impact period |
 | `PATCH` | `/api/admin/impact/:id` | Admin | Update impact period |
