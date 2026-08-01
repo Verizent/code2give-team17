@@ -46,7 +46,7 @@ function LanguageSwitch({ className }) {
             )}
             <button
               type="button"
-              onClick={() => setLocale(l.code as Locale)}
+              onClick={() => setLocale(l.code)}
               aria-pressed={active}
               className={cn(
                 'inline-flex h-10 items-center px-1',
@@ -104,7 +104,7 @@ function HelpNav() {
   const { t } = useSite()
   const { pathname } = useLocation()
   const [open, setOpen] = useState(false)
-  const rootRef = useRef<HTMLDivElement>(null)
+  const rootRef = useRef(null)
   const menuId = useId()
   const active = pathname.startsWith('/volunteer') || pathname.startsWith('/give')
 
@@ -119,10 +119,10 @@ function HelpNav() {
 
   useEffect(() => {
     if (!open) return
-    function onDoc(e: MouseEvent) {
-      if (!rootRef.current?.contains(e.target as Node)) setOpen(false)
+    function onDoc(e) {
+      if (!rootRef.current?.contains(e.target)) setOpen(false)
     }
-    function onKey(e: KeyboardEvent) {
+    function onKey(e) {
       if (e.key === 'Escape') setOpen(false)
     }
     document.addEventListener('mousedown', onDoc)

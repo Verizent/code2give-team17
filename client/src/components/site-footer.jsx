@@ -24,15 +24,13 @@ export function SiteFooter() {
               <p className="mb-3 text-[11px] font-semibold tracking-[0.08em] text-yellow uppercase">
                 {t.footer.explore}
               </p>
-              {(
-                [
-                  ['/', t.nav.home],
-                  ['/community', t.nav.community],
-                  ['/volunteer', t.nav.volunteer],
-                  ['/give', t.nav.give],
-                  ['/me', t.nav.myImpact],
-                ] as const
-              ).map(([to, label]) => (
+              {[
+                ['/', t.nav.home],
+                ['/community', t.nav.community],
+                ['/volunteer', t.nav.volunteer],
+                ['/give', t.nav.give],
+                ['/me', t.nav.myImpact],
+              ].map(([to, label]) => (
                 <Link
                   key={to}
                   to={to}
