@@ -91,4 +91,67 @@ async function findPublishedBySlug(slug) {
   return data ?? null;
 }
 
-module.exports = { listPublished, findPublishedBySlug, LIST_COLUMNS, DETAIL_COLUMNS };
+/** Admin: all statuses, both locale columns returned raw. */
+async function listAll({ category, status, from, to }) {
+  let query = getSupabase()
+    .from("articles")
+    .select(DETAIL_COLUMNS, { count: "exact" })
+    .order("published_at", { ascending: false })
+    .range(from, to);
+
+  if (category) query = query.eq("category", category);
+  if (status) query = query.eq("status", status);
+
+  const { data, error, count } = await query;
+  assertOk(error);
+  return { rows: data ?? [], total: count ?? 0 };
+}
+
+/** Admin: find by slug regardless of status. */
+async function findBySlug(slug) {
+  const { data, error } = await getSupabase()
+    .from("articles")
+    .select(DETAIL_COLUMNS)
+    .eq("slug", slug)
+    .maybeSingle();
+  assertOk(error);
+  return data ?? null;
+}
+
+/** Check if a slug is already taken (used by uniqueSlug). */
+async function slugExists(slug) {
+  const { data, error } = await getSupabase()
+    .from("articles")
+    .select("id")
+    .eq("slug", slug)
+    .maybeSingle();
+  assertOk(error);
+  return data !== null;
+}
+
+async function create(data) {
+  const { data: row, error } = await getSupabase()
+    .from("articles")
+    .insert(data)
+    .select(DETAIL_COLUMNS)
+    .single();
+  assertOk(error);
+  return row;
+}
+
+async function update(slug, data) {
+  const { data: row, error } = await getSupabase()
+    .from("articles")
+    .update(data)
+    .eq("slug", slug)
+    .select(DETAIL_COLUMNS)
+    .maybeSingle();
+  assertOk(error);
+  return row ?? null;
+}
+
+module.exports = {
+  listPublished, findPublishedBySlug,
+  listAll, findBySlug, slugExists, create, update,
+  LIST_COLUMNS, DETAIL_COLUMNS,
+};
