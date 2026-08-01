@@ -70,7 +70,7 @@ async function optionalAuth(request, _response, next) {
 async function resolveProfile(user) {
   const profile = await profilesRepo.findById(user.id);
   if (profile?.role) {
-    return profile;
+    return { ...profile, role: String(profile.role).trim() };
   }
 
   const metaRole = user.app_metadata?.role;

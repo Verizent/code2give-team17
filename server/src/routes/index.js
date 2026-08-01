@@ -9,6 +9,7 @@ const donationsRoutes = require("./donations.routes");
 const donorsRoutes = require("./donors.routes");
 const healthRoutes = require("./health.routes");
 const impactRoutes = require("./impact.routes");
+const meRoutes = require("./me.routes");
 const opportunitiesRoutes = require("./opportunities.routes");
 const volunteerRoutes = require("./volunteer.routes");
 
@@ -29,6 +30,7 @@ router.use("/api/donations", donationsRoutes);
 router.use("/api/donors", donorsRoutes);
 router.use("/api/health", healthRoutes);
 router.use("/api/impact", impactRoutes);
+router.use("/api/me", meRoutes);
 router.use("/api/opportunities", opportunitiesRoutes);
 router.use("/api/volunteer", volunteerRoutes);
 

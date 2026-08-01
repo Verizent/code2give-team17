@@ -3,7 +3,13 @@ import { HomePage } from '@/pages/HomePage'
 import { CommunityPage } from '@/pages/CommunityPage'
 import { MyImpactPage } from '@/pages/MyImpactPage'
 import { LoginPage } from '@/pages/LoginPage'
-import { AdminPage } from '@/pages/AdminPage'
+import { AdminLayout } from '@/features/admin/AdminLayout'
+import { AdminDashboardPage } from '@/pages/AdminDashboardPage'
+import { AdminCampaignsPage } from '@/pages/AdminCampaignsPage'
+import { AdminAttendancePage } from '@/pages/AdminAttendancePage'
+import { AdminStoryDeskPage } from '@/pages/AdminStoryDeskPage'
+import { AdminModerationPage } from '@/pages/AdminModerationPage'
+import { AdminArticlesPage } from '@/pages/AdminArticlesPage'
 import { VolunteerPage } from '@/pages/VolunteerPage'
 import { VolunteerDetailPage } from '@/pages/VolunteerDetailPage'
 import { VolunteerSuccessPage } from '@/pages/VolunteerSuccessPage'
@@ -33,7 +39,17 @@ export default function App() {
       <Route path="/give/thanks" element={<GiveThanksPage />} />
       <Route path="/c/:slug" element={<CampaignPublicPage />} />
       <Route path="/me" element={<MyImpactPage />} />
-      <Route path="/admin" element={<AdminPage />} />
+      <Route path="/admin" element={<AdminLayout />}>
+        <Route index element={<AdminDashboardPage />} />
+        <Route path="articles" element={<AdminArticlesPage />} />
+        <Route path="stories" element={<AdminStoryDeskPage />} />
+        <Route path="campaigns" element={<AdminCampaignsPage />} />
+        <Route path="attendance" element={<AdminAttendancePage />} />
+        <Route path="moderation" element={<AdminModerationPage />} />
+        <Route path="proofs" element={<Navigate to="/admin/stories" replace />} />
+        <Route path="social" element={<Navigate to="/admin/stories" replace />} />
+        <Route path="instagram" element={<Navigate to="/admin/stories" replace />} />
+      </Route>
       <Route path="/about" element={<AboutPage />} />
       <Route path="/news" element={<NewsPage />} />
       <Route path="/support" element={<SupportPage />} />

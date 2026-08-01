@@ -260,3 +260,17 @@ html[data-easy-read='true'] .easy-read-pic {
   border-radius: 2px;
   animation: confetti-piece 600ms ease-out forwards;
 }
+
+/* Impact Garden tree frame */
+.growing-tree-frame {
+  border-radius: 1rem;
+  background: linear-gradient(180deg, rgba(143, 212, 106, 0.1) 0%, rgba(255, 255, 255, 0.4) 45%, rgba(92, 64, 48, 0.08) 100%);
+}
+
+.growing-tree {
+  transition: transform 0.45s ease;
+}
+
+.growing-tree:hover {
+  transform: translateY(-2px);
+}

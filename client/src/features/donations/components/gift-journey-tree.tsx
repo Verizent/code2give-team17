@@ -25,11 +25,22 @@ function stageStatus(current: string, stage: JourneyStage, index: number) {
   return 'waiting' as const
 }
 
-function growthLevel(current: string) {
+export type GrowthStage = 1 | 2 | 3 | 4
+
+export function clampGrowthStage(n: number): GrowthStage {
+  if (!Number.isFinite(n)) return 1
+  return Math.min(4, Math.max(1, Math.round(n))) as GrowthStage
+}
+
+export function isSessionGiftStage(stage: string) {
+  return stage === 'session_update'
+}
+
+function growthLevel(current: string): GrowthStage {
   const i = STAGES.indexOf(current as JourneyStage)
   if (i < 0) return 1
   if (current === 'session_update') return 3
-  return i + 1
+  return (i + 1) as GrowthStage
 }
 
 /**
@@ -37,7 +48,7 @@ function growthLevel(current: string) {
  * (a completed session plus more than one gift, or multiple sessions).
  * Per-gift trees stay capped at 3.
  */
-function cumulativeGrowthLevel(gifts: GiftJourneyItem[]): 1 | 2 | 3 | 4 {
+export function cumulativeGrowthLevel(gifts: GiftJourneyItem[]): GrowthStage {
   if (!gifts.length) return 1
   const levels = gifts.map((gift) => growthLevel(gift.stage))
   const furthest = Math.max(...levels)
@@ -52,7 +63,7 @@ function cumulativeGrowthLevel(gifts: GiftJourneyItem[]): 1 | 2 | 3 | 4 {
   return base
 }
 
-function GrowingTree({
+export function GrowingTree({
   level,
   fruitCount = 0,
 }: {

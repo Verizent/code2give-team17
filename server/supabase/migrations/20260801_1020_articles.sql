@@ -52,3 +52,6 @@ create trigger articles_set_updated_at
 -- RLS on with zero policies: the service-role key bypasses RLS and is the only
 -- thing that talks to Postgres, so a leaked anon key reads nothing.
 alter table public.articles enable row level security;
+
+-- Bypass is not enough — PostgREST still needs table privileges.
+grant select, insert, update, delete on table public.articles to service_role;

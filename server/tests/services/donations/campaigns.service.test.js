@@ -44,14 +44,22 @@ test("createCampaign inserts pending_approval with unique slug", async (t) => {
   assert.equal(campaign.status, "pending_approval");
 });
 
-test("getBySlug hides rejected campaigns", async (t) => {
+test("getBySlug returns rejected campaigns for creator status", async (t) => {
   mock.method(campaignsRepo, "findBySlug", async () => ({
     slug: "gone",
     status: "rejected",
   }));
   t.after(() => mock.restoreAll());
 
-  await assert.rejects(() => getBySlug("gone"), (err) => err.status === 404);
+  const campaign = await getBySlug("gone");
+  assert.equal(campaign.status, "rejected");
+});
+
+test("getBySlug 404s when the slug is missing", async (t) => {
+  mock.method(campaignsRepo, "findBySlug", async () => null);
+  t.after(() => mock.restoreAll());
+
+  await assert.rejects(() => getBySlug("missing"), (err) => err.status === 404);
 });
 
 test("moderateCampaign only allows pending → approved|rejected", async (t) => {

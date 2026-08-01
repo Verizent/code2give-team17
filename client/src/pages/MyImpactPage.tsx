@@ -9,9 +9,17 @@ import { useAuth } from '@/features/auth/AuthProvider'
 import { GiftJourneyTree } from '@/features/donations/components/gift-journey-tree'
 import {
   listDonations,
-  seedSampleGifts,
   type StoredDonation,
 } from '@/features/donations/donation-store'
+import { AccountConsent } from '@/features/me/components/account-consent'
+import { ConversionTrigger } from '@/features/me/components/conversion-trigger'
+import { ImpactGarden } from '@/features/me/components/impact-garden'
+import { ProofReceipts } from '@/features/me/components/proof-receipts'
+import {
+  enrichGardenWithLocal,
+  loadMeImpact,
+  type MeImpactPayload,
+} from '@/features/me/impact'
 import { VolunteerProfilePanel } from '@/features/volunteering/components/volunteer-profile'
 import {
   loadVolunteerProfile,
@@ -20,16 +28,7 @@ import {
 import { apiData, isRealApiMode } from '@/lib/apiClient'
 import { cn } from '@/lib/utils'
 
-type MeTab = 'volunteer' | 'giving'
-
-type ApiDonation = {
-  id: string
-  amount_hkd: number
-  frequency: string
-  programme: string
-  status: string
-  created_at: string
-}
+type MeTab = 'impact' | 'volunteer' | 'giving' | 'account'
 
 type GiftRow = {
   id: string
@@ -43,7 +42,9 @@ type GiftRow = {
 }
 
 function stageFromStatus(status: string) {
-  if (status === 'matched' || status === 'completed') return 'matched'
+  if (status === 'matched' || status === 'completed' || status === 'allocated') {
+    return 'matched'
+  }
   if (status === 'session_update') return 'session_update'
   return 'received'
 }
@@ -54,9 +55,15 @@ export function MyImpactPage() {
   const auth = useAuth()
   const [params, setParams] = useSearchParams()
   const requested = params.get('tab')
-  const tab: MeTab = requested === 'giving' ? 'giving' : 'volunteer'
+  const tab: MeTab =
+    requested === 'volunteer' ||
+    requested === 'giving' ||
+    requested === 'account'
+      ? requested
+      : 'impact'
 
   const [profile, setProfile] = useState<VolunteerProfile | null>(null)
+  const [impact, setImpact] = useState<MeImpactPayload | null>(null)
   const [gifts, setGifts] = useState<GiftRow[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -71,21 +78,31 @@ export function MyImpactPage() {
 
     void (async () => {
       const email = auth.user?.email?.toLowerCase() ?? null
+      const userName =
+        (auth.user?.user_metadata?.full_name as string | undefined) ?? null
 
-      let nextProfile = await loadVolunteerProfile(email)
+      const { impact: loadedImpact, profile: nextProfile } = await loadMeImpact({
+        email,
+        userName,
+      })
+      const nextImpact: MeImpactPayload = {
+        ...loadedImpact,
+        garden: { ...loadedImpact.garden },
+        volunteer: { ...loadedImpact.volunteer, stats: { ...loadedImpact.volunteer.stats } },
+      }
+
+      // Enrich volunteer profile from /api/volunteer/me when available.
+      let enriched = nextProfile
       if (email) {
-        nextProfile = {
-          ...nextProfile,
+        enriched = {
+          ...enriched,
           email,
-          name:
-            nextProfile.name ??
-            (auth.user?.user_metadata?.full_name as string | undefined) ??
-            null,
-          sessions: nextProfile.sessions.filter(
+          name: enriched.name ?? userName,
+          sessions: enriched.sessions.filter(
             (s) => !s.signup.email || s.signup.email === email,
           ),
         }
-        nextProfile.session_count = nextProfile.sessions.length
+        enriched.session_count = enriched.sessions.length
       }
 
       if (isRealApiMode()) {
@@ -125,7 +142,7 @@ export function MyImpactPage() {
 
           if (data.volunteer || data.signups.length || data.interests?.length) {
             const local = await loadVolunteerProfile(email)
-            nextProfile = {
+            enriched = {
               ...local,
               name: data.volunteer?.full_name ?? local.name,
               email: data.volunteer?.email ?? email,
@@ -147,8 +164,10 @@ export function MyImpactPage() {
                       },
                       title: {
                         en: s.opportunity?.title_en ?? 'Session',
-                        'zh-Hant': s.opportunity?.title_zh ?? s.opportunity?.title_en ?? '課堂',
-                        'zh-Hans': s.opportunity?.title_zh ?? s.opportunity?.title_en ?? '课堂',
+                        'zh-Hant':
+                          s.opportunity?.title_zh ?? s.opportunity?.title_en ?? '課堂',
+                        'zh-Hans':
+                          s.opportunity?.title_zh ?? s.opportunity?.title_en ?? '课堂',
                       },
                       when: {
                         en: s.opportunity?.starts_at
@@ -179,9 +198,23 @@ export function MyImpactPage() {
                 },
               })),
             }
+
+            // Fold live hours into garden and recompute 1–5 growth.
+            nextImpact.garden = enrichGardenWithLocal(
+              {
+                ...nextImpact.garden,
+                hours_total: data.stats.hours_total,
+                session_count: data.stats.session_count,
+              },
+              listDonations().filter((d) => !email || d.email === email),
+            )
+            nextImpact.volunteer = {
+              stats: data.stats,
+              session_count: data.stats.session_count,
+            }
           }
         } catch {
-          // Keep local profile when API is unreachable.
+          // Keep local profile.
         }
       }
 
@@ -198,26 +231,20 @@ export function MyImpactPage() {
           session_when: d.session_when,
         }))
 
-      if (isRealApiMode()) {
-        try {
-          const { data } = await apiData<{ donations: ApiDonation[] }>('/api/donations/me')
-          if (data.donations?.length) {
-            nextGifts = data.donations.map((d) => ({
-              id: d.id,
-              amount_hkd: d.amount_hkd,
-              created_at: d.created_at,
-              stage: stageFromStatus(d.status),
-              programme: d.programme,
-              frequency: d.frequency,
-            }))
-          }
-        } catch {
-          // Keep local gifts.
-        }
+      if (nextImpact.donations?.length) {
+        nextGifts = nextImpact.donations.map((d) => ({
+          id: d.id,
+          amount_hkd: d.amount_hkd,
+          created_at: d.created_at,
+          stage: stageFromStatus(d.status),
+          programme: d.programme,
+          frequency: d.frequency,
+        }))
       }
 
       if (!cancelled) {
-        setProfile(nextProfile)
+        setImpact(nextImpact)
+        setProfile(enriched)
         setGifts(nextGifts)
         setLoading(false)
       }
@@ -229,28 +256,15 @@ export function MyImpactPage() {
   }, [auth.ready, auth.user])
 
   const tabs: { id: MeTab; label: string }[] = [
+    { id: 'impact', label: m.tabImpact },
     { id: 'volunteer', label: m.tabVolunteer },
     { id: 'giving', label: m.tabGiving },
+    { id: 'account', label: m.tabAccount },
   ]
 
-  function loadSamples() {
-    const email = auth.user?.email
-    if (!email) return
-    const seeded = seedSampleGifts(email)
-    setGifts(
-      seeded
-        .filter((d) => d.email === email.toLowerCase())
-        .map((d) => ({
-          id: d.id,
-          amount_hkd: d.amount_hkd,
-          created_at: d.created_at,
-          stage: d.stage,
-          programme: d.programme,
-          frequency: d.frequency,
-          session_title: d.session_title,
-          session_when: d.session_when,
-        })),
-    )
+  function setTab(id: MeTab) {
+    if (id === 'impact') setParams({})
+    else setParams({ tab: id })
   }
 
   return (
@@ -303,7 +317,7 @@ export function MyImpactPage() {
           <>
             <div className="sticky top-14 z-20 border-y border-navy/10 bg-white/95 backdrop-blur sm:top-[72px]">
               <div
-                className="mx-auto flex max-w-[1120px] gap-2 px-4 py-3 sm:px-8"
+                className="mx-auto flex max-w-[1120px] gap-2 overflow-x-auto px-4 py-3 sm:px-8"
                 role="tablist"
                 aria-label={m.title}
               >
@@ -313,11 +327,9 @@ export function MyImpactPage() {
                     type="button"
                     role="tab"
                     aria-selected={tab === option.id}
-                    onClick={() =>
-                      setParams(option.id === 'volunteer' ? {} : { tab: option.id })
-                    }
+                    onClick={() => setTab(option.id)}
                     className={cn(
-                      'min-h-11 shrink-0 rounded-full px-6 text-sm font-semibold',
+                      'min-h-11 shrink-0 rounded-full px-5 text-sm font-semibold sm:px-6',
                       tab === option.id ? 'bg-navy text-white' : 'bg-white text-navy',
                     )}
                   >
@@ -328,6 +340,19 @@ export function MyImpactPage() {
             </div>
 
             <div className="mx-auto max-w-[1120px] px-4 py-10 sm:px-8 sm:py-14">
+              {loading || !impact ? (
+                <p className="text-navy/55">{m.loading}</p>
+              ) : null}
+
+              {!loading && impact && tab === 'impact' && (
+                <>
+                  <p className="mb-8 max-w-2xl text-navy/70">{m.overviewLead}</p>
+                  <ImpactGarden garden={impact.garden} />
+                  <ProofReceipts receipts={impact.receipts} />
+                  <ConversionTrigger conversion={impact.conversion} />
+                </>
+              )}
+
               {tab === 'volunteer' &&
                 (loading || !profile ? (
                   <p className="text-navy/55">{m.loading}</p>
@@ -342,46 +367,35 @@ export function MyImpactPage() {
 
               {tab === 'giving' && (
                 <section className="mt-4">
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-                    <div>
-                      <h2 className="font-display text-3xl font-semibold text-navy">
-                        {m.givingTitle}
-                      </h2>
-                      <p className="mt-3 max-w-xl text-navy/70">{m.givingSubhead}</p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={loadSamples}
-                      className="shrink-0 rounded-md border border-navy/20 px-4 py-2.5 text-sm font-semibold text-navy hover:bg-navy/5"
-                    >
-                      {m.loadSampleGifts}
-                    </button>
+                  <div>
+                    <h2 className="font-display text-3xl font-semibold text-navy">
+                      {m.givingTitle}
+                    </h2>
+                    <p className="mt-3 max-w-xl text-navy/70">{m.givingSubhead}</p>
                   </div>
                   {loading ? (
                     <p className="mt-8 text-navy/55">{m.loading}</p>
                   ) : gifts.length === 0 ? (
                     <div className="mt-10">
                       <p className="text-navy/60">{m.givingEmpty}</p>
-                      <div className="mt-6 flex flex-wrap gap-3">
-                        <Link
-                          to="/give"
-                          className="inline-flex min-h-12 items-center rounded-md bg-red px-6 font-semibold text-white"
-                        >
-                          {m.giveCta}
-                        </Link>
-                        <button
-                          type="button"
-                          onClick={loadSamples}
-                          className="inline-flex min-h-12 items-center rounded-md border border-navy/20 px-6 font-semibold text-navy hover:bg-navy/5"
-                        >
-                          {m.loadSampleGifts}
-                        </button>
-                      </div>
+                      <Link
+                        to="/give"
+                        className="mt-6 inline-flex min-h-12 items-center rounded-md bg-red px-6 font-semibold text-white"
+                      >
+                        {m.giveCta}
+                      </Link>
                     </div>
                   ) : (
                     <GiftJourneyTree gifts={gifts} />
                   )}
                 </section>
+              )}
+
+              {tab === 'account' && impact && (
+                <AccountConsent
+                  account={impact.account}
+                  onSignOut={() => void auth.signOut()}
+                />
               )}
             </div>
           </>

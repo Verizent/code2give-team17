@@ -572,6 +572,8 @@ Two notes for whoever builds the admin UI. Every admin route must carry `require
 
 **Donations** — `POST /api/donations/checkout` → Stripe Checkout URL; `POST /api/webhooks/stripe`; `GET /api/donations/me`; `GET /api/donors/track/:token` (current edition) and `?period=<id>` (archived edition) — donor-scoped, no auth, bearer token; `POST /api/donors/recover-link`
 
+**Me (authed, PAGE 5)** — `GET /api/me/impact` — garden + proof receipts + conversion + account prefs (receipts empty until allocation→session fan-out; no seeded stand-ins)
+
 **Sessions (public)** — `GET /api/sessions`, `GET /api/sessions/:id` — the events calendar
 
 **Volunteer (authed)** — `POST /api/volunteer/signups`, `DELETE /api/volunteer/signups/:id`, `GET /api/volunteer/me`, `GET /api/volunteer/certificates/:id`
@@ -723,7 +725,7 @@ The session runs regardless, so exclusive attribution is the Kiva donor-illusion
 | Session cancelled | Allocations reassign, page updates silently — a swap isn't news |
 | Payment failed / refunded | Never counts toward the lifetime strip |
 | Same session twice | `DISTINCT session_id` prevents inflation |
-| Demo day | **[DEMO-ONLY]** `POST /api/admin/demo/advance-donation/:id` forces every state |
+| Demo day | **[DEMO-ONLY]** `POST /api/admin/demo/advance-donation/:id` forces every state (API only; not on Overview UI) |
 
 ---
 
@@ -801,11 +803,11 @@ Staff never assign a donation to a session, never decide who gets an email, neve
 - **Dashboard** — metrics first, work queue below (§23)
 - **HandsOn sync — a STUB (§17)**, not an integration. It pulls opportunities (with `capacity` / `spots_filled`) and hours matched on email from a seeded local response, so the screen renders and the shape is right; nothing reaches HandsOn. **External hours therefore only appear to count toward badges.** `HANDSON_MODE` is the seam; `live` is unimplemented. HandsOn bookings and local interest registrations are shown as **separate figures, never summed**.
 
-### Demo controls — **[DEMO-ONLY]**
+### Demo controls — **[DEMO-ONLY]** (API only; not on Overview UI)
 
-`POST /api/admin/demo/advance-donation/:id` forces a donation through pending → planned → completed. Every cron job also gets a **"run now"** button — "we scheduled it for 3am" is not a demo.
+`POST /api/admin/demo/advance-donation/:id` can force a donation through pending → planned → completed for local testing. `POST /api/admin/demo/run-now/:job` stubs cron jobs. **Neither control is shown on Admin Overview** — the staff dashboard shows live aggregates and honest empty states only.
 
-> Flagged per §26. The advance endpoint has no real-world use and must be removed or admin-gated before any live deployment; the "run now" buttons are legitimate operational controls and stay.
+> Flagged per §26. The advance endpoint has no real-world use and must be removed or admin-gated before any live deployment; "run now" becomes legitimate once real workers exist.
 
 ---
 
@@ -951,13 +953,19 @@ Out of scope for the hackathon; required before any real use.
 
 > **This list is where the `DEMO-ONLY` flag comes to rest.** Anything built for the demo (§26) adds a line here at the time it is built, not at handover. `grep -rn "DEMO-ONLY" .` is the codebase-side index; the §26 register is the document-side one.
 
-- [ ] Remove or admin-gate `POST /api/admin/demo/advance-donation/:id` and any other force-state control (§16)
+- [ ] Remove or admin-gate `POST /api/admin/demo/advance-donation/:id` and any other force-state control (§16) — **UI rail removed from Overview**; API still exists for local testing only
 - [ ] Clear every `DEMO-ONLY` marker in the codebase, or convert it to a tracked issue
+- [x] Admin dashboard chart/metric tiles use live donation / attendance series only — empty windows stay at zero (no fabricated six-month seed)
+- [x] Admin Overview conversion panel uses live interests / signups / gifts (+ form-side discovery/referral sources) — no seeded visitor funnel; anonymous visitor attribution still not collected (§23)
+- [x] Replace DEMO Proof Studio / Social queue in-memory stores with `session_proofs` + `social_drafts` tables (migration `20260802_1130_session_proofs_and_social_drafts.sql` — **must be applied**). Approvals and copy-status persist; Meta Graph publish remains deferred — Story desk is copy-caption / open-Instagram only. Content tables also need `service_role` DML grants (`20260802_1140_content_tables_service_role_grants.sql`) — without them PostgREST returns permission denied and admin UIs showed `available: false` as if the migration were missing
+- [x] Remove DEMO `/api/me/impact` seeded proof receipts — empty until allocation→session fan-out (de-identified member counts only) (§15)
+- [ ] Wire `/me` proof receipts to allocation→session fan-out once donor_period allocations + session attendance exist (§15)
+- [ ] Replace DEMO `POST /api/admin/demo/run-now/:job` stubs with real cron workers (allocations, auto-complete, monthly email, HandsOn sync) — **run-now buttons removed from Overview UI**; stub API remains for local testing
 - [ ] Live Stripe keys on Love 21's own account and legal entity
 - [ ] Valid Hong Kong s.88 tax-deductible receipting
 - [ ] PDPO collection statement and consent for all personal data
 - [x] Campaign approval workflow before fundraisers go public — statuses `pending_approval` → `approved` | `rejected`; public list approved-only; `/api/admin/campaigns*` gated by `requireAuth` + `requireRole('admin')`. Apply `20260801_1100_profiles_service_role_grant.sql` so `profiles.role` is readable (until then role falls back to `app_metadata.role`)
-- [ ] Meta app review, or tester role for Love 21's real Instagram account
+- [ ] Meta app review, or tester role for Love 21's real Instagram account — Graph publish deferred; admin uses official embeds + open-in-Instagram for now
 - [ ] DNS verification on `love21foundation.com` for email
 - [ ] Photo and name clearance for every story in §4
 - [ ] Accessibility audit (WCAG 2.2 AA) — an inaccessible site for a neurodiversity charity is the one flaw this panel cannot miss
@@ -969,6 +977,7 @@ Out of scope for the hackathon; required before any real use.
 - [ ] `audit_log` viewer — the table exists in §13 and nothing reads it
 - [ ] Native-speaker pass over all zh-Hant copy, especially Instagram captions, which publish under the charity's name and cannot be quietly corrected
 - [ ] Replace the seeded content in `server/db/seed/` with staff-authored records through the admin path. The 14 articles, 4 Voices and the 2024–25 impact row stand in for a real CMS and real reporting: **name and photo consent is unconfirmed for every story** (§18.5), and which stat set is current is unconfirmed (§20.1). Six of the fourteen articles have no zh-Hant translation and fall back to English
+- [ ] Apply `community_posts` content migration so Voices moderation queue is live (admin shows an honest empty/unavailable state until then)
 
 ---
 
@@ -1150,7 +1159,7 @@ Label the UI to match the method: **"views" and "daily visitors"**, never a bare
 
 ### `/admin` dashboard and `/admin/insights`
 
-The dashboard opens **metrics first, work queue below** — money and volunteer tiles, two six-month charts, then what needs attention today: stories pending, signups to confirm, impact month missing. The queue is derived, not a table. **Generated seed data is fine for the demo** — **[DEMO-ONLY]** per §26 — seeded into the tables and queried normally, so the screen goes live without a rewrite when real data arrives. Six months of charted history is fabricated; say so if a judge asks where the numbers came from.
+The dashboard opens **metrics first, work queue below** — money and volunteer tiles, two six-month charts, then what needs attention today: stories pending, signups to confirm, impact month missing. The queue is derived, not a table. **Tiles and charts are live aggregates only** — empty windows stay at zero with honest empty copy ("No gifts in this window"), never fabricated history. A conversion panel below shows form-side interests → signups → gifts (plus discovery/referral answers when present); it is not an anonymous visitor funnel (§23 does not collect one).
 
 There is deliberately **no donations screen**. Staff use Stripe for anything donor-specific; admin shows aggregates plus the supporter notes.
 
@@ -1337,7 +1346,7 @@ When time is short — and it will be — resolve in this order:
 - The back half of a CRUD — create and list demo the point; edit and delete usually do not
 - Pagination, search and sort on lists that will hold a dozen seeded rows
 - Edge cases no click path in the demo story reaches
-- Retry, backoff and scheduling — a **"run now"** button *is* the demo (§16)
+- Retry, backoff and scheduling — Overview no longer advertises force-state "run now"; real workers stay cut (§16)
 - Anything real-time
 - Admin screens the demo narrative never opens
 - Empty and error states on surfaces the demo never puts into those states (they stay required on surfaces it does — §21)
@@ -1389,12 +1398,12 @@ Everything below is a deliberate decision recorded elsewhere in this document. C
 | Feature | What is real | What is demo-only | § |
 |---|---|---|---|
 | Donations | Full Stripe Checkout, webhooks, idempotency | **Test mode only.** No live keys, no s.88 receipting, persistent DEMO banner | §17, §18.6, §19 |
-| Demo state controls | — | `POST /api/admin/demo/advance-donation/:id`; cron "run now" buttons | §16 |
+| Demo state controls | — | `POST /api/admin/demo/advance-donation/:id` and cron "run now" **API stubs only** — not shown on Overview UI | §16 |
 | HandsOn sync | The contract, the consumer, the UX | **A stub**, not a mock service — seeded from the two real §5 listings, no scheduling, no reconciliation, `live` unimplemented. External hours only appear to count toward badges | §17, §20.12 |
 | Email | Resend integration, templates | Sandbox domain — delivers **only to our own verified addresses**. In-app prompts are primary, email is not a demo dependency | §17, §23 |
-| Instagram publishing | **Genuinely live** — real posts to a real account | The account is a throwaway we control, app in Development Mode; Love 21's real account needs review or a tester role | §17, §19 |
-| AI caption drafting | Server route, Zod validation, disabled-state degradation | Depends on a local Ollama that will not be running on a judge's machine | §22 |
-| Admin dashboard + insights | Queries, charts, range filter | Generated seed data, including six months of fabricated history | §23 |
+| Instagram publishing | Story desk (`/admin/stories`): approve proofs + copy captions / open Instagram against persisted drafts | Meta Graph compose / crop / AI caption / `media_publish` deferred — staff publish in Instagram itself | §17, §19, §22 |
+| AI caption drafting | Server route, Zod validation, disabled-state degradation | Depends on a local Ollama that will not be running on a judge's machine — **cut from demo**; caption starter on admin is a manual textarea only | §22 |
+| Admin dashboard + insights | `GET /api/admin/dashboard` live metrics/charts/queue; form-side conversion panel | Insights page cut; no anonymous visitor funnel | §23 |
 | Campaign creation | Create, page, share, approval + `requireRole('admin')` moderate | “Your campaigns” keyed to this-browser slugs (no `owner_profile_id` on live table); profiles SELECT grant may still need applying | §18.2 |
 | `POST /api/events` | Batching, beacon, hashing | Unauthenticated; view counts are inflatable | §18.10 |
 | Instagram consent gate | `consent_status` displays in the editor | Blocks nothing | §18.11 |
@@ -1424,8 +1433,11 @@ alternative — one deep pillar — was rejected because the brief is explicitly
 | **2 · Volunteering** | The Learn tab, which carries most of pillar 2 · opportunity listings and detail · **on-site signup, which does not exist today at all** · HandsOn listings mirrored with interest captured first, backed by a **stub sync** (§17) · volunteer profile with hours and badges |
 | **3 · Donating** | Donate form (amount, frequency, optional programme — nothing Stripe already collects) · hosted Stripe Checkout in test mode · the §15 allocation engine · **the donor tracking page** · thanks page · recovery form |
 
-Cross-cutting: bilingual EN / 繁體中文, the admin bulk-attendance screen, article and Voices
-admin, the demo controls from §16, and the persistent "DEMO — no real payments" banner.
+Cross-cutting: bilingual EN / 繁體中文 (admin included), the admin bulk-attendance screen,
+**articles CMS** (`/admin/articles` CRUD + publish), Voices admin, Story desk with persisted
+proofs/captions (no Meta Graph), and the persistent "DEMO — no real payments" banner.
+Force-state demo donation advance remains available as an **API-only** local testing aid and is
+not shown on Overview.
 
 ### Cut, and why
 
@@ -1436,7 +1448,7 @@ admin, the demo controls from §16, and the persistent "DEMO — no real payment
 | **Certificates (PDF/CJK)** | Real work, invisible in a five-minute demo. |
 | **`/admin/insights` (§23)** | `POST /api/events` still fires and still collects, so the data exists. The screen is stretch. |
 | **Wishlist** | Not load-bearing. |
-| **Real fortnightly cron** | Replaced by the demo-advance control. Judges see the state machine either way, and §16 already says "we scheduled it for 3am" is not a demo. |
+| **Real fortnightly cron** | Stub `run-now` API remains for local testing; Overview no longer advertises it. Judges see live aggregates / empty states instead of force-advancing gifts. |
 
 > Everything cut here stays specified in §§15–23. Cut means *not built by 3 August*, not
 > *rejected*. A team picking this up later should read Part II as the target and this section

@@ -24,6 +24,8 @@ const LIST_COLUMNS = [
   "is_featured",
 ].join(", ");
 
+const ADMIN_LIST_COLUMNS = [LIST_COLUMNS, "status", "updated_at", "created_at"].join(", ");
+
 const DETAIL_COLUMNS = [
   LIST_COLUMNS,
   "body_en",
@@ -36,6 +38,8 @@ const DETAIL_COLUMNS = [
   "og_image_url",
   "updated_at",
 ].join(", ");
+
+const ADMIN_DETAIL_COLUMNS = [DETAIL_COLUMNS, "status", "created_at"].join(", ");
 
 /**
  * Published articles only, newest first.
@@ -71,6 +75,31 @@ async function listPublished({ category, tag, isFeatured, from, to }) {
 }
 
 /**
+ * Admin list — all statuses unless filtered.
+ *
+ * @param {{ status?: string, category?: string, from: number, to: number }} options
+ * @returns {Promise<{ rows: object[], total: number }>}
+ */
+async function listForAdmin({ status, category, from, to }) {
+  let query = getSupabase()
+    .from("articles")
+    .select(ADMIN_LIST_COLUMNS, { count: "exact" })
+    .order("updated_at", { ascending: false })
+    .range(from, to);
+
+  if (status && status !== "all") {
+    query = query.eq("status", status);
+  }
+  if (category) {
+    query = query.eq("category", category);
+  }
+
+  const { data, error, count } = await query;
+  assertOk(error);
+  return { rows: data ?? [], total: count ?? 0 };
+}
+
+/**
  * A slug that does not exist and a slug whose article is unpublished both resolve to
  * `null`, so the route answers 404 for each. Distinguishing them would let anyone
  * confirm a draft exists by probing slugs.
@@ -91,4 +120,74 @@ async function findPublishedBySlug(slug) {
   return data ?? null;
 }
 
-module.exports = { listPublished, findPublishedBySlug, LIST_COLUMNS, DETAIL_COLUMNS };
+/**
+ * @param {string} id
+ * @returns {Promise<object | null>}
+ */
+async function findById(id) {
+  const { data, error } = await getSupabase()
+    .from("articles")
+    .select(ADMIN_DETAIL_COLUMNS)
+    .eq("id", id)
+    .maybeSingle();
+  assertOk(error);
+  return data ?? null;
+}
+
+/**
+ * @param {string} slug
+ * @returns {Promise<boolean>}
+ */
+async function slugExists(slug) {
+  const { data, error } = await getSupabase()
+    .from("articles")
+    .select("id")
+    .eq("slug", slug)
+    .maybeSingle();
+  assertOk(error);
+  return Boolean(data);
+}
+
+/**
+ * @param {object} row
+ * @returns {Promise<object>}
+ */
+async function insert(row) {
+  const { data, error } = await getSupabase()
+    .from("articles")
+    .insert(row)
+    .select(ADMIN_DETAIL_COLUMNS)
+    .single();
+  assertOk(error);
+  return data;
+}
+
+/**
+ * @param {string} id
+ * @param {object} patch
+ * @returns {Promise<object>}
+ */
+async function update(id, patch) {
+  const { data, error } = await getSupabase()
+    .from("articles")
+    .update(patch)
+    .eq("id", id)
+    .select(ADMIN_DETAIL_COLUMNS)
+    .single();
+  assertOk(error);
+  return data;
+}
+
+module.exports = {
+  listPublished,
+  listForAdmin,
+  findPublishedBySlug,
+  findById,
+  slugExists,
+  insert,
+  update,
+  LIST_COLUMNS,
+  DETAIL_COLUMNS,
+  ADMIN_LIST_COLUMNS,
+  ADMIN_DETAIL_COLUMNS,
+};
