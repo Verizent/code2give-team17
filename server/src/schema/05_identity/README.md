@@ -1,68 +1,97 @@
 # Identity
 
-One table, `profiles`, extending `auth.users`. It exists to answer one question the rest of
-the API cannot answer for itself: **what role is this caller?**
+`profiles` extends `auth.users` and answers the one question the rest of the API cannot answer
+for itself: **what role is this caller?**
 
-- `00_profiles.sql` — the table
-- `90_grant_admin.example.txt` — how an admin is made (`.txt` on purpose; see below)
+## There is no SQL file here, on purpose
 
-## Why `05_`
+**This directory does not own `profiles`.** The table was designed and applied by another
+track — its migration is `supabase/migrations/20260801_1060_profiles.sql` on
+`feature/donations-backend`, and a hardened version of it is what is live.
 
-Numeric prefixes are dependency order, because the replay documented in the parent README is a
-single-level glob:
+This branch originally carried its own `00_profiles.sql`. It has been **deleted**, because two
+`create table profiles` definitions in one repository is the failure CLAUDE.md warns about
+specifically: git merges them cleanly and silently, and the breakage only appears later, when
+somebody replays
 
 ```bash
 cat src/schema/*/*.sql | psql "$DATABASE_URL"
 ```
 
-`profiles` only depends on `auth.users`, which always exists, so strictly it could sit anywhere.
-`05_` puts it after `00_shared` (whose `set_updated_at()` the trigger needs) and before
-`10_volunteers`, so that **if** anyone later retargets `volunteers.profile_id` to `profiles(id)`
-the ordering already supports it without renaming a folder.
+and the second definition fails the whole pipe.
 
-`90_grant_admin.example.txt` is **not** `.sql` — the glob above matches any `.sql` file, so an
-`.example.sql` would be replayed with its placeholder uuid and fail the whole pipe.
+`90_grant_admin.example.txt` stays. It is `.txt` and not `.sql` deliberately — the glob above
+matches any `.sql` file, so an `.example.sql` would be replayed with its placeholder uuid and
+fail.
 
-## What this table deliberately does not have
+## The live table, as actually applied
 
-`CONTEXT.md` §13 specifies `role, full_name, email, phone, locale`. **`email` and `phone` are
-omitted.**
+Verified against the project, not copied from a migration file:
 
-- **`email`** already has two authoritative homes: `auth.users.email`, which Supabase owns and
-  which changes through Auth rather than through us, and `volunteers.email`, the normalised
-  business key carrying `check (email = lower(btrim(email)))`. A third copy is the one that goes
-  stale silently — which is the whole lesson of §15's donor collation rule. Nothing needs it
-  here: the volunteer claim links on the **verified JWT email**, not on a stored copy.
-- **`phone`** has exactly one consumer, the volunteer programme, which already has the column.
+| Column | Type | Notes |
+|---|---|---|
+| `id` | `uuid` | PK, `references auth.users(id) on delete cascade` |
+| `role` | `text` | `not null default 'volunteer'`, `check (role in ('volunteer','admin'))` |
+| `full_name` | `text` | nullable |
+| `email` | `text` | **`not null`**, `check (email = lower(btrim(email)))` |
+| `phone` | `text` | nullable |
+| `locale` | `text` | `not null default 'en'`, `check (locale in ('en','zh-Hant'))` |
+| `created_at` / `updated_at` | `timestamptz` | `not null default now()` |
 
-`full_name` and `locale` stay. An admin has no `volunteers` row, so without a name here the only
-way to give them a display name would be to fabricate a volunteer row — which would then be
-counted in every volunteer list and headcount on the admin screens.
+RLS enabled with **no policies**, matching every other table: the anon key reaches nothing, and
+the server's service-role key bypasses RLS entirely.
 
-Adding a column later is additive and safe, so this is the reversible direction to be wrong in.
+Note `email NOT NULL`. An earlier version of this branch omitted `email` from its provisioning
+insert, which would have failed against this table — see `services/auth/authenticate.js`, which
+now normalises it through `lib/email.js` so the check constraint is satisfied.
+
+## How a row is created
+
+**A trigger, at signup** — not just-in-time, and not by this branch:
+
+```sql
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute function public.handle_new_user();
+```
+
+`handle_new_user()` inserts `(id, email, full_name, locale, role)` with `role` **hardcoded** to
+`'volunteer'`, `email` coalesced through `lower(btrim(coalesce(new.email, '')))`, and
+`full_name` read from `raw_user_meta_data`. It is `security definer` with `set search_path = ''`.
+
+This branch's design avoided a trigger precisely because the circulating examples of
+`handle_new_user()` copy `new.raw_user_meta_data->>'role'` into the profile — a value the browser
+supplies to `signUp({ options: { data } })`, and therefore attacker-controlled. **This
+implementation does not do that.** It reads only `full_name` from metadata, which is a display
+name and carries no privilege. The escalation hole is not present.
+
+`services/auth/authenticate.js` still contains a just-in-time insert. It is now a **fallback**,
+reached only if a user somehow exists without a profile row — the trigger dropped, renamed, or a
+user created before it existed. It passes no role; `data/profiles.repo.js` injects `'volunteer'`.
+
+`tests/services/auth/authenticate.test.js` asserts that a token whose metadata claims
+`role: 'admin'` still resolves as a volunteer. That test is the only automated evidence the hole
+stays shut in application code, and should not be deleted.
+
+## Why `05_`
+
+Numeric prefixes are dependency order. `profiles` depends only on `auth.users`, so it could sit
+anywhere; `05_` places it after `00_shared` (whose `set_updated_at()` its trigger uses) and
+before `10_volunteers`, so that **if** anyone later retargets `volunteers.profile_id` the
+ordering already supports it without renaming a folder.
 
 ## Foreign keys deliberately not added
 
 | | Why not |
 |---|---|
-| `volunteers.profile_id` → `profiles(id)` | Currently references `auth.users(id)`. Since `profiles.id` is itself an FK to `auth.users(id)`, the two are semantically identical. Retargeting means `ALTER TABLE` on a **live** table — an `ACCESS EXCLUSIVE` lock — for zero behavioural gain. |
+| `volunteers.profile_id` → `profiles(id)` | Currently references `auth.users(id)`. Since `profiles.id` is itself an FK to `auth.users(id)`, the two are semantically identical. Retargeting means `ALTER TABLE` on a live table — an `ACCESS EXCLUSIVE` lock — for zero behavioural gain. |
 | `volunteer_signups.profile_id` → `profiles(id)` | Same reasoning. |
-| `community_posts.moderated_by` → `profiles(id)` | Its commented-out FK lives in `supabase/migrations/`, which is **not applied**. Adding the constraint would mean applying that whole tree first. |
+| `community_posts.moderated_by` → `profiles(id)` | Its commented-out FK lives in `supabase/migrations/`, which is not applied. Adding the constraint means applying that whole tree first. |
 
-## How a row is created
+## Known, reported, not fixed here
 
-**Just-in-time, in `services/auth/authenticate.js`, on a user's first authenticated request.**
-There is no trigger on `auth.users`, and that is a security decision rather than a convenience
-one:
-
-Every `handle_new_user()` example in circulation copies `new.raw_user_meta_data->>'role'` into
-the profile. That value is whatever the browser passed to `signUp({ options: { data } })` — fully
-attacker-controlled. Not writing the trigger removes the escalation hole structurally instead of
-relying on everyone who edits the file to remember. A failing trigger also fails *inside* GoTrue's
-transaction and surfaces as "Database error saving new user", with the cause visible only in
-Supabase's logs.
-
-The provisioning call passes no role at all; `data/profiles.repo.js` injects `'volunteer'` and the
-column defaults to it. `tests/services/auth/authenticate.test.js` asserts that a token whose
-metadata claims `role: 'admin'` still resolves as a volunteer — that test is the only automated
-evidence the hole is shut, and should not be deleted.
+`public.handle_new_user()` is callable by `anon` and `authenticated` via
+`/rest/v1/rpc/handle_new_user`. Exploitability is low — it references `new`, so calling it
+outside trigger context errors — but a `security definer` function should not be reachable from
+the public API. The fix is `revoke execute on function public.handle_new_user() from anon,
+authenticated;`, which does not affect the trigger. **Left to the track that owns the function.**
