@@ -151,7 +151,13 @@ export function SiteHeader() {
             <LanguageSwitch />
           </nav>
 
-          <div className="hidden items-center gap-2 lg:flex">
+          <div className="hidden items-center gap-3 lg:flex">
+            <Link
+              to="/support"
+              className="min-h-[44px] px-1 text-[13px] font-medium text-navy/55 underline-offset-4 hover:text-navy hover:underline"
+            >
+              {t.nav.askForHelp}
+            </Link>
             <EasyReadToggle />
             <Link
               to="/volunteer"
@@ -207,6 +213,13 @@ export function SiteHeader() {
               <div className="flex min-h-[48px] items-center border-b border-black/5">
                 <LanguageSwitch />
               </div>
+              <Link
+                to="/support"
+                onClick={() => setOpen(false)}
+                className="flex min-h-[44px] items-center border-b border-black/5 text-[14px] font-medium text-navy/55"
+              >
+                {t.nav.askForHelp}
+              </Link>
               <Link
                 to="/volunteer"
                 onClick={() => setOpen(false)}

@@ -85,10 +85,10 @@ export function StatsBand() {
     >
       <div ref={ref} className="mx-auto max-w-[1120px] px-5 py-10 sm:px-8 sm:py-14">
         <p className="kicker text-yellow">{t.stats.title}</p>
-        <div className="mt-8 grid grid-cols-2 gap-x-6 gap-y-10 md:grid-cols-4 md:gap-8">
+        <div className="mt-8 grid grid-cols-2 gap-x-4 gap-y-10 sm:gap-x-6 md:grid-cols-4 md:gap-8">
           {t.stats.items.map((item) => (
-            <div key={item.label}>
-              <p className="font-display text-[clamp(2rem,5vw,3rem)] leading-none font-extrabold break-words text-yellow">
+            <div key={item.id}>
+              <p className="font-display text-[clamp(2.5rem,7vw,4rem)] leading-none font-extrabold break-words text-yellow">
                 <CountUp
                   value={item.value}
                   suffix={item.suffix}

@@ -39,35 +39,43 @@ export const places: Place[] = [
   {
     id: 'kennedy-town',
     name: { en: 'Kennedy Town', 'zh-Hant': '堅尼地城', 'zh-Hans': '坚尼地城' },
-    activity: { en: 'Dance studio', 'zh-Hant': '舞蹈工作室', 'zh-Hans': '舞蹈工作室' },
+    activity: { en: 'Dance', 'zh-Hant': '舞蹈', 'zh-Hans': '舞蹈' },
     lat: 22.2818,
     lng: 114.1287,
   },
   {
     id: 'sai-ying-pun',
     name: { en: 'Sai Ying Pun', 'zh-Hant': '西營盤', 'zh-Hans': '西营盘' },
-    activity: { en: 'Community café', 'zh-Hant': '社區咖啡店', 'zh-Hans': '社区咖啡店' },
+    activity: {
+      en: 'Community & Education',
+      'zh-Hant': '社區與教育',
+      'zh-Hans': '社区与教育',
+    },
     lat: 22.2857,
     lng: 114.1425,
   },
   {
     id: 'sheung-wan',
     name: { en: 'Sheung Wan', 'zh-Hant': '上環', 'zh-Hans': '上环' },
-    activity: { en: 'Art studio', 'zh-Hant': '藝術工作室', 'zh-Hans': '艺术工作室' },
+    activity: { en: 'Floor curling', 'zh-Hant': '地壺球', 'zh-Hans': '地壶球' },
     lat: 22.2867,
     lng: 114.15,
   },
   {
     id: 'wan-chai',
     name: { en: 'Wan Chai', 'zh-Hant': '灣仔', 'zh-Hans': '湾仔' },
-    activity: { en: 'Teaching kitchen', 'zh-Hant': '教學廚房', 'zh-Hans': '教学厨房' },
+    activity: { en: 'Nutrition', 'zh-Hant': '營養', 'zh-Hans': '营养' },
     lat: 22.2779,
     lng: 114.1731,
   },
   {
     id: 'stanley',
     name: { en: 'Stanley', 'zh-Hant': '赤柱', 'zh-Hans': '赤柱' },
-    activity: { en: 'Dragon-boat crew', 'zh-Hant': '龍舟隊', 'zh-Hans': '龙舟队' },
+    activity: {
+      en: 'Dragon boat racing',
+      'zh-Hant': '龍舟競賽',
+      'zh-Hans': '龙舟竞赛',
+    },
     lat: 22.2176,
     lng: 114.213,
   },
@@ -75,46 +83,46 @@ export const places: Place[] = [
 
 export const activities: Activity[] = [
   {
-    id: 'dance-class',
-    title: {
-      en: 'Saturday dance class',
-      'zh-Hant': '週六舞蹈班',
-      'zh-Hans': '周六舞蹈班',
-    },
-    date: { en: 'Sat 9 Aug · 10:00', 'zh-Hant': '8月9日（六）· 10:00', 'zh-Hans': '8月9日（六）· 10:00' },
-    place: { en: 'Kennedy Town studio', 'zh-Hant': '堅尼地城工作室', 'zh-Hans': '坚尼地城工作室' },
-    category: { en: 'Movement', 'zh-Hant': '律動', 'zh-Hans': '律动' },
-    recruiting: true,
-    accent: 'pink',
-  },
-  {
-    id: 'cafe-shift',
-    title: {
-      en: 'Community café shift',
-      'zh-Hant': '社區咖啡店當值',
-      'zh-Hans': '社区咖啡店当值',
-    },
-    date: { en: 'Tue 12 Aug · 14:00', 'zh-Hant': '8月12日（二）· 14:00', 'zh-Hans': '8月12日（二）· 14:00' },
-    place: { en: 'Sai Ying Pun', 'zh-Hant': '西營盤', 'zh-Hans': '西营盘' },
-    category: { en: 'Work skills', 'zh-Hant': '工作技能', 'zh-Hans': '工作技能' },
-    recruiting: true,
-    accent: 'teal',
-  },
-  {
     id: 'dragon-boat',
     title: {
-      en: 'Dragon-boat training',
-      'zh-Hant': '龍舟訓練',
-      'zh-Hans': '龙舟训练',
+      en: 'Dragon boat racing',
+      'zh-Hant': '龍舟競賽',
+      'zh-Hans': '龙舟竞赛',
     },
     date: { en: 'Sun 17 Aug · 08:30', 'zh-Hant': '8月17日（日）· 08:30', 'zh-Hans': '8月17日（日）· 08:30' },
     place: { en: 'Stanley Main Beach', 'zh-Hant': '赤柱正灘', 'zh-Hans': '赤柱正滩' },
-    category: { en: 'Sport', 'zh-Hant': '運動', 'zh-Hans': '运动' },
+    category: { en: 'Sports', 'zh-Hant': '運動', 'zh-Hans': '运动' },
     recruiting: false,
     accent: 'navy',
   },
   {
-    id: 'cooking',
+    id: 'zumba',
+    title: {
+      en: 'Zumba class',
+      'zh-Hant': '尊巴課',
+      'zh-Hans': '尊巴课',
+    },
+    date: { en: 'Sat 9 Aug · 10:00', 'zh-Hant': '8月9日（六）· 10:00', 'zh-Hans': '8月9日（六）· 10:00' },
+    place: { en: 'Kennedy Town', 'zh-Hant': '堅尼地城', 'zh-Hans': '坚尼地城' },
+    category: { en: 'Sports', 'zh-Hant': '運動', 'zh-Hans': '运动' },
+    recruiting: true,
+    accent: 'pink',
+  },
+  {
+    id: 'circuit-training',
+    title: {
+      en: 'Circuit training',
+      'zh-Hant': '循環訓練',
+      'zh-Hans': '循环训练',
+    },
+    date: { en: 'Tue 12 Aug · 14:00', 'zh-Hant': '8月12日（二）· 14:00', 'zh-Hans': '8月12日（二）· 14:00' },
+    place: { en: 'Sheung Wan', 'zh-Hant': '上環', 'zh-Hans': '上环' },
+    category: { en: 'Sports', 'zh-Hant': '運動', 'zh-Hans': '运动' },
+    recruiting: true,
+    accent: 'teal',
+  },
+  {
+    id: 'nutrition-lunch',
     title: {
       en: 'Cook & share lunch',
       'zh-Hant': '烹飪共享午餐',
@@ -122,21 +130,25 @@ export const activities: Activity[] = [
     },
     date: { en: 'Thu 21 Aug · 11:00', 'zh-Hant': '8月21日（四）· 11:00', 'zh-Hans': '8月21日（四）· 11:00' },
     place: { en: 'Wan Chai kitchen', 'zh-Hant': '灣仔廚房', 'zh-Hans': '湾仔厨房' },
-    category: { en: 'Life skills', 'zh-Hant': '生活技能', 'zh-Hans': '生活技能' },
+    category: { en: 'Nutrition', 'zh-Hant': '營養', 'zh-Hans': '营养' },
     recruiting: true,
     accent: 'yellow',
   },
   {
-    id: 'art-studio',
+    id: 'family-bocce',
     title: {
-      en: 'Open art studio',
-      'zh-Hant': '開放藝術工作室',
-      'zh-Hans': '开放艺术工作室',
+      en: 'Family bocce morning',
+      'zh-Hant': '家庭地擲球晨聚',
+      'zh-Hans': '家庭地掷球晨聚',
     },
     date: { en: 'Fri 22 Aug · 15:00', 'zh-Hant': '8月22日（五）· 15:00', 'zh-Hans': '8月22日（五）· 15:00' },
-    place: { en: 'Sheung Wan', 'zh-Hant': '上環', 'zh-Hans': '上环' },
-    category: { en: 'Art', 'zh-Hant': '藝術', 'zh-Hans': '艺术' },
-    recruiting: false,
+    place: { en: 'Sai Ying Pun', 'zh-Hant': '西營盤', 'zh-Hans': '西营盘' },
+    category: {
+      en: 'Family Support',
+      'zh-Hant': '家庭支援',
+      'zh-Hans': '家庭支援',
+    },
+    recruiting: true,
     accent: 'pink',
   },
 ]
@@ -170,8 +182,6 @@ export type Story = {
   line: Localized
   author: string
   accent: 'teal' | 'pink' | 'yellow' | 'navy'
-  /** Placeholder photo height variety for masonry */
-  photoH: 'sm' | 'md' | 'lg'
 }
 
 export type KnowledgeKind = 'dots' | 'slider'
@@ -185,31 +195,32 @@ export type KnowledgeStat = {
   afterStoryCount: number
 }
 
-export type FollowProgram = {
+export type ActivityAbility = {
   id: string
-  type: ActivityType
   name: Localized
   blurb: Localized
-  accent: 'teal' | 'pink' | 'yellow' | 'navy'
 }
 
+/** Live count for the Ability Wall header. Bump as real moments are logged. */
+export const MOMENTS_OF_ABILITY_COUNT = 1247
+
 export const stories: Story[] = [
+  // Real: RHKYC × Love 21 dragon-boat programme, 2021 (love21foundation.com/media, SCMP).
   {
     id: 's1',
     type: 'sport',
     title: {
-      en: 'Paddled the full 500 metres',
-      'zh-Hant': '划完全程 500 米',
-      'zh-Hans': '划完全程 500 米',
+      en: 'Learned to race a dragon boat',
+      'zh-Hant': '學會扒龍舟比賽',
+      'zh-Hans': '学会扒龙舟比赛',
     },
     line: {
-      en: 'Our crew hit the water at Stanley before breakfast.',
-      'zh-Hant': '我們的隊伍在早餐前就下水了。',
-      'zh-Hans': '我们的队伍在早餐前就下水了。',
+      en: 'Members train and compete in dragon boating with the Royal Hong Kong Yacht Club.',
+      'zh-Hant': '會員與香港遊艇會一起練習及參與龍舟比賽。',
+      'zh-Hans': '会员与香港游艇会一起练习及参与龙舟比赛。',
     },
-    author: 'Tom',
+    author: 'RHKYC × Love 21',
     accent: 'navy',
-    photoH: 'lg',
   },
   {
     id: 's2',
@@ -226,7 +237,6 @@ export const stories: Story[] = [
     },
     author: 'Aya',
     accent: 'yellow',
-    photoH: 'md',
   },
   {
     id: 's3',
@@ -243,7 +253,6 @@ export const stories: Story[] = [
     },
     author: 'Ken',
     accent: 'pink',
-    photoH: 'sm',
   },
   {
     id: 's4',
@@ -260,7 +269,6 @@ export const stories: Story[] = [
     },
     author: 'Sam',
     accent: 'yellow',
-    photoH: 'md',
   },
   {
     id: 's5',
@@ -277,7 +285,6 @@ export const stories: Story[] = [
     },
     author: 'Mrs. Chan',
     accent: 'teal',
-    photoH: 'sm',
   },
   {
     id: 's6',
@@ -294,24 +301,24 @@ export const stories: Story[] = [
     },
     author: 'Leo',
     accent: 'teal',
-    photoH: 'lg',
   },
+  // Real: Love 21 Employment Training Programme, SCMP 8 Nov 2021 (love21foundation.com/media).
+  // Roles verified from the article subhead — don't add unverified job titles.
   {
     id: 's7',
     type: 'special',
     title: {
-      en: 'Opened the annual ability night',
-      'zh-Hant': '揭開年度能力之夜',
-      'zh-Hans': '揭开年度能力之夜',
+      en: 'Ready for real employment',
+      'zh-Hant': '準備好投入真實職場',
+      'zh-Hans': '准备好投入真实职场',
     },
     line: {
-      en: 'The hall went quiet — then stood for the first bow.',
-      'zh-Hant': '禮堂安靜下來——然後為第一個鞠躬起立。',
-      'zh-Hans': '礼堂安静下来——然后为第一个鞠躬起立。',
+      en: 'Love 21 members train for real jobs — like receptionists and teaching assistants — not specially-designed roles, real ones.',
+      'zh-Hant': 'Love 21 會員接受培訓，投身接待員、教學助理等真實職位——不是特別設計的崗位，是真正的工作。',
+      'zh-Hans': 'Love 21 会员接受培训，投身接待员、教学助理等真实职位——不是特别设计的岗位，是真正的工作。',
     },
-    author: 'Winnie',
+    author: 'Love 21 team',
     accent: 'pink',
-    photoH: 'md',
   },
   {
     id: 's8',
@@ -328,7 +335,6 @@ export const stories: Story[] = [
     },
     author: 'Jay',
     accent: 'navy',
-    photoH: 'sm',
   },
   {
     id: 's9',
@@ -345,7 +351,6 @@ export const stories: Story[] = [
     },
     author: 'Mei',
     accent: 'teal',
-    photoH: 'md',
   },
   {
     id: 's10',
@@ -362,7 +367,6 @@ export const stories: Story[] = [
     },
     author: 'Chris',
     accent: 'navy',
-    photoH: 'lg',
   },
   {
     id: 's11',
@@ -379,7 +383,6 @@ export const stories: Story[] = [
     },
     author: 'Nina',
     accent: 'pink',
-    photoH: 'sm',
   },
   {
     id: 's12',
@@ -396,7 +399,6 @@ export const stories: Story[] = [
     },
     author: 'Ellie',
     accent: 'yellow',
-    photoH: 'md',
   },
 ]
 
@@ -421,22 +423,27 @@ export const knowledgeStats: KnowledgeStat[] = [
     kind: 'slider',
     afterStoryCount: 5,
     headline: {
-      en: 'Fewer than 15% are in competitive employment',
-      'zh-Hant': '少於 15% 能進入競爭性就業',
-      'zh-Hans': '少于 15% 能进入竞争性就业',
+      en: 'There’s more they take part in than most people guess',
+      'zh-Hant': '他們參與的活動，比大部分人猜的還要多',
+      'zh-Hans': '他们参与的活动，比大部分人猜的还要多',
     },
     body: {
-      en: 'Guess the figure, then see the truth. Ability is here — opportunity is not.',
-      'zh-Hant': '先猜一個數字，再看真相。能力在這裡——機會還不夠。',
-      'zh-Hans': '先猜一个数字，再看真相。能力在这里——机会还不够。',
+      en: 'Guess how many different activities Love 21 members take part in — sport, dance, art and more — then see the real number.',
+      'zh-Hant': '先猜猜 Love 21 會員參與多少種不同活動——運動、跳舞、藝術等等——再看看真實數字。',
+      'zh-Hans': '先猜猜 Love 21 会员参与多少种不同活动——运动、跳舞、艺术等等——再看看真实数字。',
     },
   },
 ]
 
-export const followPrograms: FollowProgram[] = [
+/**
+ * Real activity descriptions, salvaged from the removed "Follow a program" panel
+ * (that feature promised notifications we don't build). Earmarked for the future
+ * Employment/Opportunities block — 'cafe' is the clearest real employment-ability
+ * example: real shifts, real customers, real skills.
+ */
+export const activityAbilities: ActivityAbility[] = [
   {
     id: 'dragon-boat',
-    type: 'sport',
     name: {
       en: 'Dragon boat',
       'zh-Hant': '龍舟',
@@ -447,11 +454,9 @@ export const followPrograms: FollowProgram[] = [
       'zh-Hant': '赤柱一帶的訓練晨練與比賽日。',
       'zh-Hans': '赤柱一带的训练晨练与比赛日。',
     },
-    accent: 'navy',
   },
   {
     id: 'dance',
-    type: 'art',
     name: {
       en: 'Dance',
       'zh-Hant': '舞蹈',
@@ -462,11 +467,9 @@ export const followPrograms: FollowProgram[] = [
       'zh-Hant': '由學員帶領的週六工作室課堂。',
       'zh-Hans': '由学员带领的周六工作室课堂。',
     },
-    accent: 'pink',
   },
   {
     id: 'cafe',
-    type: 'csr',
     name: {
       en: 'Community café',
       'zh-Hant': '社區咖啡店',
@@ -477,11 +480,9 @@ export const followPrograms: FollowProgram[] = [
       'zh-Hant': '真實當值、真實客人、真實技能。',
       'zh-Hans': '真实当值、真实客人、真实技能。',
     },
-    accent: 'teal',
   },
   {
     id: 'art-studio',
-    type: 'art',
     name: {
       en: 'Art studio',
       'zh-Hant': '藝術工作室',
@@ -492,11 +493,9 @@ export const followPrograms: FollowProgram[] = [
       'zh-Hant': '上環開放工作室時段與市集日。',
       'zh-Hans': '上环开放工作室时段与市集日。',
     },
-    accent: 'yellow',
   },
   {
     id: 'cook-share',
-    type: 'nutrition',
     name: {
       en: 'Cook & share',
       'zh-Hant': '烹飪共享',
@@ -507,11 +506,9 @@ export const followPrograms: FollowProgram[] = [
       'zh-Hant': '從廚房技巧走到共享餐桌。',
       'zh-Hans': '从厨房技巧走到共享餐桌。',
     },
-    accent: 'yellow',
   },
   {
     id: 'fitness-circuit',
-    type: 'fitness',
     name: {
       en: 'Fitness circuit',
       'zh-Hant': '體能循環',
@@ -522,7 +519,6 @@ export const followPrograms: FollowProgram[] = [
       'zh-Hant': '教練大聲加油的肌力訓練。',
       'zh-Hans': '教练大声加油的肌力训练。',
     },
-    accent: 'teal',
   },
 ]
 
@@ -530,65 +526,82 @@ export const spotlights: Spotlight[] = [
   {
     id: 'ken',
     achievement: {
-      en: 'Teaches our dance class.',
-      'zh-Hant': '教授我們的舞蹈班。',
-      'zh-Hans': '教授我们的舞蹈班。',
+      en: 'Leads Saturday dance warm-ups.',
+      'zh-Hant': '帶領週六舞蹈熱身。',
+      'zh-Hans': '带领周六舞蹈热身。',
     },
     name: 'Ken',
     detail: {
-      en: 'Ken leads warm-ups for thirty dancers every Saturday morning.',
-      'zh-Hant': 'Ken 每個週六早上為三十位舞者帶領熱身。',
-      'zh-Hans': 'Ken 每个周六早上为三十位舞者带领热身。',
+      en: 'Ken counts the beats for thirty dancers every Saturday morning.',
+      'zh-Hant': 'Ken 每個週六早上為三十位舞者打拍子。',
+      'zh-Hans': 'Ken 每个周六早上为三十位舞者打拍子。',
     },
-    category: { en: 'Coach', 'zh-Hant': '教練', 'zh-Hans': '教练' },
+    category: { en: 'Coach · Dance', 'zh-Hant': '教練 · 舞蹈', 'zh-Hans': '教练 · 舞蹈' },
     accent: 'pink',
   },
   {
     id: 'mei',
     achievement: {
-      en: 'Holds a real job at a café.',
-      'zh-Hant': '在咖啡店有一份真正的工作。',
-      'zh-Hans': '在咖啡店有一份真正的工作。',
+      en: 'Runs the CSR café morning bar.',
+      'zh-Hant': '主理企業社會責任咖啡店早班吧台。',
+      'zh-Hans': '主理企业社会责任咖啡店早班吧台。',
     },
     name: 'Mei',
     detail: {
-      en: 'Mei runs the morning coffee bar and knows every regular by name.',
-      'zh-Hant': 'Mei 負責早班咖啡吧，記得每位常客的名字。',
-      'zh-Hans': 'Mei 负责早班咖啡吧，记得每位常客的名字。',
+      en: 'Mei hosts colleagues on Community & Education shifts and knows every regular by name.',
+      'zh-Hant': 'Mei 在社區與教育當值接待同事，記得每位常客的名字。',
+      'zh-Hans': 'Mei 在社区与教育当值接待同事，记得每位常客的名字。',
     },
-    category: { en: 'Barista', 'zh-Hant': '咖啡師', 'zh-Hans': '咖啡师' },
+    category: {
+      en: 'Barista · Community & Education',
+      'zh-Hant': '咖啡師 · 社區與教育',
+      'zh-Hans': '咖啡师 · 社区与教育',
+    },
     accent: 'teal',
   },
   {
-    id: 'tom',
+    // Real event: RHKYC x Love 21 inclusive dragon-boat programme, Aug–Sep 2021.
+    // No individual member is named in the public record, so this stays a team
+    // credit rather than inventing a person's identity. Sources: SCMP
+    // (scmp.com/news/hong-kong/society/article/3155167) and SCMP video
+    // (scmp.com/video/scmp-originals/3150667).
+    id: 'dragon-boat-crew',
     achievement: {
-      en: 'Finished the dragon-boat race.',
-      'zh-Hant': '完成了龍舟比賽。',
-      'zh-Hans': '完成了龙舟比赛。',
+      en: 'Raced in open water after six weeks of training.',
+      'zh-Hant': '六週訓練後，完成公海龍舟賽事。',
+      'zh-Hans': '六周训练后，完成公海龙舟赛事。',
     },
-    name: 'Tom',
+    name: 'RHKYC × Love 21',
     detail: {
-      en: 'Tom paddled all 500 metres with his crew and crossed the line.',
-      'zh-Hant': 'Tom 與隊友划完全程 500 米，衝過終點。',
-      'zh-Hans': 'Tom 与队友划完全程 500 米，冲过终点。',
+      en: 'Thirteen teens trained with the Royal Hong Kong Yacht Club for six weeks, then raced open water — chanting "friendship first, losing second."',
+      'zh-Hant': '十三位青年與香港遊艇會接受六週訓練，其後在海上完成龍舟賽事——口號是「友誼第一，比賽第二」。',
+      'zh-Hans': '十三位青年与香港游艇会接受六周训练，其后在海上完成龙舟赛事——口号是「友谊第一，比赛第二」。',
     },
-    category: { en: 'Athlete', 'zh-Hant': '運動員', 'zh-Hans': '运动员' },
+    category: {
+      en: 'Team · Dragon boat',
+      'zh-Hant': '團隊 · 龍舟',
+      'zh-Hans': '团队 · 龙舟',
+    },
     accent: 'navy',
   },
   {
     id: 'aya',
     achievement: {
-      en: 'Sells her paintings at market.',
-      'zh-Hant': '在市集售賣自己的畫作。',
-      'zh-Hans': '在市集售卖自己的画作。',
+      en: 'Landed a clean bocce scoring shot.',
+      'zh-Hant': '打出一記漂亮的地擲球得分。',
+      'zh-Hans': '打出一记漂亮的地掷球得分。',
     },
     name: 'Aya',
     detail: {
-      en: 'Aya priced, framed and sold out her first collection this spring.',
-      'zh-Hant': 'Aya 今個春天為首個系列定價、裱框並售罄。',
-      'zh-Hans': 'Aya 今个春天为首个系列定价、装裱并售罄。',
+      en: 'Aya trains bocce alongside boxing and fencing sessions with the Sports programme.',
+      'zh-Hant': 'Aya 在運動項目中練習地擲球，也參與拳擊與劍擊課。',
+      'zh-Hans': 'Aya 在运动项目中练习地掷球，也参与拳击与剑击课。',
     },
-    category: { en: 'Artist', 'zh-Hant': '藝術家', 'zh-Hans': '艺术家' },
+    category: {
+      en: 'Athlete · Bocce',
+      'zh-Hant': '運動員 · 地擲球',
+      'zh-Hans': '运动员 · 地掷球',
+    },
     accent: 'yellow',
   },
 ]

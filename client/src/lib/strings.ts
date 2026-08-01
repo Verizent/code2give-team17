@@ -17,6 +17,7 @@ type Strings = {
     easyRead: string
     language: string
     skipToContent: string
+    askForHelp: string
   }
   hero: {
     eyebrow: string
@@ -28,7 +29,12 @@ type Strings = {
   stats: {
     title: string
     updated: string
-    items: { value: number; suffix: string; label: string }[]
+    items: {
+      id: 'families' | 'sessions' | 'activityTypes' | 'volunteerHours'
+      value: number
+      suffix: string
+      label: string
+    }[]
   }
   activities: {
     title: string
@@ -91,18 +97,16 @@ type Strings = {
     shareSubmit: string
     shareClose: string
     shareSent: string
-    followTitle: string
-    followSubhead: string
-    followCta: string
-    followingCta: string
-    followNotify: string
     knowledgeHook: string
     dotsCaption: string
     sliderGuess: string
     sliderReveal: string
     sliderYourGuess: string
     sliderReal: string
+    sliderUnit: string
     emptyFilter: string
+    momentsLabel: string
+    revealPrompt: string
   }
   volunteer: {
     kicker: string
@@ -267,6 +271,17 @@ type Strings = {
     thanksShareCampaign: string
     thanksHome: string
   }
+  support: {
+    eyebrow: string
+    title: string
+    intro: string
+    processTitle: string
+    processBody: string
+    emailCta: string
+    memberNote: string
+    memberCta: string
+    backHome: string
+  }
 }
 
 export const STRINGS: Record<Locale, Strings> = {
@@ -281,23 +296,24 @@ export const STRINGS: Record<Locale, Strings> = {
       easyRead: 'Easy Read',
       language: 'Language',
       skipToContent: 'Skip to content',
+      askForHelp: 'Ask for help',
     },
     hero: {
-      eyebrow: '#Somuchability',
+      eyebrow: '#somuchability',
       line1: 'So much',
       line2: 'ability',
       subhead:
-        'Sport, nutrition and family care programmes — free for our members.',
+        'A Hong Kong charity empowering the Down syndrome, autistic and neurodiverse community through sport, nutrition and holistic support.',
       cta: 'See what they can do',
     },
     stats: {
       title: 'Impact you can count',
-      updated: 'Last updated 30s ago · Annual Report 2024/25',
+      updated: 'From our 2024–25 annual report',
       items: [
-        { value: 6859, suffix: '', label: 'sessions offered (2024/25)' },
-        { value: 490, suffix: '', label: 'families supported' },
-        { value: 84, suffix: '', label: 'activity types' },
-        { value: 1000, suffix: '+', label: 'volunteer hours / month' },
+        { id: 'families', value: 490, suffix: '', label: 'families supported' },
+        { id: 'sessions', value: 6859, suffix: '', label: 'sessions offered per year' },
+        { id: 'activityTypes', value: 84, suffix: '', label: 'types of activities' },
+        { id: 'volunteerHours', value: 1000, suffix: '+', label: 'volunteer hours per month' },
       ],
     },
     activities: {
@@ -377,18 +393,16 @@ export const STRINGS: Record<Locale, Strings> = {
       shareSubmit: 'Submit for review',
       shareClose: 'Close',
       shareSent: 'Submitted for review — thank you.',
-      followTitle: 'Follow a program',
-      followSubhead: 'Follow an activity type — not a person. New moments notify you.',
-      followCta: 'Follow',
-      followingCta: 'Following',
-      followNotify: 'You’ll hear when new moments land in this program.',
-      knowledgeHook: 'Want to change this number? → Volunteer',
+      knowledgeHook: 'Want to try one with them? → Volunteer',
       dotsCaption: '700 babies · 1 lit',
-      sliderGuess: 'Drag to guess the percentage',
-      sliderReveal: 'Reveal the real figure',
+      sliderGuess: 'Drag to guess how many',
+      sliderReveal: 'Reveal the real number',
       sliderYourGuess: 'Your guess',
-      sliderReal: 'The real figure',
+      sliderReal: 'The real number',
+      sliderUnit: 'activities',
       emptyFilter: 'No moments in this program yet — try another filter.',
+      momentsLabel: 'moments of ability and counting',
+      revealPrompt: 'See who did this',
     },
 volunteer: {
       kicker: 'Take part',
@@ -593,6 +607,19 @@ volunteer: {
       thanksShareCampaign: 'Share a campaign',
       thanksHome: 'Home',
     },
+    support: {
+      eyebrow: 'Support',
+      title: 'Looking for support for your family?',
+      intro:
+        'Love 21 runs sport, nutrition and family programmes for the Down syndrome, autistic and neurodiverse community in Hong Kong. If you think we could be a good fit, we would love to meet you.',
+      processTitle: 'How to reach us',
+      processBody:
+        'There is no online application yet — the fastest way in is a quick email. We will get back to you, talk through your family’s needs, and if it looks like a good fit, arrange a visit to meet the team at our centre.',
+      emailCta: 'Email info@love21foundation.com',
+      memberNote: 'Already a Love 21 member?',
+      memberCta: 'Sign in to your account',
+      backHome: 'Back to home',
+    },
   },
   'zh-Hant': {
     nav: {
@@ -605,22 +632,24 @@ volunteer: {
       easyRead: '簡易閱讀',
       language: '語言',
       skipToContent: '跳至內容',
+      askForHelp: '尋求協助',
     },
     hero: {
-      eyebrow: '#Somuchability',
+      eyebrow: '#somuchability',
       line1: '無限',
       line2: '能力',
-      subhead: '運動、營養與家庭支援計劃——會員免費。',
+      subhead:
+        '香港慈善機構，透過運動、營養與全人支援，賦能唐氏綜合症、自閉症及神經多樣性社群。',
       cta: '看看他們的能力',
     },
     stats: {
       title: '看得見的影響',
-      updated: '30 秒前更新 · 2024/25 年度報告',
+      updated: '數據來自 2024–25 年度報告',
       items: [
-        { value: 6859, suffix: '', label: '課程總節數（2024/25）' },
-        { value: 490, suffix: '', label: '支援家庭' },
-        { value: 84, suffix: '', label: '活動種類' },
-        { value: 1000, suffix: '+', label: '義工時數 / 月' },
+        { id: 'families', value: 490, suffix: '', label: '支援家庭' },
+        { id: 'sessions', value: 6859, suffix: '', label: '每年提供課程節數' },
+        { id: 'activityTypes', value: 84, suffix: '', label: '活動種類' },
+        { id: 'volunteerHours', value: 1000, suffix: '+', label: '每月義工時數' },
       ],
     },
     activities: {
@@ -700,18 +729,16 @@ volunteer: {
       shareSubmit: '提交審核',
       shareClose: '關閉',
       shareSent: '已提交審核——謝謝。',
-      followTitle: '追蹤一個項目',
-      followSubhead: '追蹤活動類型——不是個人。有新時刻會通知你。',
-      followCta: '追蹤',
-      followingCta: '追蹤中',
-      followNotify: '此項目有新時刻時會通知你。',
-      knowledgeHook: '想改變這個數字？→ 做義工',
+      knowledgeHook: '想和他們一起試試？→ 做義工',
       dotsCaption: '700 名嬰兒 · 點亮 1 個',
-      sliderGuess: '拖動猜測百分比',
+      sliderGuess: '拖動猜猜有多少',
       sliderReveal: '顯示真實數字',
       sliderYourGuess: '你的猜測',
       sliderReal: '真實數字',
+      sliderUnit: '種活動',
       emptyFilter: '此項目暫無時刻——試試其他篩選。',
+      momentsLabel: '個能力時刻，持續累積中',
+      revealPrompt: '看看是誰做到的',
     },
 volunteer: {
       kicker: '參與',
@@ -907,6 +934,19 @@ volunteer: {
       thanksShareCampaign: '分享籌款',
       thanksHome: '首頁',
     },
+    support: {
+      eyebrow: '支援',
+      title: '想為你的家庭尋找支援？',
+      intro:
+        'Love 21 在香港為唐氏綜合症、自閉症及其他神經多樣人士提供運動、營養及家庭支援活動。如果你覺得我們可能適合你的家庭，我們很樂意與你見面。',
+      processTitle: '如何聯絡我們',
+      processBody:
+        '我們暫時未有網上申請——最快的方法是先發一封電郵。我們會回覆你，了解你家庭的需要，如果合適，會再安排你到中心參觀，認識我們的團隊。',
+      emailCta: '電郵 info@love21foundation.com',
+      memberNote: '已經是 Love 21 會員？',
+      memberCta: '登入你的帳戶',
+      backHome: '返回首頁',
+    },
   },
   'zh-Hans': {
     nav: {
@@ -919,22 +959,24 @@ volunteer: {
       easyRead: '简易阅读',
       language: '语言',
       skipToContent: '跳至内容',
+      askForHelp: '寻求协助',
     },
     hero: {
-      eyebrow: '#Somuchability',
+      eyebrow: '#somuchability',
       line1: '无限',
       line2: '能力',
-      subhead: '运动、营养与家庭支援计划——会员免费。',
+      subhead:
+        '香港慈善机构，透过运动、营养与全人支援，赋能唐氏综合症、自闭症及神经多样性社群。',
       cta: '看看他们的能力',
     },
     stats: {
       title: '看得见的影响',
-      updated: '30 秒前更新 · 2024/25 年度报告',
+      updated: '数据来自 2024–25 年度报告',
       items: [
-        { value: 6859, suffix: '', label: '课程总节数（2024/25）' },
-        { value: 490, suffix: '', label: '支援家庭' },
-        { value: 84, suffix: '', label: '活动种类' },
-        { value: 1000, suffix: '+', label: '义工时数 / 月' },
+        { id: 'families', value: 490, suffix: '', label: '支援家庭' },
+        { id: 'sessions', value: 6859, suffix: '', label: '每年提供课程节数' },
+        { id: 'activityTypes', value: 84, suffix: '', label: '活动种类' },
+        { id: 'volunteerHours', value: 1000, suffix: '+', label: '每月义工时数' },
       ],
     },
     activities: {
@@ -1014,18 +1056,16 @@ volunteer: {
       shareSubmit: '提交审核',
       shareClose: '关闭',
       shareSent: '已提交审核——谢谢。',
-      followTitle: '追踪一个项目',
-      followSubhead: '追踪活动类型——不是个人。有新时刻会通知你。',
-      followCta: '追踪',
-      followingCta: '追踪中',
-      followNotify: '此项目有新时刻时会通知你。',
-      knowledgeHook: '想改变这个数字？→ 做义工',
+      knowledgeHook: '想和他们一起试试？→ 做义工',
       dotsCaption: '700 名婴儿 · 点亮 1 个',
-      sliderGuess: '拖动猜测百分比',
+      sliderGuess: '拖动猜猜有多少',
       sliderReveal: '显示真实数字',
       sliderYourGuess: '你的猜测',
       sliderReal: '真实数字',
+      sliderUnit: '种活动',
       emptyFilter: '此项目暂无时刻——试试其他筛选。',
+      momentsLabel: '个能力时刻，持续累积中',
+      revealPrompt: '看看是谁做到的',
     },
 volunteer: {
       kicker: '参与',
@@ -1221,6 +1261,19 @@ volunteer: {
       thanksShareCampaign: '分享筹款',
       thanksHome: '首页',
     },
+    support: {
+      eyebrow: '支援',
+      title: '想为你的家庭寻找支援？',
+      intro:
+        'Love 21 在香港为唐氏综合症、自闭症及其他神经多样人士提供运动、营养及家庭支援活动。如果你觉得我们可能适合你的家庭，我们很乐意与你见面。',
+      processTitle: '如何联系我们',
+      processBody:
+        '我们暂时还没有网上申请——最快的方法是先发一封邮件。我们会回复你，了解你家庭的需要，如果合适，会再安排你到中心参观，认识我们的团队。',
+      emailCta: '邮件 info@love21foundation.com',
+      memberNote: '已经是 Love 21 会员？',
+      memberCta: '登录你的账户',
+      backHome: '返回首页',
+    },
   },
 }
 
@@ -1261,17 +1314,17 @@ const EASY_READ_EN: DeepPartial<Strings> = {
     line1: 'So much',
     line2: 'ability',
     subhead:
-      'We help people with Down syndrome and autism in Hong Kong. Sport and food classes are free.',
+      'We are a Hong Kong charity. We support people with Down syndrome, autism and other neurodiverse needs through sport, food and care.',
     cta: 'See what they can do',
   },
   stats: {
     title: 'Our numbers',
-    updated: 'These numbers are from our yearly report.',
+    updated: 'From our 2024–25 annual report.',
     items: [
-      { value: 6859, suffix: '', label: 'classes last year' },
-      { value: 490, suffix: '', label: 'families we help' },
-      { value: 84, suffix: '', label: 'kinds of activities' },
-      { value: 1000, suffix: '+', label: 'volunteer hours each month' },
+      { id: 'families', value: 490, suffix: '', label: 'families we help' },
+      { id: 'sessions', value: 6859, suffix: '', label: 'classes each year' },
+      { id: 'activityTypes', value: 84, suffix: '', label: 'kinds of activities' },
+      { id: 'volunteerHours', value: 1000, suffix: '+', label: 'volunteer hours each month' },
     ],
   },
   activities: {
@@ -1320,6 +1373,8 @@ const EASY_READ_EN: DeepPartial<Strings> = {
     eyebrow: 'Stories',
     title: 'What people can do',
     subhead: 'Read short stories. Learn facts. Share a moment if you want.',
+    momentsLabel: 'good moments. And counting.',
+    revealPrompt: 'Tap to see who',
   },
   volunteer: {
     kicker: 'Help out',
@@ -1351,6 +1406,17 @@ const EASY_READ_EN: DeepPartial<Strings> = {
     thanksCreateAccount: 'Want gifts and volunteer hours in one place?',
     thanksCreateAccountBody: 'Make a free account with this email. We will add this gift.',
     thanksCreateCta: 'Make an account',
+  },
+  support: {
+    eyebrow: 'Support',
+    title: 'Need help for your family?',
+    intro: 'Love 21 helps people with Down syndrome, autism, and other needs. We do sport, food help, and family support.',
+    processTitle: 'How to talk to us',
+    processBody: 'Send us an email. We will write back. We will ask about your family. Then we may invite you to visit us.',
+    emailCta: 'Email us',
+    memberNote: 'Already a member?',
+    memberCta: 'Sign in',
+    backHome: 'Home',
   },
 }
 

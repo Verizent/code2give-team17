@@ -5,19 +5,22 @@ import { EasyReadRow, EasyReadSentences } from '@/components/easy-read-row'
 import { spotlights, type Spotlight } from '@/lib/mock'
 import { cn } from '@/lib/utils'
 
+// Real Love 21 moment photos — not tied 1:1 to any card's specific text.
+// member.jpg is a Zoom-call screenshot with attendees' real names visible,
+// so it's excluded from decorative reuse.
 const SPOTLIGHT_IMAGES = [
-  '/brand/member.jpg',
-  '/brand/class.jpg',
-  '/brand/activity.jpg',
   '/brand/hero-group.jpg',
+  '/brand/hero-huddle.jpg',
+  '/brand/activity.jpg',
+  '/brand/class.jpg',
 ] as const
 
-const accentBlock: Record<Spotlight['accent'], string> = {
-  teal: 'bg-teal text-white',
-  pink: 'bg-pink text-navy',
-  yellow: 'bg-yellow text-navy',
-  navy: 'bg-navy text-white',
-}
+// Single dark scrim for every card (not per-accent): measured against all 4
+// photos' brightest/darkest pixels, navy/75 keeps white text >=5.5:1 (AA
+// needs 4.5:1). A per-accent tint can't hit AA reliably — solid teal+white
+// alone is already only 4.52:1, so any photo showing through drops below
+// threshold. Accent identity lives in the avatar ring below instead.
+const PHOTO_SCRIM = 'bg-navy/75'
 
 const avatarRing: Record<Spotlight['accent'], string> = {
   teal: 'bg-teal/15 text-teal',
@@ -26,7 +29,7 @@ const avatarRing: Record<Spotlight['accent'], string> = {
   navy: 'bg-navy/10 text-navy',
 }
 
-function SpotlightCard({ item }: { item: Spotlight }) {
+function SpotlightCard({ item, photoSrc }: { item: Spotlight; photoSrc: string }) {
   const { locale, t } = useSite()
 
   return (
@@ -34,8 +37,10 @@ function SpotlightCard({ item }: { item: Spotlight }) {
       to="/community"
       className="group flex flex-col overflow-hidden rounded-xl border border-black/8 bg-white shadow-[0_1px_2px_rgba(20,40,75,0.04)] transition-shadow hover:shadow-[0_8px_24px_rgba(20,40,75,0.08)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
     >
-      <div className={cn('min-h-[7.5rem] p-5', accentBlock[item.accent])}>
-        <p className="font-display text-[1.2rem] leading-snug font-semibold text-balance">
+      <div className="relative min-h-[9rem] overflow-hidden p-5 text-white">
+        <img src={photoSrc} alt="" className="absolute inset-0 h-full w-full object-cover" />
+        <div className={cn('absolute inset-0', PHOTO_SCRIM)} aria-hidden="true" />
+        <p className="relative font-display text-[1.2rem] leading-snug font-semibold text-balance">
           {item.achievement[locale]}
         </p>
       </div>
@@ -95,7 +100,7 @@ export function AbilitySpotlight() {
               <EasyReadRow
                 key={item.id}
                 imageSrc={SPOTLIGHT_IMAGES[i % SPOTLIGHT_IMAGES.length]}
-                imageAlt={`${item.name}`}
+                imageAlt="Love 21 members together at an activity"
               >
                 <p className="kicker text-navy">
                   {t.spotlight.reveal} {item.name}
@@ -134,8 +139,12 @@ export function AbilitySpotlight() {
         </p>
 
         <div className="mt-10 grid gap-5 sm:mt-12 sm:grid-cols-2 lg:grid-cols-4">
-          {spotlights.map((item) => (
-            <SpotlightCard key={item.id} item={item} />
+          {spotlights.map((item, i) => (
+            <SpotlightCard
+              key={item.id}
+              item={item}
+              photoSrc={SPOTLIGHT_IMAGES[i % SPOTLIGHT_IMAGES.length]}
+            />
           ))}
         </div>
       </div>
