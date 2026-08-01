@@ -114,20 +114,20 @@ describe("volunteering API", { skip }, () => {
 
     const start = await apiRequest("POST", "/api/email-verifications", { email });
     assert.equal(start.status, 201);
-    assert.ok(start.body.demo_code);
+    assert.ok(start.body.data.demo_code);
 
     const confirm = await apiRequest(
       "PUT",
-      `/api/email-verifications/${start.body.id}/confirmation`,
-      { code: start.body.demo_code },
+      `/api/email-verifications/${start.body.data.id}/confirmation`,
+      { code: start.body.data.demo_code },
     );
     assert.equal(confirm.status, 200);
-    assert.ok(confirm.body.verification_token);
+    assert.ok(confirm.body.data.verification_token);
 
     const volunteer = await apiRequest("POST", "/api/volunteers", {
       email,
       full_name: "API Test Volunteer",
-      verification_token: confirm.body.verification_token,
+      verification_token: confirm.body.data.verification_token,
     });
     assert.equal(volunteer.status, 201);
     assert.ok(volunteer.body.access_token);

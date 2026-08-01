@@ -1,6 +1,7 @@
 const express = require("express");
 const { validate } = require("../middleware/validate");
 const rateLimit = require("../middleware/rate-limit");
+const { envelope } = require("../lib/envelope");
 const emailVerificationService = require("../services/volunteering/email-verification.service");
 const {
   startEmailVerificationBodySchema,
@@ -17,7 +18,7 @@ router.post(
   async (request, response, next) => {
     try {
       const result = await emailVerificationService.startVerification(request.body.email);
-      response.status(201).json(result);
+      response.status(201).json(envelope(result));
     } catch (error) {
       next(error);
     }
@@ -36,7 +37,7 @@ router.put(
         request.params.id,
         request.body.code,
       );
-      response.json(result);
+      response.json(envelope(result));
     } catch (error) {
       next(error);
     }
