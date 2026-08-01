@@ -1,24 +1,24 @@
 const express = require("express");
-const {
-  createDonation,
-  donorHasHistory,
-} = require("../services/donations.service");
+const { validate } = require("../middleware/validate");
+const { z } = require("zod");
+const { envelope } = require("../lib/envelope");
+const { createDonation } = require("../services/donations.service");
 
 const router = express.Router();
 
-router.post("/", async (request, response, next) => {
-  try {
-    const donation = await createDonation(request.body);
-    response.status(201).json(donation);
-  } catch (error) {
-    next(error);
-  }
+const createDonationSchema = z.strictObject({
+  email:       z.string().email(),
+  amount_hkd:  z.number().int().min(1),
+  frequency:   z.enum(["once", "weekly", "monthly"]).optional(),
+  programme:   z.enum(["sports", "fitness", "nutrition", "family", "where_needed"]).optional(),
+  campaign_id: z.string().uuid().optional(),
 });
 
-router.get("/donor-exists", async (request, response, next) => {
+// POST /api/donations
+router.post("/", validate({ body: createDonationSchema }), async (request, response, next) => {
   try {
-    const exists = await donorHasHistory(request.query.email);
-    response.json({ exists });
+    const result = await createDonation(request.body);
+    response.status(201).json(envelope(result));
   } catch (error) {
     next(error);
   }

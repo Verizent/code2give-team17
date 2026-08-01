@@ -1,5 +1,5 @@
 const crypto = require("node:crypto");
-const { getSupabase } = require("../config/supabase");
+const donorsRepo = require("../data/donors.repo");
 const { normalizeEmail } = require("../lib/normalize");
 
 function newAccessToken() {
@@ -7,51 +7,41 @@ function newAccessToken() {
 }
 
 /**
+ * Upserts a donor keyed on normalised email (CONTEXT.md §15).
  * A returning email resolves to the existing row and token — never split history.
+ *
+ * @param {{ email: string, fullName?: string, locale?: string, trackingOptIn?: boolean }} opts
+ * @returns {Promise<{ id: string, email: string, access_token: string, full_name: string|null }>}
  */
 async function upsertDonor({ email, fullName, locale = "en", trackingOptIn = true }) {
   const normalized = normalizeEmail(email);
-  const db = getSupabase();
-
-  const { data: existing, error: lookupError } = await db
-    .from("donors")
-    .select("id, email, access_token, full_name")
-    .eq("email", normalized)
-    .maybeSingle();
-
-  if (lookupError) {
-    throw lookupError;
-  }
+  const existing = await donorsRepo.findByEmail(normalized);
 
   if (existing) {
     const updates = {};
-    if (trackingOptIn) updates.tracking_opt_in = true;
+    if (trackingOptIn && !existing.tracking_opt_in) updates.tracking_opt_in = true;
     if (fullName && !existing.full_name) updates.full_name = fullName;
-
     if (Object.keys(updates).length > 0) {
-      await db.from("donors").update(updates).eq("id", existing.id);
+      await donorsRepo.updateDonor(existing.id, updates);
     }
-
     return existing;
   }
 
-  const { data: created, error: insertError } = await db
-    .from("donors")
-    .insert({
-      email: normalized,
-      full_name: fullName || null,
-      locale,
-      access_token: newAccessToken(),
-      tracking_opt_in: trackingOptIn,
-    })
-    .select("id, email, access_token")
-    .single();
-
-  if (insertError) {
-    throw insertError;
-  }
-
-  return created;
+  return donorsRepo.createDonor({
+    email: normalized,
+    full_name: fullName ?? null,
+    locale,
+    access_token: newAccessToken(),
+    tracking_opt_in: trackingOptIn,
+  });
 }
 
-module.exports = { upsertDonor, newAccessToken };
+/**
+ * @param {string} token
+ * @returns {Promise<object|null>}
+ */
+async function findDonorByToken(token) {
+  return donorsRepo.findByToken(token);
+}
+
+module.exports = { upsertDonor, findDonorByToken, newAccessToken };
