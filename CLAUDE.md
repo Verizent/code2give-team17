@@ -21,10 +21,12 @@ cd server && npm run dev       # node --watch index.js
 cd server && npm start         # node index.js
 cd server && npm test          # BOTH trees — unit + live-DB schema (~11s, writes to Supabase)
 cd server && npm run test:schema                       # the live-DB tree alone
-cd server && node --test tests/                        # the offline unit tree alone
+cd server && node --test "tests/**/*.test.js"          # the offline unit tree alone
 cd server && npm run test:coverage
 cd server && node --test tests/lib/slug.test.js        # a single file
-cd server && node --test --test-name-pattern "slug"    # a single test by name
+cd server && node --test --test-name-pattern "slug" "tests/**/*.test.js"   # by name
+# Note: `node --test tests/` does NOT work — a bare directory is treated as a
+# module entry point. Pass the glob, or a specific file.
 cd server && npm run seed                              # upsert-only seed (articles, impact, community posts)
 
 # client — port 5173, proxies /api → localhost:3000

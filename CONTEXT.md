@@ -965,6 +965,10 @@ Out of scope for the hackathon; required before any real use.
 - [ ] Replace the HandsOn **stub** (§17) with a real integration, or remove the surfaces that imply one. Needs partner credentials (§20.12), plus everything the stub skips: scheduling, reconciliation, real `capacity` / `spots_filled`, genuine hours ingestion, auth, retries and error handling. Until then, **HandsOn hours must not be presented as counting toward badges or certificates**
 - [ ] PDPO collection statement at the point of collection — the donor thanks-page fields, the volunteer signup and post-attendance forms, and Voices. Hong Kong law requires stating what is collected and why *where it is collected*. §23 narrows this to two things, which makes the statement short and honest rather than boilerplate
 - [ ] Disclose the article view counting (§23) — no cookie banner is required, since nothing is stored client-side, but a privacy note should still say that views and a daily-rotating visitor hash are recorded
+- [ ] **Decide how 4xx detail reaches a form in production.** `error-handler.js` drops `message` on every status outside `development`, so `validate.js`'s field-level text ("locale: Invalid option…") disappears and the form has only `code` to work with. Either the client maps `code` + field to its own bilingual copy — better for §20 anyway, since server strings are English-only — or the handler stops suppressing 4xx. **Invisible locally**, because `NODE_ENV` is `development`; it appears the first time anything is deployed (§29)
+- [ ] Reconcile the two SQL homes (`supabase/migrations/` unapplied, `src/schema/` applied) into one, and de-duplicate `set_updated_at()` (§28)
+- [ ] Collapse `getSupabase()` and `getServiceClient()` in `config/supabase.js` — two singletons, one identical service-role client, left by the volunteer merge (§28)
+- [ ] Put `--test-concurrency=1` on `npm test`, or split the live-DB tree out of it. `npm test` currently writes to the **shared** Supabase project and runs the schema suites concurrently against shared tables
 - [ ] Prerendering or SSR so social scrapers read OG tags (§18.12)
 - [ ] `audit_log` viewer — the table exists in §13 and nothing reads it
 - [ ] Native-speaker pass over all zh-Hant copy, especially Instagram captions, which publish under the charity's name and cannot be quietly corrected
@@ -1475,23 +1479,35 @@ and the data layer are still to be built, and §30 assigns them.
 ### What is actually here
 
 ```
-client/                              server/
-├── index.html                       ├── index.js        entry: dotenv, listen, shutdown
-├── vite.config.js   proxy /api      ├── .env.example
-├── .oxlintrc.json                   └── src/
-└── src/                                 ├── app.js      express app + CORS + mounts
-    ├── main.jsx     renders <App/>      ├── config/
-    ├── App.jsx      Vite starter        │   └── supabase.js   anon client + health probe
-    ├── App.css                          ├── middleware/
-    ├── index.css                        │   ├── not-found.js
-    ├── assets/      react/vite/hero     │   └── error-handler.js
-    ├── components/                      └── routes/
-    │   └── Navbar.jsx      empty            ├── index.js       GET /api + mounts
-    └── pages/                               └── health.routes.js
-        ├── HomePage.jsx    placeholder
-        ├── PageNotFound.jsx    empty
-        └── news/Articles.jsx   empty
+client/  (unchanged — still the      server/
+│         stock Vite starter)        ├── index.js        entry: dotenv, listen, shutdown
+├── index.html                       ├── .env.example
+├── vite.config.js   proxy /api      ├── db/seed/        articles · impact · community-posts
+├── .oxlintrc.json                   ├── supabase/migrations/   4 files — NOT applied
+└── src/                             ├── tests/          unit, offline (mock.method stubs)
+    ├── main.jsx     renders <App/>  ├── test/schema/    volunteer CRUD, hits the LIVE db
+    ├── App.jsx      Vite starter    └── src/
+    ├── App.css                          ├── app.js      express app + CORS + mounts
+    ├── index.css                        ├── config/supabase.js   service-role + health probe
+    ├── assets/      react/vite/hero     ├── lib/        api-error · envelope · locale ·
+    ├── components/                      │               pagination · reading-time · slug ·
+    │   └── Navbar.jsx      empty        │               visitor-hash
+    └── pages/                           ├── schemas/    blocks · article · community-post ·
+        ├── HomePage.jsx    placeholder  │               query   (zod v4)
+        ├── PageNotFound.jsx    empty    ├── middleware/ validate · not-found · error-handler
+        └── news/Articles.jsx   empty    ├── data/       articles.repo · impact.repo ·
+                                         │               supabase-error
+                                         ├── services/content/  articles · impact
+                                         ├── routes/     index · health · articles · impact
+                                         └── schema/     volunteer SQL — APPLIED to live
 ```
+
+**Two SQL homes, both legitimate, easy to confuse.** `supabase/migrations/` (Supabase CLI
+convention, timestamped) holds the content tables and is **not applied**. `src/schema/`
+(domain-numbered, from the volunteer track) holds the seven volunteer tables and **is
+applied**. `public.set_updated_at()` is defined in both; both use `create or replace` and
+both pin `set search_path = ''`, which is the only reason that is safe. Drop the pin from
+either and whichever runs last silently un-hardens the function.
 
 **Four of those client files are empty or near-empty.** `Navbar.jsx`, `PageNotFound.jsx` and
 `news/Articles.jsx` are zero bytes; `HomePage.jsx` returns `<div>HomePage</div>`. They are
@@ -1505,20 +1521,31 @@ The entry point is `server/index.js` at the workspace root, not `src/index.js`.
 
 | Route | Response |
 |---|---|
-| `GET /` | `{ message, status }` — banner |
-| `GET /api` | `{ message, status }` — banner |
-| `GET /api/health` | `{ status: "ok", timestamp }` |
+| `GET /` | `{ message, status }` — banner, unwrapped |
+| `GET /api` | `{ message, status }` — banner, unwrapped |
+| `GET /api/health` | `{ status: "ok", timestamp }` — probe, unwrapped |
 | `GET /api/health/supabase` | `{ status: "ok", service: "supabase" }`, or 503 through the error handler |
+| `GET /api/articles` | `{ data: [...], meta: { total, page, limit } }` |
+| `GET /api/articles/:slug` | `{ data: {...} }`, or 404 |
+| `GET /api/impact` | `{ data: {...} }`, or 404 when no period is current |
 
 `app.js` in order: `x-powered-by` disabled → `express.json()` → a hand-written CORS
 middleware (`CLIENT_ORIGIN`, default `http://localhost:5173`, answering `OPTIONS` with 204)
 → routes → `not-found` → `error-handler`. **CORS is hand-rolled, not the `cors` package.**
 
-`config/supabase.js` builds a lazy singleton on the **anon** key with `persistSession` and
-`autoRefreshToken` off, and exposes `checkSupabaseConnection()`, which fetches
-`/auth/v1/health` on a 5-second timeout and throws with `status = 503`. §9 calls for the
-**service-role** key server-side; moving to it is a one-line change in this file plus a new
-variable in `.env.example`, and it should happen before anything queries a table.
+`config/supabase.js` exposes `getServiceClient()` — a lazy singleton on the **service-role**
+key with `persistSession` and `autoRefreshToken` off — plus `checkSupabaseConnection()`,
+which fetches `/auth/v1/health` on a 5-second timeout and throws with `status = 503`. Every
+repo uses the service-role client, because our tables have RLS on with **zero policies**, so
+an anon client reads nothing and returns **empty arrays rather than errors** (§9).
+
+> **Merge artifact — two names for one client.** `getSupabase()` and `getServiceClient()`
+> are separate exports with separate module-level singletons that build the *same*
+> service-role client with the same options. The content repos call `getSupabase()`; the
+> volunteer track's code calls `getServiceClient()`. Nothing is broken — no anon key survives
+> anywhere, which is the part that mattered — but the file now opens two connections where
+> one would do, and the comment above `getServiceClient()` still refers to "the anon client
+> above", which no longer exists. Collapse them when someone is next in this file.
 
 ### The client
 
