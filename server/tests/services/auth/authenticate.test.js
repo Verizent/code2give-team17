@@ -26,7 +26,11 @@ function hostileToken() {
 function stubAll(t, { token = hostileToken(), profile } = {}) {
   mock.method(verifyToken, "verifySupabaseToken", async () => token);
   mock.method(profilesRepo, "findById", async () => profile ?? null);
-  mock.method(profilesRepo, "insertIfAbsent", async (row) => ({ ...row }));
+  // Mirrors the real repo, which injects role itself and ignores any role in input.
+  mock.method(profilesRepo, "insertIfAbsent", async (row) => ({
+    ...row,
+    role: "volunteer",
+  }));
   mock.method(volunteerLinkService, "linkVolunteerToProfile", async () => ({
     linked: false,
     reason: "no_volunteer",
@@ -51,8 +55,11 @@ test("provisions a missing profile as volunteer, ignoring hostile metadata", asy
 
   await resolveAuth(request);
 
+  // The provisioning call must not carry a role at all — the repo hardcodes it.
+  // If a role ever appears in this payload it came from somewhere, and the only
+  // "somewhere" available is attacker-controlled token metadata.
   const inserted = profilesRepo.insertIfAbsent.mock.calls[0].arguments[0];
-  assert.equal(inserted.role, "volunteer");
+  assert.equal(inserted.role, undefined);
   assert.equal(request.auth.role, "volunteer");
 });
 
@@ -130,9 +137,12 @@ test("is idempotent — a second call does not re-verify the token", async (t) =
 });
 
 test("does not attempt a volunteer link when the email is unconfirmed", async (t) => {
+  // profile: null so this IS a first provision — the only thing that may stop the
+  // link is the unconfirmed email. With an existing profile the test would pass
+  // even if the guard were missing.
   stubAll(t, {
     token: { ...hostileToken(), emailConfirmedAt: null },
-    profile: { id: USER_ID, role: "volunteer" },
+    profile: null,
   });
 
   await resolveAuth(requestWith("Bearer abc.def.ghi"));
