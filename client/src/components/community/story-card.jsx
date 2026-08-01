@@ -2,7 +2,7 @@ import { useRef, useState } from 'react'
 import { PartyPopper } from 'lucide-react'
 import { useSite } from '@/components/site-provider'
 import { useReducedMotion } from '@/lib/use-reduced-motion'
-import { cn } from '@/lib/utils'
+import { cn, formatRelativeTime } from '@/lib/utils'
 
 const avatarStyle = {
   teal: 'bg-teal/15 text-teal',
@@ -144,10 +144,11 @@ function CelebrateButton({ initialCount }) {
 
 export function StoryCard({ story }) {
   const { locale, t } = useSite()
+  const timeAgo = formatRelativeTime(story.postedAt, t.community)
 
   return (
     <article className="break-inside-avoid overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-      <div className="flex items-center justify-between gap-3 px-4 pt-4 pb-3">
+      <div className="flex items-start justify-between gap-3 px-4 pt-4 pb-3">
         <div className="flex items-center gap-3">
           <span
             aria-hidden="true"
@@ -158,7 +159,11 @@ export function StoryCard({ story }) {
           >
             {story.author.charAt(0)}
           </span>
-          <p className="font-semibold text-navy">{story.author}</p>
+          <div>
+            <p className="font-semibold text-navy">{story.author}</p>
+            {/* Secondary metadata — never competes with the achievement headline below. */}
+            <p className="text-xs text-navy/45">{timeAgo}</p>
+          </div>
         </div>
         <span className={cn('shrink-0 rounded-full px-3 py-1 text-xs font-semibold', tagStyle[story.accent])}>
           {t.community.filters[story.type]}

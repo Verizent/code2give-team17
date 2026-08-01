@@ -4,6 +4,7 @@ import { SiteFooter } from '@/components/site-footer'
 import { SkipLink } from '@/components/skip-link'
 import { useSite } from '@/components/site-provider'
 import { ShareMomentButton } from '@/components/community/share-moment'
+import { MediaCarousel } from '@/components/community/media-carousel'
 import { StoryFeed } from '@/components/community/story-feed'
 
 export function CommunityPage() {
@@ -32,6 +33,7 @@ export function CommunityPage() {
         <BrandPatternBand variant="yellow" className="easy-hide" />
 
         <div className="mx-auto max-w-[1120px] px-4 py-10 sm:px-8 sm:py-16">
+          <MediaCarousel />
           <StoryFeed />
         </div>
       </main>
