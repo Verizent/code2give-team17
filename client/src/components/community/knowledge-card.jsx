@@ -1,17 +1,18 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowRight } from 'lucide-react'
 import { useSite } from '@/components/site-provider'
-import type { KnowledgeStat } from '@/lib/mock'
 import { cn } from '@/lib/utils'
 
 const DOT_COUNT = 700
 const LIT_INDEX = 349
-const EMPLOYMENT_REAL = 15
+// Real figure, matches stats.items 'activityTypes' in strings.ts (2024–25 annual report).
+const ACTIVITY_TYPES_REAL = 84
 
 function DotsVisual() {
   const { t } = useSite()
-  const dots = useMemo(() => Array.from({ length: DOT_COUNT }, (_, i) => i), [])
+  // Constant-shape array (no reactive inputs) — React Compiler memoizes this.
+  const dots = Array.from({ length: DOT_COUNT }, (_, i) => i)
 
   return (
     <div>
@@ -40,7 +41,7 @@ function DotsVisual() {
 
 function SliderVisual() {
   const { t } = useSite()
-  const [guess, setGuess] = useState(40)
+  const [guess, setGuess] = useState(20)
   const [revealed, setRevealed] = useState(false)
 
   return (
@@ -58,10 +59,10 @@ function SliderVisual() {
               setRevealed(false)
             }}
             className="h-2 w-full cursor-pointer appearance-none rounded-full bg-muted accent-navy"
-            aria-valuetext={`${guess}%`}
+            aria-valuetext={`${guess} ${t.community.sliderUnit}`}
           />
-          <span className="w-14 shrink-0 text-right font-display text-2xl font-bold text-navy">
-            {guess}%
+          <span className="w-16 shrink-0 text-right font-display text-2xl font-bold text-navy">
+            {guess}
           </span>
         </div>
       </label>
@@ -78,12 +79,15 @@ function SliderVisual() {
         <div className="mt-4 grid gap-3 rounded-xl bg-paper/80 p-4 sm:grid-cols-2">
           <div>
             <p className="kicker text-navy/50">{t.community.sliderYourGuess}</p>
-            <p className="mt-1 font-display text-3xl font-bold text-navy">{guess}%</p>
+            <p className="mt-1 font-display text-3xl font-bold text-navy">
+              {guess} <span className="text-base font-medium text-navy/50">{t.community.sliderUnit}</span>
+            </p>
           </div>
           <div>
-            <p className="kicker text-red">{t.community.sliderReal}</p>
-            <p className="mt-1 font-display text-3xl font-bold text-red">
-              &lt;{EMPLOYMENT_REAL}%
+            <p className="kicker text-teal">{t.community.sliderReal}</p>
+            <p className="mt-1 font-display text-3xl font-bold text-teal">
+              {ACTIVITY_TYPES_REAL}{' '}
+              <span className="text-base font-medium text-teal/60">{t.community.sliderUnit}</span>
             </p>
           </div>
         </div>
@@ -92,7 +96,7 @@ function SliderVisual() {
   )
 }
 
-export function KnowledgeCard({ item }: { item: KnowledgeStat }) {
+export function KnowledgeCard({ item }) {
   const { locale, t } = useSite()
 
   return (

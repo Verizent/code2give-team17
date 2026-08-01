@@ -1,431 +1,10 @@
-export type Locale = 'en' | 'zh-Hant' | 'zh-Hans'
-
-export const LOCALES: { code: Locale; label: string; short: string }[] = [
+export const LOCALES = [
   { code: 'zh-Hant', label: '繁體中文', short: '繁' },
   { code: 'zh-Hans', label: '简体中文', short: '简' },
   { code: 'en', label: 'English', short: 'EN' },
 ]
 
-type Strings = {
-  nav: {
-    home: string
-    community: string
-    about: string
-    news: string
-    volunteer: string
-    give: string
-    donate: string
-    login: string
-    easyRead: string
-    language: string
-    skipToContent: string
-  }
-  hero: {
-    eyebrow: string
-    line1: string
-    line2: string
-    subhead: string
-    cta: string
-  }
-  stats: {
-    title: string
-    updated: string
-    items: { value: number; suffix: string; label: string }[]
-  }
-  activities: {
-    title: string
-    subhead: string
-    recruiting: string
-    joinCta: string
-    viewCta: string
-  }
-  spotlight: {
-    title: string
-    subhead: string
-    reveal: string
-    readMore: string
-  }
-  map: {
-    kicker: string
-    title: string
-    subhead: string
-  }
-  paths: {
-    title: string
-    subhead: string
-    witness: { tag: string; title: string; body: string; cta: string }
-    take: { tag: string; title: string; body: string; cta: string }
-    support: { tag: string; title: string; body: string; cta: string }
-  }
-  footer: {
-    tax: string
-    portal: string
-    support: string
-    followUs: string
-    rights: string
-  }
-  community: {
-    eyebrow: string
-    title: string
-    subhead: string
-    filterAll: string
-    filters: Record<
-      | 'sport'
-      | 'art'
-      | 'nutrition'
-      | 'family'
-      | 'fitness'
-      | 'special'
-      | 'outings'
-      | 'csr',
-      string
-    >
-    toldBy: string
-    shareCta: string
-    shareTitle: string
-    shareHint: string
-    sharePhoto: string
-    shareLine: string
-    shareLinePlaceholder: string
-    shareAiLabel: string
-    shareAiDraft: string
-    shareReviewNote: string
-    shareSubmit: string
-    shareClose: string
-    shareSent: string
-    followTitle: string
-    followSubhead: string
-    followCta: string
-    followingCta: string
-    followNotify: string
-    knowledgeHook: string
-    dotsCaption: string
-    sliderGuess: string
-    sliderReveal: string
-    sliderYourGuess: string
-    sliderReal: string
-    emptyFilter: string
-  }
-  volunteer: {
-    kicker: string
-    title: string
-    subhead: string
-    communityLink: string
-    modeTitle: string
-    individualTag: string
-    individualTitle: string
-    individualBody: string
-    individualCta: string
-    corporateTag: string
-    corporateTitle: string
-    corporateBody: string
-    corporateCta: string
-    skillsTitle: string
-    skillsHint: string
-    skills: Record<
-      | 'patient'
-      | 'sports'
-      | 'music'
-      | 'kitchen'
-      | 'photography'
-      | 'youth14'
-      | 'cantonese',
-      string
-    >
-    clearSkills: string
-    filterMySkills: string
-    filterMySkillsHint: string
-    filterMySkillsEmpty: string
-    filterMySkillsEdit: string
-    filterMySkillsLogin: string
-    listTitle: string
-    emptyList: string
-    emptyListNoSessions: string
-    loadError: string
-    recruiting: string
-    fullBadge: string
-    spots: string
-    sourceLove21: string
-    sourceHandson: string
-    viewDetail: string
-    backToHub: string
-    detailWhat: string
-    detailEligibility: string
-    detailSafeguard: string
-    handsonCapacity: string
-    registerInterest: string
-    completeHandson: string
-    joinSession: string
-    formIntro: string
-    interestFormIntroLoggedIn: string
-    shortFormIntro: string
-    shortFormIntroLoggedIn: string
-    joiningAs: string
-    joiningAsEdit: string
-    shortName: string
-    shortSubmit: string
-    safeguardAck: string
-    emergencyName: string
-    emergencyPhone: string
-    fullError: string
-    signupError: string
-    signupDuplicate: string
-    interestChineseName: string
-    interestEnglishName: string
-    interestAgeGroup: string
-    ageGroupHint: string
-    ageGroups: Record<
-      'youth14_18' | 'age19_29' | 'age30_44' | 'age45_59' | 'age60_plus',
-      string
-    >
-    interestGender: string
-    genders: Record<'female' | 'male' | 'prefer_not', string>
-    interestEmail: string
-    interestPhone: string
-    interestRoles: string
-    roles: Record<'assistant' | 'host' | 'event' | 'other', string>
-    interestRoleOther: string
-    interestAbout: string
-    interestDiscovery: string
-    discovery: Record<'existing' | 'social' | 'edm' | 'company' | 'other', string>
-    interestDiscoveryOther: string
-    interestSubmit: string
-    interestCancel: string
-    interestDuplicate: string
-    interestError: string
-    hubSignupTitle: string
-    hubSignupSubhead: string
-    hubSignupCta: string
-    hubCreateAccountCta: string
-    hubSignedInTitle: string
-    hubSignedInSubhead: string
-    hubSignedInCta: string
-    joinConfirmTitle: string
-    joinConfirmBody: string
-    joinConfirmYes: string
-    joinConfirmNo: string
-    successTitle: string
-    successBody: string
-    successGiveCta: string
-    successHome: string
-    successBriefingCta: string
-    successSaveCta: string
-    briefingKicker: string
-    briefingTitle: string
-    briefingArrive: string
-    briefingMeet: string
-    briefingWear: string
-    briefingDo: string
-    briefingEmergency: string
-    briefingCancel: string
-    corporatePanelTitle: string
-    corporateBullets: string[]
-    corporateFormTitle: string
-    corporateOrg: string
-    corporateContact: string
-    corporateEmail: string
-    corporateMessage: string
-    corporateSubmit: string
-    corporateThanks: string
-    changeMode: string
-  }
-  give: {
-    kicker: string
-    title: string
-    subhead: string
-    tabMoney: string
-    tabWishlist: string
-    tabFundraise: string
-    amountLabel: string
-    customAmountLabel: string
-    customAmountHint: string
-    everyDollarCounts: string
-    impactLabel: string
-    impactSmall: string
-    once: string
-    weekly: string
-    monthly: string
-    programmeLabel: string
-    receiptNote: string
-    otherMeansTitle: string
-    otherMeansBank: string
-    otherMeansCheque: string
-    otherMeansAddress: string
-    programmes: Record<
-      'sports' | 'fitness' | 'nutrition' | 'family' | 'where_needed',
-      string
-    >
-    section88: string
-    trustStrip: string
-    emailLabel: string
-    emailHint: string
-    emailRequiredJourney: string
-    receiptTitle: string
-    receiptUseAccount: string
-    receiptUseAccountHint: string
-    receiptNameLabel: string
-    receiptEmailLabel: string
-    receiptEmailHint: string
-    receiptForOther: string
-    receiptForOtherHint: string
-    receiptRequired: string
-    applyCustom: string
-    journeyOptInLabel: string
-    journeyOptInHelper: string
-    journeyTitle: string
-    journeyReceived: string
-    journeyMatched: string
-    journeySession: string
-    journeyEmailNote: string
-    journeyAdvance: string
-    donateCta: string
-    donateWorking: string
-    wishlistTitle: string
-    wishlistSubhead: string
-    needed: string
-    pledged: string
-    pledgeCta: string
-    pledgeTitle: string
-    pledgeQty: string
-    pledgeNote: string
-    pledgeSubmit: string
-    pledgeSuccess: string
-    pledgeClose: string
-    wishlistEmpty: string
-    fundraiseTitle: string
-    fundraiseSubhead: string
-    fundraiseSteps: string[]
-    createCampaignCta: string
-    liveCampaigns: string
-    noLiveCampaigns: string
-    yourCampaigns: string
-    noCampaigns: string
-    formTitle: string
-    formStory: string
-    formGoal: string
-    formCover: string
-    formEnd: string
-    formSubmit: string
-    formWorking: string
-    formError: string
-    campaignProgress: string
-    campaignShare: string
-    campaignShareDone: string
-    campaignDonate: string
-    campaignPending: string
-    campaignApproved: string
-    campaignRejected: string
-    campaignNotFound: string
-    campaignAwaitingApproval: string
-    stickyDonate: string
-    thanksAck: string
-    thanksNotifyLabel: string
-    thanksNotifyHelper: string
-    thanksEmail: string
-    thanksNotifyToast: string
-    thanksSampleUpdate: string
-    thanksCreateAccount: string
-    thanksCreateAccountBody: string
-    thanksCreateCta: string
-    thanksNoThanks: string
-    thanksExistingBody: string
-    thanksViewGiving: string
-    thanksVolunteer: string
-    thanksShareCampaign: string
-    thanksHome: string
-    thanksSaveImpact: string
-  }
-  login: {
-    kicker: string
-    signInTitle: string
-    signUpTitle: string
-    subhead: string
-    modeLabel: string
-    signInTab: string
-    signUpTab: string
-    fullName: string
-    chineseName: string
-    phone: string
-    volunteerProfileHint: string
-    email: string
-    password: string
-    signInCta: string
-    signUpCta: string
-    working: string
-    genericError: string
-    notConfigured: string
-    checkEmail: string
-    backToMe: string
-  }
-  me: {
-    kicker: string
-    title: string
-    subhead: string
-    tabVolunteer: string
-    tabGiving: string
-    loading: string
-    gateTitle: string
-    gateBody: string
-    gateCta: string
-    hello: string
-    logOut: string
-    volunteerKicker: string
-    volunteerTitle: string
-    volunteerEmpty: string
-    volunteerCta: string
-    volunteerMoreCta: string
-    volunteerHoursNote: string
-    skillsTitle: string
-    skillsHint: string
-    skillsSave: string
-    skillsSaved: string
-    skillsNeedEmail: string
-    statSessions: string
-    statHours: string
-    statProgrammes: string
-    sessionsTitle: string
-    interestsTitle: string
-    interestsLead: string
-    interestRegistered: string
-    sessionConfirmed: string
-    openBriefing: string
-    badgesTitle: string
-    badgesSubhead: string
-    badgeEarned: string
-    badgeLocked: string
-    giveCta: string
-    givingTitle: string
-    givingSubhead: string
-    givingEmpty: string
-    viewGift: string
-    journeyReceived: string
-    journeyMatched: string
-    journeySession: string
-    journeyStatusDone: string
-    journeyStatusProcessing: string
-    journeyStatusWaiting: string
-    journeyGrowthLabel: string
-    journeyGrowthCumulativeTitle: string
-    journeyGrowthCumulativeBody: string
-    journeyGrowthCumulativeLabel: string
-    journeyGrowthTotalGiven: string
-    journeyGrowthGiftCount: string
-    journeyGrowthSessions: string
-    journeyDetailReceivedDone: string
-    journeyDetailReceivedProcessing: string
-    journeyDetailReceivedWaiting: string
-    journeyDetailMatchedDone: string
-    journeyDetailMatchedProcessing: string
-    journeyDetailMatchedWaiting: string
-    journeyDetailSessionDone: string
-    journeyDetailSessionDoneNamed: string
-    journeyDetailSessionProcessing: string
-    journeyDetailSessionWaiting: string
-    loadSampleGifts: string
-  }
-}
-
-export const STRINGS: Record<Locale, Strings> = {
+export const STRINGS = {
   en: {
     nav: {
       home: 'Home',
@@ -439,6 +18,7 @@ export const STRINGS: Record<Locale, Strings> = {
       easyRead: 'Easy Read',
       language: 'Language',
       skipToContent: 'Skip to content',
+      askForHelp: 'Ask for help',
     },
     hero: {
       eyebrow: '#Somuchability',
@@ -464,6 +44,18 @@ export const STRINGS: Record<Locale, Strings> = {
       recruiting: 'Volunteers welcome',
       joinCta: 'Join as a volunteer',
       viewCta: 'View activity',
+    },
+    achievements: {
+      eyebrow: 'Achievements & impact',
+      title: 'What the community has built',
+      subhead: 'Collective milestones — no single name attached, because they belong to everyone.',
+    },
+    corporateImpact: {
+      title: 'Companies who show up',
+      subhead: 'Real teams, real shifts, real impact.',
+      wallLabel: 'With thanks to',
+      wallSubhead: 'Corporates, law firms and foundations who\u2019ve backed Love 21 — named in our 2024\u201325 annual report.',
+      cta: 'Bring your company',
     },
     spotlight: {
       title: 'Ability spotlight',
@@ -521,32 +113,52 @@ export const STRINGS: Record<Locale, Strings> = {
         outings: 'Outings',
         csr: 'CSR',
       },
-      toldBy: 'Told by',
       shareCta: 'Share a moment',
       shareTitle: 'Share a moment',
-      shareHint: 'A coach or family posts a photo and one line. AI drafts the full post.',
+      shareHint: 'Share a real moment in your own words — a short paragraph is enough.',
+      shareAsLabel: 'Posting as',
+      shareAuthorLabel: 'Your name',
+      shareAuthorPlaceholder: 'e.g. Alex Chan',
+      shareEmailLabel: 'Email (optional)',
+      shareEmailPlaceholder: 'So we can tell you when it goes live',
+      shareEmailInvalid: 'Please enter a valid email, or leave it blank.',
       sharePhoto: 'Photo',
-      shareLine: 'One line',
-      shareLinePlaceholder: 'e.g. Finished the race with the whole crew',
-      shareAiLabel: 'AI draft preview',
-      shareAiDraft:
-        'Today our member showed quiet courage on the water — paddling every stroke with the crew, finishing strong, and teaching us again what ability looks like in motion.',
-      shareReviewNote: 'Posts require review before going public. This is a UI preview only.',
+      sharePhotoAdd: 'Add a photo',
+      sharePhotoAttached: 'Photo attached (preview)',
+      shareLine: 'Your story',
+      shareLinePlaceholder: 'e.g. Finished the race with the whole crew, high-fives all round.',
+      shareLengthHint: 'At least {min} characters — {n} so far',
+      shareRelationshipLabel: 'Your relationship to Love 21',
+      relationships: {
+        volunteer: 'Volunteer',
+        parent: 'Parent or family member',
+        supporter: 'Supporter',
+      },
+      shareConsent: 'I have permission to share this photo and story publicly.',
+      shareReviewNote: 'Posts require review before going public.',
       shareSubmit: 'Submit for review',
       shareClose: 'Close',
       shareSent: 'Submitted for review — thank you.',
-      followTitle: 'Follow a program',
-      followSubhead: 'Follow an activity type — not a person. New moments notify you.',
-      followCta: 'Follow',
-      followingCta: 'Following',
-      followNotify: 'You’ll hear when new moments land in this program.',
-      knowledgeHook: 'Want to change this number? → Volunteer',
+      shareError: 'Something went wrong — please try again.',
+      knowledgeHook: 'Want to try one with them? → Volunteer',
       dotsCaption: '700 babies · 1 lit',
-      sliderGuess: 'Drag to guess the percentage',
-      sliderReveal: 'Reveal the real figure',
+      sliderGuess: 'Drag to guess how many',
+      sliderReveal: 'Reveal the real number',
       sliderYourGuess: 'Your guess',
-      sliderReal: 'The real figure',
+      sliderReal: 'The real number',
+      sliderUnit: 'activities',
       emptyFilter: 'No moments in this program yet — try another filter.',
+      momentsLabel: 'moments of ability and counting',
+      celebrateCta: 'Celebrate',
+      photoAlt: 'Love 21 members taking part in an activity',
+      imageLabel: 'Photo',
+      timeToday: 'Today',
+      timeDayAgo: '{n} day ago',
+      timeDaysAgo: '{n} days ago',
+      timeWeekAgo: '{n} week ago',
+      timeWeeksAgo: '{n} weeks ago',
+      timeMonthAgo: '{n} month ago',
+      timeMonthsAgo: '{n} months ago',
     },
     volunteer: {
       kicker: 'Take part',
@@ -826,6 +438,20 @@ export const STRINGS: Record<Locale, Strings> = {
       thanksHome: 'Home',
       thanksSaveImpact: 'Save my gifts to My Impact',
     },
+    support: {
+      eyebrow: 'Support',
+      title: 'Looking for support for your family?',
+      intro:
+        'Love 21 runs sport, nutrition and family programmes for the Down syndrome, autistic and neurodiverse community in Hong Kong. If you think we could be a good fit, we would love to meet you.',
+      processTitle: 'Tell us about your family',
+      processBody:
+        'Fill in a short form and our team will contact you as soon as possible to talk through what your family needs.',
+      formCta: 'Fill in the form',
+      emailNote: 'Prefer email? Write to info@love21foundation.com',
+      memberNote: 'Already a Love 21 member?',
+      memberCta: 'Sign in to see your classes',
+      backHome: 'Back to home',
+    },
     login: {
       kicker: 'Welcome back',
       signInTitle: 'Log in',
@@ -947,6 +573,7 @@ export const STRINGS: Record<Locale, Strings> = {
       easyRead: '簡易閱讀',
       language: '語言',
       skipToContent: '跳至內容',
+      askForHelp: '尋求協助',
     },
     hero: {
       eyebrow: '#Somuchability',
@@ -971,6 +598,18 @@ export const STRINGS: Record<Locale, Strings> = {
       recruiting: '歡迎義工',
       joinCta: '成為義工',
       viewCta: '查看活動',
+    },
+    achievements: {
+      eyebrow: '成就與影響力',
+      title: '社群共同創造的成果',
+      subhead: '集體的里程碑——不屬於單一個人，因為它屬於每一位。',
+    },
+    corporateImpact: {
+      title: '願意參與的企業',
+      subhead: '真實的團隊、真實的當值、真實的影響力。',
+      wallLabel: '衷心感謝',
+      wallSubhead: '感謝這些企業、律師事務所及基金會的支持——名單載於 2024–25 年報。',
+      cta: '讓你的公司加入',
     },
     spotlight: {
       title: '能力聚焦',
@@ -1028,32 +667,52 @@ export const STRINGS: Record<Locale, Strings> = {
         outings: '外出',
         csr: '企業社會責任',
       },
-      toldBy: '講述者',
       shareCta: '分享一個時刻',
       shareTitle: '分享一個時刻',
-      shareHint: '教練或家人貼上照片與一句話，AI 會起草完整貼文。',
+      shareHint: '用自己的話分享一個真實時刻——一小段文字就足夠。',
+      shareAsLabel: '以此身分發佈',
+      shareAuthorLabel: '你的姓名',
+      shareAuthorPlaceholder: '例如：陳大文',
+      shareEmailLabel: '電郵（可選）',
+      shareEmailPlaceholder: '方便我們在公開時通知你',
+      shareEmailInvalid: '請輸入有效電郵，或留空。',
       sharePhoto: '照片',
-      shareLine: '一句話',
-      shareLinePlaceholder: '例如：與全隊一起完成比賽',
-      shareAiLabel: 'AI 草稿預覽',
-      shareAiDraft:
-        '今天我們的學員在水上展現沉著勇氣——每一槳都與隊友同行，穩穩抵達終點，再次教我們看見動態中的能力。',
-      shareReviewNote: '貼文須經審核才會公開。此為介面預覽。',
+      sharePhotoAdd: '加入照片',
+      sharePhotoAttached: '已附上照片（預覽）',
+      shareLine: '你的故事',
+      shareLinePlaceholder: '例如：與全隊一起完成比賽，互相擊掌慶祝。',
+      shareLengthHint: '至少需要 {min} 個字——目前 {n} 個',
+      shareRelationshipLabel: '你與 Love 21 的關係',
+      relationships: {
+        volunteer: '義工',
+        parent: '家長或家人',
+        supporter: '支持者',
+      },
+      shareConsent: '我已獲得許可，可公開分享這張照片與故事。',
+      shareError: '發生錯誤，請再試一次。',
+      shareReviewNote: '貼文須經審核才會公開。',
       shareSubmit: '提交審核',
       shareClose: '關閉',
       shareSent: '已提交審核——謝謝。',
-      followTitle: '追蹤一個項目',
-      followSubhead: '追蹤活動類型——不是個人。有新時刻會通知你。',
-      followCta: '追蹤',
-      followingCta: '追蹤中',
-      followNotify: '此項目有新時刻時會通知你。',
-      knowledgeHook: '想改變這個數字？→ 做義工',
+      knowledgeHook: '想和他們一起試試？→ 做義工',
       dotsCaption: '700 名嬰兒 · 點亮 1 個',
-      sliderGuess: '拖動猜測百分比',
+      sliderGuess: '拖動猜猜有多少',
       sliderReveal: '顯示真實數字',
       sliderYourGuess: '你的猜測',
       sliderReal: '真實數字',
+      sliderUnit: '種活動',
       emptyFilter: '此項目暫無時刻——試試其他篩選。',
+      momentsLabel: '個能力時刻，持續累積中',
+      celebrateCta: '慶祝',
+      photoAlt: 'Love 21 學員參與活動的照片',
+      imageLabel: '照片',
+      timeToday: '今天',
+      timeDayAgo: '{n} 天前',
+      timeDaysAgo: '{n} 天前',
+      timeWeekAgo: '{n} 週前',
+      timeWeeksAgo: '{n} 週前',
+      timeMonthAgo: '{n} 個月前',
+      timeMonthsAgo: '{n} 個月前',
     },
     volunteer: {
       kicker: '參與',
@@ -1316,6 +975,20 @@ export const STRINGS: Record<Locale, Strings> = {
       thanksHome: '首頁',
       thanksSaveImpact: '儲存捐助到「我的影響」',
     },
+    support: {
+      eyebrow: '支援',
+      title: '想為你的家庭尋找支援？',
+      intro:
+        'Love 21 在香港為唐氏綜合症、自閉症及其他神經多樣人士提供運動、營養及家庭支援活動。如果你覺得我們可能適合你的家庭，我們很樂意與你見面。',
+      processTitle: '告訴我們你的家庭情況',
+      processBody:
+        '填寫一份簡短表格，我們的團隊會盡快聯絡你，了解你家庭的需要。',
+      formCta: '填寫表格',
+      emailNote: '想用電郵？請寫信到 info@love21foundation.com',
+      memberNote: '已經是 Love 21 會員？',
+      memberCta: '登入查看你的課堂',
+      backHome: '返回首頁',
+    },
     login: {
       kicker: '歡迎回來',
       signInTitle: '登入',
@@ -1423,6 +1096,7 @@ export const STRINGS: Record<Locale, Strings> = {
       easyRead: '简易阅读',
       language: '语言',
       skipToContent: '跳至内容',
+      askForHelp: '寻求协助',
     },
     hero: {
       eyebrow: '#Somuchability',
@@ -1447,6 +1121,18 @@ export const STRINGS: Record<Locale, Strings> = {
       recruiting: '欢迎义工',
       joinCta: '成为义工',
       viewCta: '查看活动',
+    },
+    achievements: {
+      eyebrow: '成就与影响力',
+      title: '社群共同创造的成果',
+      subhead: '集体的里程碑——不属于单一个人，因为它属于每一位。',
+    },
+    corporateImpact: {
+      title: '愿意参与的企业',
+      subhead: '真实的团队、真实的当值、真实的影响力。',
+      wallLabel: '衷心感谢',
+      wallSubhead: '感谢这些企业、律师事务所及基金会的支持——名单载于 2024–25 年报。',
+      cta: '让你的公司加入',
     },
     spotlight: {
       title: '能力聚焦',
@@ -1504,32 +1190,52 @@ export const STRINGS: Record<Locale, Strings> = {
         outings: '外出',
         csr: '企业社会责任',
       },
-      toldBy: '讲述者',
       shareCta: '分享一个时刻',
       shareTitle: '分享一个时刻',
-      shareHint: '教练或家人贴上照片与一句话，AI 会起草完整贴文。',
+      shareHint: '用自己的话分享一个真实时刻——一小段文字就足够。',
+      shareAsLabel: '以此身份发布',
+      shareAuthorLabel: '你的姓名',
+      shareAuthorPlaceholder: '例如：陈大文',
+      shareEmailLabel: '邮箱（可选）',
+      shareEmailPlaceholder: '方便我们在公开时通知你',
+      shareEmailInvalid: '请输入有效邮箱，或留空。',
       sharePhoto: '照片',
-      shareLine: '一句话',
-      shareLinePlaceholder: '例如：与全队一起完成比赛',
-      shareAiLabel: 'AI 草稿预览',
-      shareAiDraft:
-        '今天我们的学员在水上展现沉着勇气——每一桨都与队友同行，稳稳抵达终点，再次教我们看见动态中的能力。',
-      shareReviewNote: '贴文须经审核才会公开。此为界面预览。',
+      sharePhotoAdd: '加入照片',
+      sharePhotoAttached: '已附上照片（预览）',
+      shareLine: '你的故事',
+      shareLinePlaceholder: '例如：与全队一起完成比赛，互相击掌庆祝。',
+      shareLengthHint: '至少需要 {min} 个字——目前 {n} 个',
+      shareRelationshipLabel: '你与 Love 21 的关系',
+      relationships: {
+        volunteer: '志愿者',
+        parent: '家长或家人',
+        supporter: '支持者',
+      },
+      shareConsent: '我已获得许可，可公开分享这张照片与故事。',
+      shareError: '发生错误，请再试一次。',
+      shareReviewNote: '贴文须经审核才会公开。',
       shareSubmit: '提交审核',
       shareClose: '关闭',
       shareSent: '已提交审核——谢谢。',
-      followTitle: '追踪一个项目',
-      followSubhead: '追踪活动类型——不是个人。有新时刻会通知你。',
-      followCta: '追踪',
-      followingCta: '追踪中',
-      followNotify: '此项目有新时刻时会通知你。',
-      knowledgeHook: '想改变这个数字？→ 做义工',
+      knowledgeHook: '想和他们一起试试？→ 做义工',
       dotsCaption: '700 名婴儿 · 点亮 1 个',
-      sliderGuess: '拖动猜测百分比',
+      sliderGuess: '拖动猜猜有多少',
       sliderReveal: '显示真实数字',
       sliderYourGuess: '你的猜测',
       sliderReal: '真实数字',
+      sliderUnit: '种活动',
       emptyFilter: '此项目暂无时刻——试试其他筛选。',
+      momentsLabel: '个能力时刻，持续累积中',
+      celebrateCta: '庆祝',
+      photoAlt: 'Love 21 学员参与活动的照片',
+      imageLabel: '照片',
+      timeToday: '今天',
+      timeDayAgo: '{n} 天前',
+      timeDaysAgo: '{n} 天前',
+      timeWeekAgo: '{n} 周前',
+      timeWeeksAgo: '{n} 周前',
+      timeMonthAgo: '{n} 个月前',
+      timeMonthsAgo: '{n} 个月前',
     },
     volunteer: {
       kicker: '参与',
@@ -1792,6 +1498,20 @@ export const STRINGS: Record<Locale, Strings> = {
       thanksHome: '首页',
       thanksSaveImpact: '保存捐助到「我的影响」',
     },
+    support: {
+      eyebrow: '支援',
+      title: '想为你的家庭寻找支援？',
+      intro:
+        'Love 21 在香港为唐氏综合症、自闭症及其他神经多样人士提供运动、营养及家庭支援活动。如果你觉得我们可能适合你的家庭，我们很乐意与你见面。',
+      processTitle: '告诉我们你的家庭情况',
+      processBody:
+        '填写一份简短表格，我们的团队会尽快联系你，了解你家庭的需要。',
+      formCta: '填写表格',
+      emailNote: '想用邮件？请写信到 info@love21foundation.com',
+      memberNote: '已经是 Love 21 会员？',
+      memberCta: '登录查看你的课堂',
+      backHome: '返回首页',
+    },
     login: {
       kicker: '欢迎回来',
       signInTitle: '登录',
@@ -1888,54 +1608,24 @@ export const STRINGS: Record<Locale, Strings> = {
   },
 }
 
-type DeepPartial<T> = {
-  [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]> : T[K]
-}
-
-function deepMerge<T extends Record<string, unknown>>(base: T, over: DeepPartial<T>): T {
-  const out = { ...base }
-  for (const key of Object.keys(over) as (keyof T)[]) {
-    const b = base[key]
-    const o = over[key]
-    if (
-      o &&
-      typeof o === 'object' &&
-      !Array.isArray(o) &&
-      b &&
-      typeof b === 'object' &&
-      !Array.isArray(b)
-    ) {
-      out[key] = deepMerge(
-        b as Record<string, unknown>,
-        o as DeepPartial<Record<string, unknown>>,
-      ) as T[keyof T]
-    } else if (o !== undefined) {
-      out[key] = o as T[keyof T]
-    }
-  }
-  return out
-}
-
-/** UK Easy Read overlays — short sentences, no contractions, everyday words.
- *  Pictures are paired in components (image left, words right). */
-const EASY_READ_EN: DeepPartial<Strings> = {
+const EASY_READ_EN = {
   // Keep nav labels stable (Community stays Community) — only body copy simplifies.
   hero: {
     eyebrow: 'Love 21',
     line1: 'So much',
     line2: 'ability',
     subhead:
-      'We help people with Down syndrome and autism in Hong Kong. Sport and food classes are free.',
+      'We are a Hong Kong charity. We support people with Down syndrome, autism and other neurodiverse needs through sport, food and care.',
     cta: 'See what they can do',
   },
   stats: {
     title: 'Our numbers',
-    updated: 'These numbers are from our yearly report.',
+    updated: 'From our 2024–25 annual report.',
     items: [
-      { value: 6859, suffix: '', label: 'classes last year' },
-      { value: 490, suffix: '', label: 'families we help' },
-      { value: 84, suffix: '', label: 'kinds of activities' },
-      { value: 1000, suffix: '+', label: 'volunteer hours each month' },
+      { id: 'families', value: 490, suffix: '', label: 'families we help' },
+      { id: 'sessions', value: 6859, suffix: '', label: 'classes each year' },
+      { id: 'activityTypes', value: 84, suffix: '', label: 'kinds of activities' },
+      { id: 'volunteerHours', value: 1000, suffix: '+', label: 'volunteer hours each month' },
     ],
   },
   activities: {
@@ -1984,6 +1674,7 @@ const EASY_READ_EN: DeepPartial<Strings> = {
     eyebrow: 'Stories',
     title: 'What people can do',
     subhead: 'Read short stories. Learn facts. Share a moment if you want.',
+    momentsLabel: 'good moments. And counting.',
   },
   volunteer: {
     kicker: 'Help out',
@@ -2004,6 +1695,7 @@ const EASY_READ_EN: DeepPartial<Strings> = {
     kicker: 'Give',
     title: 'Give to Love 21',
     subhead: 'Give money. Or give things. Or raise money with friends.',
+    demoBanner: 'This is a demo. No real money is taken.',
     tabMoney: 'Money',
     tabWishlist: 'Things we need',
     tabFundraise: 'Raise money',
@@ -2015,16 +1707,28 @@ const EASY_READ_EN: DeepPartial<Strings> = {
     thanksCreateAccountBody: 'Make a free account with this email. We will add this gift.',
     thanksCreateCta: 'Make an account',
   },
+  support: {
+    eyebrow: 'Support',
+    title: 'Need help for your family?',
+    intro: 'Love 21 helps people with Down syndrome, autism, and other needs. We do sport, food help, and family support.',
+    processTitle: 'Tell us about you',
+    processBody: 'Fill in a form. We will contact you soon.',
+    formCta: 'Fill in the form',
+    emailNote: 'Or email us',
+    memberNote: 'Already a member?',
+    memberCta: 'Sign in',
+    backHome: 'Home',
+  },
 }
 
 /** Standard copy, or UK Easy Read overlay when easyRead is on (EN first; zh falls back). */
-export function getStrings(locale: Locale, easyRead: boolean): Strings {
+export function getStrings(locale, easyRead) {
   const base = STRINGS[locale]
   if (!easyRead) return base
   if (locale === 'en') return deepMerge(base, EASY_READ_EN)
   // Traditional / Simplified: keep structure; still apply EN easy nav labels lightly via layout
   return deepMerge(base, {
     nav: { easyRead: locale === 'zh-Hans' ? '简易阅读' : '簡易閱讀' },
-  } as DeepPartial<Strings>)
+  })
 }
 

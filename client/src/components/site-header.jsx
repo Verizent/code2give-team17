@@ -5,9 +5,9 @@ import { cn } from '@/lib/utils'
 import { useSite } from '@/components/site-provider'
 import { BrandLogo } from '@/components/brand-logo'
 import { useAuth } from '@/features/auth/AuthProvider'
-import { LOCALES, type Locale } from '@/lib/strings'
+import { LOCALES } from '@/lib/strings'
 
-function LanguageSwitch({ className }: { className?: string }) {
+function LanguageSwitch({ className }) {
   const { locale, setLocale, t } = useSite()
   const codes = LOCALES.filter((l) => l.code === 'en' || l.code === 'zh-Hant')
   return (
@@ -27,7 +27,7 @@ function LanguageSwitch({ className }: { className?: string }) {
             )}
             <button
               type="button"
-              onClick={() => setLocale(l.code as Locale)}
+              onClick={() => setLocale(l.code)}
               aria-pressed={active}
               className={cn(
                 'min-h-[44px] px-1',
@@ -43,7 +43,7 @@ function LanguageSwitch({ className }: { className?: string }) {
   )
 }
 
-function EasyReadToggle({ compact = false }: { compact?: boolean }) {
+function EasyReadToggle({ compact = false }) {
   const { easyRead, setEasyRead, t } = useSite()
   return (
     <button
@@ -174,15 +174,21 @@ export function SiteHeader() {
             )}
             <Link
               to="/volunteer"
-              className="inline-flex h-10 items-center rounded-md border border-red px-4 text-[14px] font-semibold text-red hover:bg-red/5 xl:px-5"
+              className="inline-flex h-10 shrink-0 items-center whitespace-nowrap rounded-md border border-red px-4 text-[14px] font-semibold text-red hover:bg-red/5 xl:px-5"
             >
               {t.nav.volunteer}
             </Link>
             <Link
               to="/give"
-              className="inline-flex h-10 items-center rounded-md bg-red px-4 text-[14px] font-bold text-white shadow-sm hover:bg-red/90 xl:px-5"
+              className="inline-flex h-10 shrink-0 items-center whitespace-nowrap rounded-md bg-red px-4 text-[14px] font-bold text-white shadow-sm hover:bg-red/90 xl:px-5"
             >
               {t.nav.donate}
+            </Link>
+            <Link
+              to="/support"
+              className="inline-flex h-10 shrink-0 items-center whitespace-nowrap rounded-md bg-teal px-4 text-[14px] font-bold text-white shadow-sm hover:bg-teal/90 xl:px-5"
+            >
+              {t.nav.askForHelp}
             </Link>
           </div>
 
@@ -190,9 +196,15 @@ export function SiteHeader() {
             <EasyReadToggle compact />
             <Link
               to="/give"
-              className="header-compact inline-flex h-9 items-center rounded-md bg-red px-2.5 text-[13px] font-semibold text-white sm:h-10 sm:px-3 sm:text-sm"
+              className="header-compact inline-flex h-9 items-center whitespace-nowrap rounded-md bg-red px-2.5 text-[13px] font-semibold text-white sm:h-10 sm:px-3 sm:text-sm"
             >
               {t.nav.donate}
+            </Link>
+            <Link
+              to="/support"
+              className="header-compact inline-flex h-9 items-center whitespace-nowrap rounded-md bg-teal px-2.5 text-[13px] font-semibold text-white sm:h-10 sm:px-3 sm:text-sm"
+            >
+              {t.nav.askForHelp}
             </Link>
             <button
               type="button"
@@ -246,6 +258,13 @@ export function SiteHeader() {
                 className="mt-2 flex min-h-[48px] items-center justify-center rounded-md bg-red font-semibold text-white"
               >
                 {t.nav.donate}
+              </Link>
+              <Link
+                to="/support"
+                onClick={() => setOpen(false)}
+                className="mt-2 flex min-h-[48px] items-center justify-center rounded-md bg-teal font-semibold text-white"
+              >
+                {t.nav.askForHelp}
               </Link>
             </nav>
           </div>

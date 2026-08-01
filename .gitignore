@@ -37,6 +37,12 @@ test-results/
 # .claude/rules/ IS tracked; only this file is ignored.
 .claude/settings.local.json
 
+# local planning/design docs — not part of the codebase
+Landing_Community_Implementation*.md
+
+# Local Cursor config — keep off remote
+.cursor/
+
 # OS cruft
 .DS_Store
 Thumbs.db

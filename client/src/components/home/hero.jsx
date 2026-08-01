@@ -2,28 +2,39 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useSite } from '@/components/site-provider'
 import { EasyReadRow, EasyReadSentences } from '@/components/easy-read-row'
+import { getImpact } from '@/features/content/api'
 
-/** Live “last updated Ns ago” — ticks every second, soft-resets at 30s (demo). */
-function LiveSessionsChip() {
-  const [ago, setAgo] = useState(0)
+/**
+ * Same figure as StatsBand's "sessions" stat — fetched independently (no
+ * shared cache/query layer yet) so the two never disagree once real data
+ * lands, instead of one reading a stale hardcoded number.
+ */
+function SessionsChip({ t, locale }) {
+  const sessions = t.stats.items.find((item) => item.id === 'sessions')
+  const [total, setTotal] = useState(sessions?.value)
 
   useEffect(() => {
-    const id = window.setInterval(() => {
-      setAgo((n) => (n >= 30 ? 0 : n + 1))
-    }, 1000)
-    return () => window.clearInterval(id)
-  }, [])
+    let cancelled = false
+    getImpact(locale).then((data) => {
+      if (!cancelled && data?.total_sessions) setTotal(data.total_sessions)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [locale])
+
+  if (!sessions) return null
 
   return (
     <div className="easy-hide mt-10 inline-flex max-w-full items-center gap-3.5 rounded-full bg-yellow px-4 py-3.5 shadow-sm sm:mt-12 sm:gap-4 sm:px-5 sm:py-4">
       <img src="/brand/logo.png?v=user-asset" alt="" className="h-10 w-auto shrink-0 sm:h-11" />
       <div className="min-w-0 pr-2 sm:pr-4">
         <p className="font-display text-[1.35rem] leading-none font-bold tracking-[-0.02em] text-navy sm:text-[1.6rem]">
-          6,859 <span className="font-semibold">sessions</span>
+          {total.toLocaleString()}
+          {sessions.suffix} <span className="font-semibold">{sessions.label}</span>
         </p>
-        <p className="mt-1.5 text-[12px] font-medium text-navy/65 sm:text-[13px]" aria-live="polite">
-          last updated {ago}s ago
-          <span className="text-navy/40"> · annual report 2024/25</span>
+        <p className="mt-1.5 text-[12px] font-medium text-navy/65 sm:text-[13px]">
+          {t.stats.updated}
         </p>
       </div>
     </div>
@@ -31,15 +42,15 @@ function LiveSessionsChip() {
 }
 
 export function Hero() {
-  const { t, easyRead } = useSite()
+  const { t, easyRead, locale } = useSite()
 
   if (easyRead) {
     return (
       <section className="relative bg-white">
         <div className="mx-auto max-w-[1120px] px-5 py-10 sm:px-8 sm:py-14">
           <EasyReadRow
-            imageSrc="/brand/hero-huddle.jpg"
-            imageAlt="Love 21 members standing close together in a huddle"
+            imageSrc="/brand/hero-group.jpg"
+            imageAlt="Love 21 members dancing together with ribbons, arms raised"
             className="sm:grid-cols-[minmax(9rem,14rem)_minmax(0,1fr)]"
           >
             <p className="kicker text-red">{t.hero.eyebrow}</p>
@@ -74,7 +85,7 @@ export function Hero() {
           <h1 className="font-display text-[clamp(2.75rem,7vw,5rem)] leading-[0.98] font-semibold tracking-[-0.03em] text-navy">
             {t.hero.line1} {t.hero.line2}.
           </h1>
-          <p className="kicker mt-3 text-red">#Somuchability</p>
+          <p className="kicker mt-3 text-red">{t.hero.eyebrow}</p>
           <p className="hero-lede mt-5 max-w-[24rem] text-base leading-relaxed text-navy/75 sm:text-lg">
             {t.hero.subhead}
           </p>
@@ -94,14 +105,14 @@ export function Hero() {
             </Link>
           </div>
 
-          <LiveSessionsChip />
+          <SessionsChip t={t} locale={locale} />
         </div>
 
         {/* Photo + mockup white fade (no red panel) */}
         <div className="relative min-h-[320px] w-full bg-white sm:min-h-[420px] lg:min-h-[560px]">
           <img
-            src="/brand/hero-huddle.jpg"
-            alt="Love 21 members in a huddle together"
+            src="/brand/hero-group.jpg"
+            alt="Love 21 members dancing together with ribbons, arms raised"
             className="absolute inset-0 h-full w-full object-cover object-center lg:object-[center_35%]"
           />
           {/* Soft white fade from left — matches mockup blend into copy column */}

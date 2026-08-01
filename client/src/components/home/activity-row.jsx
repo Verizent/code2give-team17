@@ -3,20 +3,19 @@ import { Link } from 'react-router-dom'
 import { CalendarDays, MapPin, ArrowRight } from 'lucide-react'
 import { useSite } from '@/components/site-provider'
 import { loadOpportunities } from '@/features/volunteering/api'
-import type { VolunteerOpportunity } from '@/features/volunteering/fixtures'
-import { activities, type Activity } from '@/lib/mock'
+import { activities } from '@/lib/mock'
 import { cn } from '@/lib/utils'
 
-const accentBar: Record<Activity['accent'], string> = {
+const accentBar = {
   teal: 'bg-teal',
   pink: 'bg-pink',
   yellow: 'bg-yellow',
   navy: 'bg-navy',
 }
 
-const ACCENTS: Activity['accent'][] = ['pink', 'teal', 'navy', 'yellow']
+const ACCENTS = ['pink', 'teal', 'navy', 'yellow']
 
-function toActivity(opportunity: VolunteerOpportunity, index: number): Activity {
+function toActivity(opportunity, index) {
   return {
     id: opportunity.id,
     title: opportunity.title,
@@ -28,7 +27,7 @@ function toActivity(opportunity: VolunteerOpportunity, index: number): Activity 
   }
 }
 
-function ActivityCard({ activity }: { activity: Activity }) {
+function ActivityCard({ activity }) {
   const { locale, t } = useSite()
   const isVolunteer = activity.recruiting
   const href = isVolunteer ? `/volunteer/${activity.id}` : '/community'
@@ -80,7 +79,7 @@ function ActivityCard({ activity }: { activity: Activity }) {
 
 export function ActivityRow() {
   const { t } = useSite()
-  const [items, setItems] = useState<Activity[]>(activities)
+  const [items, setItems] = useState(activities)
 
   useEffect(() => {
     let cancelled = false

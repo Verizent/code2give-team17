@@ -45,6 +45,12 @@ export function SiteFooter() {
               <p className="mb-3 text-[11px] font-semibold tracking-[0.08em] text-yellow uppercase">
                 More
               </p>
+              <Link
+                to="/support"
+                className="min-h-[40px] py-1 text-sm font-medium text-white/85 hover:text-yellow"
+              >
+                {t.footer.support}
+              </Link>
               <a
                 href="https://love21foundation.com/our-story/"
                 target="_blank"

@@ -7,7 +7,7 @@ import { AuthTokenBridge } from '@/features/auth/AuthTokenBridge'
 import App from '@/App'
 import './index.css'
 
-createRoot(document.getElementById('root')!).render(
+createRoot(document.getElementById('root')).render(
   <StrictMode>
     <BrowserRouter>
       <SiteProvider>
