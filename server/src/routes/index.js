@@ -6,6 +6,7 @@ const articlesRoutes = require("./articles.routes");
 const communityPostsRoutes = require("./community-posts.routes");
 const healthRoutes = require("./health.routes");
 const impactRoutes = require("./impact.routes");
+const meRoutes = require("./me.routes");
 
 const router = express.Router();
 
@@ -23,5 +24,6 @@ router.use("/api/articles", articlesRoutes);
 router.use("/api/community-posts", communityPostsRoutes);
 router.use("/api/health", healthRoutes);
 router.use("/api/impact", impactRoutes);
+router.use("/api/me", meRoutes);
 
 module.exports = router;
