@@ -1,68 +1,77 @@
 import { Link } from 'react-router-dom'
-import { Heart } from 'lucide-react'
 import { useSite } from '@/components/site-provider'
+import { BrandLogo } from '@/components/brand-logo'
 
 export function SiteFooter() {
   const { t } = useSite()
 
-  const socials = [
-    { href: '#', label: 'Instagram' },
-    { href: '#', label: 'Facebook' },
-    { href: '#', label: 'YouTube' },
-  ]
-
   return (
-    <footer className="mt-24 bg-navy text-white">
-      <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6">
-        <div className="flex flex-col gap-10 md:flex-row md:justify-between">
+    <footer className="bg-navy text-white">
+      <div className="mx-auto max-w-[1120px] px-5 py-12 sm:px-8 sm:py-16">
+        <div className="grid gap-10 md:grid-cols-3">
           <div className="max-w-sm">
-            <div className="flex items-center gap-2">
-              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-red text-white">
-                <Heart className="h-5 w-5" fill="currentColor" aria-hidden="true" />
-              </span>
-              <span className="font-display text-lg font-bold text-white">
-                Love 21 Foundation
-              </span>
-            </div>
-            <p className="mt-4 text-sm leading-relaxed text-white/80">
-              {t.footer.tax}
+            <span className="inline-flex rounded-md bg-yellow px-2.5 py-2">
+              <BrandLogo markClassName="h-9 sm:h-10" />
+            </span>
+            <p className="mt-5 text-sm leading-relaxed text-white/70">
+              #Somuchability · San Po Kong, Hong Kong
             </p>
+            <p className="mt-3 text-sm leading-relaxed text-white/70">{t.footer.tax}</p>
           </div>
 
-          <div className="flex flex-col gap-4">
-            <Link
-              to="/portal"
-              className="inline-flex min-h-[44px] items-center text-base font-medium text-white hover:underline"
-            >
-              {t.footer.portal}
-            </Link>
-            <Link
-              to="/support"
-              className="inline-flex min-h-[44px] items-center text-base font-medium text-white/80 hover:text-white hover:underline"
-            >
-              {t.footer.support}
-            </Link>
-          </div>
-
-          <div>
-            <p className="text-sm font-semibold tracking-wide text-white/70 uppercase">
-              {t.footer.followUs}
-            </p>
-            <div className="mt-3 flex flex-col gap-2">
-              {socials.map(({ href, label }) => (
+          <div className="grid grid-cols-2 gap-8 md:col-span-2">
+            <div className="flex flex-col gap-1">
+              <p className="mb-3 text-[11px] font-semibold tracking-[0.08em] text-yellow uppercase">
+                Explore
+              </p>
+              {[
+                ['/', t.nav.home],
+                ['/community', t.nav.community],
+                ['/volunteer', t.nav.volunteer],
+                ['/give', t.nav.give],
+                ['/me', 'My Impact'],
+              ].map(([to, label]) => (
                 <Link
-                  key={label}
-                  to={href}
-                  className="inline-flex min-h-[44px] items-center text-base font-medium text-white/80 transition-colors hover:text-white hover:underline"
+                  key={to}
+                  to={to}
+                  className="min-h-[40px] py-1 text-sm font-medium text-white/85 hover:text-yellow"
                 >
                   {label}
                 </Link>
               ))}
             </div>
+
+            <div className="flex flex-col gap-1">
+              <p className="mb-3 text-[11px] font-semibold tracking-[0.08em] text-yellow uppercase">
+                More
+              </p>
+              <a
+                href="https://love21foundation.com/our-story/"
+                target="_blank"
+                rel="noreferrer"
+                className="min-h-[40px] py-1 text-sm font-medium text-white/85 hover:text-yellow"
+              >
+                About Love 21 ↗
+              </a>
+              <a
+                href="https://love21foundation.com/wp-content/uploads/2026/04/Annualreport_final.pdf"
+                target="_blank"
+                rel="noreferrer"
+                className="min-h-[40px] py-1 text-sm font-medium text-white/85 hover:text-yellow"
+              >
+                Annual Report ↗
+              </a>
+              <Link
+                to="/admin"
+                className="min-h-[40px] py-1 text-sm font-medium text-white/50 hover:text-yellow"
+              >
+                Admin Studio
+              </Link>
+            </div>
           </div>
         </div>
 
-        <div className="mt-12 border-t border-white/15 pt-6 text-sm text-white/60">
+        <div className="mt-12 border-t border-white/15 pt-6 text-xs text-white/45">
           © {new Date().getFullYear()} Love 21 Foundation. {t.footer.rights}
         </div>
       </div>

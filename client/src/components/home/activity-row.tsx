@@ -19,42 +19,39 @@ function ActivityCard({ activity }: { activity: Activity }) {
   return (
     <Link
       to={href}
-      className="group relative flex w-[280px] shrink-0 snap-start flex-col overflow-hidden rounded-xl border border-border bg-card shadow-sm transition-transform hover:-translate-y-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:w-[320px]"
+      className="group flex w-[min(280px,82vw)] shrink-0 snap-start flex-col overflow-hidden rounded-xl border border-black/8 bg-white shadow-[0_1px_2px_rgba(20,40,75,0.04)] transition-shadow hover:shadow-[0_8px_24px_rgba(20,40,75,0.08)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
     >
-      <span
-        aria-hidden="true"
-        className={cn('h-2 w-full', accentBar[activity.accent])}
-      />
+      <span aria-hidden="true" className={cn('h-1.5 w-full', accentBar[activity.accent])} />
       <div className="flex flex-1 flex-col p-5">
-        <span className="kicker text-teal">
+        <span className="text-[12px] font-semibold tracking-wide text-teal uppercase">
           {activity.category[locale]}
         </span>
-        <h3 className="mt-2 font-display text-2xl font-bold text-navy">
+        <h3 className="mt-2 font-display text-[1.25rem] leading-snug font-semibold text-navy">
           {activity.title[locale]}
         </h3>
-        <dl className="mt-4 flex flex-col gap-2 text-base text-ink/90">
-          <div className="flex items-center gap-2">
-            <CalendarDays className="h-4 w-4 text-navy/60" aria-hidden="true" />
+        <dl className="mt-4 flex flex-col gap-2 text-[14px] text-navy/70">
+          <div className="flex items-start gap-2">
+            <CalendarDays className="mt-0.5 h-4 w-4 shrink-0 text-navy/40" aria-hidden="true" />
             <dd>{activity.date[locale]}</dd>
           </div>
-          <div className="flex items-center gap-2">
-            <MapPin className="h-4 w-4 text-navy/60" aria-hidden="true" />
+          <div className="flex items-start gap-2">
+            <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-navy/40" aria-hidden="true" />
             <dd>{activity.place[locale]}</dd>
           </div>
         </dl>
 
-        <div className="mt-5 flex items-center justify-between">
+        <div className="mt-auto flex items-center justify-between gap-2 pt-5">
           {isVolunteer ? (
-            <span className="inline-flex items-center rounded-md bg-yellow/20 px-2.5 py-1 font-mono text-xs font-semibold tracking-wide text-navy">
+            <span className="rounded bg-yellow px-2 py-1 text-[11px] font-bold tracking-wide text-navy uppercase">
               {t.activities.recruiting}
             </span>
           ) : (
             <span />
           )}
-          <span className="inline-flex items-center gap-1 text-sm font-semibold text-navy">
+          <span className="inline-flex items-center gap-1 text-[13px] font-semibold text-navy">
             {isVolunteer ? t.activities.joinCta : t.activities.viewCta}
             <ArrowRight
-              className="h-4 w-4 transition-transform group-hover:translate-x-0.5"
+              className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5"
               aria-hidden="true"
             />
           </span>
@@ -68,35 +65,34 @@ export function ActivityRow() {
   const { t } = useSite()
 
   return (
-    <section aria-labelledby="activities-title" className="py-20">
-      <div className="mx-auto max-w-6xl px-4 sm:px-6">
-        <span aria-hidden="true" className="block h-1 w-10 bg-red" />
+    <section aria-labelledby="activities-title" className="bg-amber py-16 sm:py-24">
+      <div className="mx-auto max-w-[1120px] px-5 sm:px-8">
         <h2
           id="activities-title"
-          className="mt-4 font-display text-4xl font-bold text-navy sm:text-5xl"
+          className="font-display text-[clamp(2rem,4.5vw,2.75rem)] font-extrabold tracking-[-0.02em] text-navy"
         >
           {t.activities.title}
         </h2>
-        <p className="mt-3 text-lg text-ink/75">{t.activities.subhead}</p>
+        <p className="section-lede mt-3 max-w-xl text-lg leading-relaxed font-medium text-navy/80 sm:text-xl">
+          {t.activities.subhead}
+        </p>
       </div>
 
-      <div className="relative mt-8">
-        {/* edge fades */}
+      <div className="relative mt-8 sm:mt-10">
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-y-0 left-0 z-10 w-8 bg-gradient-to-r from-paper to-transparent"
+          className="pointer-events-none absolute inset-y-0 left-0 z-10 w-4 bg-gradient-to-r from-amber to-transparent sm:w-10"
         />
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-y-0 right-0 z-10 w-8 bg-gradient-to-l from-paper to-transparent"
+          className="pointer-events-none absolute inset-y-0 right-0 z-10 w-4 bg-gradient-to-l from-amber to-transparent sm:w-10"
         />
-        <ul className="no-scrollbar flex snap-x snap-mandatory gap-5 overflow-x-auto px-4 pb-4 sm:px-6">
+        <ul className="no-scrollbar mx-auto flex max-w-[1120px] snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain px-4 pb-2 sm:gap-5 sm:px-8">
           {activities.map((activity) => (
             <li key={activity.id} className="flex">
               <ActivityCard activity={activity} />
             </li>
           ))}
-          <li aria-hidden="true" className="w-1 shrink-0" />
         </ul>
       </div>
     </section>

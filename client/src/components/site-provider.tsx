@@ -6,14 +6,15 @@ import {
   useState,
   type ReactNode,
 } from 'react'
-import { STRINGS, type Locale } from '@/lib/strings'
+import { getStrings, type Locale } from '@/lib/strings'
 
 type SiteContextValue = {
   locale: Locale
   setLocale: (locale: Locale) => void
+  /** UK Easy Read: short words + pictures + clear layout (not just bigger text) */
   easyRead: boolean
   setEasyRead: (value: boolean) => void
-  t: (typeof STRINGS)[Locale]
+  t: ReturnType<typeof getStrings>
 }
 
 const SiteContext = createContext<SiteContextValue | null>(null)
@@ -24,13 +25,30 @@ const LOCALE_LANG: Record<Locale, string> = {
   'zh-Hans': 'zh-Hans',
 }
 
-export function SiteProvider({ children }: { children: ReactNode }) {
-  const [locale, setLocale] = useState<Locale>('en')
-  const [easyRead, setEasyRead] = useState(false)
+function readStoredEasyRead() {
+  const next = localStorage.getItem('love21-easy-read')
+  if (next === 'true' || next === 'false') return next === 'true'
+  // migrate mistaken “reading mode” key if present
+  return localStorage.getItem('love21-reading-mode') === 'true'
+}
 
-  // Keep the document language in sync for assistive tech and font rendering.
+export function SiteProvider({ children }: { children: ReactNode }) {
+  const [locale, setLocale] = useState<Locale>(() => {
+    const saved = localStorage.getItem('love21-locale')
+    if (saved === 'en' || saved === 'zh-Hant' || saved === 'zh-Hans') return saved
+    return 'en'
+  })
+  const [easyRead, setEasyReadState] = useState(readStoredEasyRead)
+
+  function setEasyRead(value: boolean) {
+    setEasyReadState(value)
+    localStorage.setItem('love21-easy-read', String(value))
+    localStorage.removeItem('love21-reading-mode')
+  }
+
   useEffect(() => {
     document.documentElement.lang = LOCALE_LANG[locale]
+    localStorage.setItem('love21-locale', locale)
   }, [locale])
 
   useEffect(() => {
@@ -43,7 +61,7 @@ export function SiteProvider({ children }: { children: ReactNode }) {
       setLocale,
       easyRead,
       setEasyRead,
-      t: STRINGS[locale],
+      t: getStrings(locale, easyRead),
     }),
     [locale, easyRead],
   )
