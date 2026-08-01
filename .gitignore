@@ -18,9 +18,12 @@ coverage/
 playwright-report/
 test-results/
 
-# Claude Code local state — per-machine permission grants, not shared.
-# .claude/rules/ IS tracked; only this file is ignored.
-.claude/settings.local.json
+# Claude Code local state — no Claude-generated docs or config are shared.
+# Each developer keeps their own CLAUDE.md, CONTEXT.md, and .claude/ (rules, plans,
+# TDD notes, per-machine permission grants). Nothing under .claude/ is tracked.
+.claude/
+CLAUDE.md
+CONTEXT.md
 
 # OS cruft
 .DS_Store
