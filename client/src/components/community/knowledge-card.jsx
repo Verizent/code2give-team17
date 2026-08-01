@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowRight } from 'lucide-react'
 import { useSite } from '@/components/site-provider'
@@ -11,7 +11,8 @@ const ACTIVITY_TYPES_REAL = 84
 
 function DotsVisual() {
   const { t } = useSite()
-  const dots = useMemo(() => Array.from({ length: DOT_COUNT }, (_, i) => i), [])
+  // Constant-shape array (no reactive inputs) — React Compiler memoizes this.
+  const dots = Array.from({ length: DOT_COUNT }, (_, i) => i)
 
   return (
     <div>

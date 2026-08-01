@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { PartyPopper } from 'lucide-react'
 import { useSite } from '@/components/site-provider'
 import { useReducedMotion } from '@/lib/use-reduced-motion'
@@ -84,20 +84,18 @@ function CelebrateButton({ initialCount }) {
   const [burstId, setBurstId] = useState(null)
 
   // Fixed per-card so repeat celebrates reuse the same tasteful spread.
-  const particles = useMemo(
-    () =>
-      Array.from({ length: CONFETTI_COUNT }, (_, i) => {
-        const angle = (i / CONFETTI_COUNT) * Math.PI * 2 + Math.random() * 0.5
-        const distance = 22 + Math.random() * 16
-        return {
-          tx: `${Math.cos(angle) * distance}px`,
-          ty: `${Math.sin(angle) * distance - 8}px`,
-          tr: `${Math.round(Math.random() * 360)}deg`,
-          color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
-        }
-      }),
-    [],
-  )
+  // No reactive inputs (module-level constants only) — React Compiler
+  // caches this across re-renders the same way useMemo(..., []) did.
+  const particles = Array.from({ length: CONFETTI_COUNT }, (_, i) => {
+    const angle = (i / CONFETTI_COUNT) * Math.PI * 2 + Math.random() * 0.5
+    const distance = 22 + Math.random() * 16
+    return {
+      tx: `${Math.cos(angle) * distance}px`,
+      ty: `${Math.sin(angle) * distance - 8}px`,
+      tr: `${Math.round(Math.random() * 360)}deg`,
+      color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
+    }
+  })
 
   function toggle() {
     const next = !celebrated

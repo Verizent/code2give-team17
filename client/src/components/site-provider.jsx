@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react'
+import { createContext, useContext, useEffect, useState } from 'react'
 import { getStrings } from '@/lib/strings'
 
 const SiteContext = createContext(null)
@@ -39,16 +39,13 @@ export function SiteProvider({ children }) {
     document.documentElement.dataset.easyRead = easyRead ? 'true' : 'false'
   }, [easyRead])
 
-  const value = useMemo(
-    () => ({
-      locale,
-      setLocale,
-      easyRead,
-      setEasyRead,
-      t: getStrings(locale, easyRead),
-    }),
-    [locale, easyRead],
-  )
+  const value = {
+    locale,
+    setLocale,
+    easyRead,
+    setEasyRead,
+    t: getStrings(locale, easyRead),
+  }
 
   return <SiteContext.Provider value={value}>{children}</SiteContext.Provider>
 }

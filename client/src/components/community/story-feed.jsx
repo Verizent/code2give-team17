@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useSite } from '@/components/site-provider'
 import { ACTIVITY_TYPES, MOMENTS_OF_ABILITY_COUNT, knowledgeStats, stories } from '@/lib/mock'
 import { cn } from '@/lib/utils'
@@ -79,7 +79,7 @@ function buildFeed(filter) {
 export function StoryFeed() {
   const { t } = useSite()
   const [filter, setFilter] = useState('all')
-  const feed = useMemo(() => buildFeed(filter), [filter])
+  const feed = buildFeed(filter)
 
   const tabs = [
     { id: 'all', label: t.community.filterAll },
