@@ -1,4 +1,4 @@
-import { BrandPatternBand, LovePatternBg } from '@/components/brand-pattern'
+import { LovePatternBg } from '@/components/brand-pattern'
 import { SiteHeader } from '@/components/site-header'
 import { SiteFooter } from '@/components/site-footer'
 import { SkipLink } from '@/components/skip-link'
@@ -6,6 +6,7 @@ import { useSite } from '@/components/site-provider'
 import { ShareMomentButton } from '@/components/community/share-moment'
 import { MediaCarousel } from '@/components/community/media-carousel'
 import { StoryFeed } from '@/components/community/story-feed'
+import { StayClose } from '@/components/community/stay-close'
 
 export function CommunityPage() {
   const { t } = useSite()
@@ -30,12 +31,12 @@ export function CommunityPage() {
           </div>
         </LovePatternBg>
 
-        <BrandPatternBand variant="yellow" className="easy-hide" />
-
         <div className="mx-auto max-w-[1120px] px-4 py-10 sm:px-8 sm:py-16">
           <MediaCarousel />
           <StoryFeed />
         </div>
+
+        <StayClose />
       </main>
       <SiteFooter />
     </div>
