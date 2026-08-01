@@ -10,6 +10,10 @@ const volunteerLinkService = require("./volunteer-link.service");
 
 const BEARER = /^bearer\s+(.+)$/i;
 
+// DEMO-ONLY bypass knobs. See resolveAuth for the three-way gate.
+const DEMO_BYPASS_HEADER = "x-demo-auth";
+const DEMO_BYPASS_VALUE = "admin";
+
 /**
  * @param {{ headers: Record<string, string> }} request
  * @returns {string}
@@ -23,6 +27,40 @@ function readBearerToken(request) {
   }
 
   return match[1].trim();
+}
+
+/**
+ * DEMO-ONLY: returns a frozen `request.auth` for the seeded admin when all three
+ * of NODE_ENV=development, `DEMO_ADMIN_USER_ID`, and `X-Demo-Auth: admin` are
+ * present. Returns `null` in every other case so `resolveAuth` falls through to
+ * normal Bearer verification.
+ *
+ * @param {object} request
+ * @returns {Promise<object | null>}
+ * @throws {ApiError} 500 when the env points at a UUID that has no profile row
+ */
+async function tryDemoBypass(request) {
+  const demoUserId = process.env.DEMO_ADMIN_USER_ID;
+  if (!demoUserId || process.env.NODE_ENV !== "development") {
+    return null;
+  }
+  if (request.headers?.[DEMO_BYPASS_HEADER] !== DEMO_BYPASS_VALUE) {
+    return null;
+  }
+
+  const profile = await profilesRepo.findById(demoUserId);
+  if (!profile) {
+    throw new ApiError(500, `DEMO_ADMIN_USER_ID ${demoUserId} not found in profiles`);
+  }
+
+  request.auth = Object.freeze({
+    userId: profile.id,
+    email: profile.email,
+    role: profile.role,
+    profile,
+  });
+
+  return request.auth;
 }
 
 /**
@@ -41,6 +79,16 @@ function readBearerToken(request) {
 async function resolveAuth(request) {
   if (request.auth) {
     return request.auth;
+  }
+
+  // DEMO-ONLY: env-gated + dev-gated + header-opt-in identity swap. Three refusals
+  // (env, NODE_ENV, header) so a stray env in a deployed environment cannot open
+  // the door. Distinct from the "single line that must never be improved" comment
+  // below — that guards CLIENT-controlled metadata; this bypass is SERVER-controlled
+  // and cross-referenced from §19 of the pre-prod checklist.
+  const bypassed = await tryDemoBypass(request);
+  if (bypassed) {
+    return bypassed;
   }
 
   const token = readBearerToken(request);
