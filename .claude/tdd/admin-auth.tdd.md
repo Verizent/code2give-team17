@@ -148,6 +148,45 @@ rather than a raw token.
 
 ---
 
+## Second pass — reconciling with the live database
+
+The first pass proved things about a schema that was not the one in production. Investigating
+the live project found `public.profiles` **already applied by another track**, with `email NOT
+NULL` and `phone` — the two columns this branch dropped — plus an `on_auth_user_created`
+trigger. Suite 173 → **178 passing**, coverage 85.03% → **86.47%**.
+
+| Cycle | RED | GREEN |
+|---|---|---|
+| Volunteer linking never ran | `b813d70` · 1 failure, the real bug | `b2b3682` · 175 pass |
+| Provisioning email missing | `56b7ac8` · 2 failures | `82107c4` · 177 pass |
+| `adminGuard` on every mount | `def5d14` · 3 failures | `fac6794` · 178 pass |
+
+**The bug worth naming.** `linkVolunteerIfProven` fired only when `resolveAuth` had just created
+the profile. The trigger creates it at signup, so `findById` always found one and the branch was
+unreachable — **volunteer linking had never executed once**, silently, while every test passed
+because they exercised the service directly rather than the path. Fixed by decoupling:
+`verifySupabaseToken` now reports whether it served from cache, and the link is attempted on a
+cache miss, throttled to once per token per 60s by state the system already kept.
+
+`insertIfAbsent` omitting `email` was latent rather than live — the trigger provisions first, so
+the path is currently unreachable — but any account reaching it could never authenticate, behind
+a 500 naming nothing.
+
+The mount guard was **rewritten, not kept**: the other track guards per mount rather than with a
+gated parent router and owns the admin routes, so this branch adopted their pattern. Verified the
+replacement catches what it is for — adding `/api/admin/sessions` without `adminGuard` names it in
+the failure, and reverting restores green.
+
+**Two things I expected and was wrong about.** The other track's `handle_new_user()` does *not*
+copy `raw_user_meta_data->>'role'` into the profile — it hardcodes `'volunteer'` and pins
+`search_path`. And *Confirm email* is **ON**, evidenced by a 67-second gap between the one real
+account's `created_at` and `email_confirmed_at`; with the toggle off those are written together
+and identical.
+
+**Not covered by tests, and not claimed to be:** the guard swap itself. `feature/donations-backend`
+carries a `require-auth.js` stub that hands every caller `role: "admin"` with no token check,
+behind five mounted admin surfaces. This branch replaces it, but that only takes effect at merge.
+
 ## Known gaps
 
 **Nothing here has been exercised against a real database.** `05_identity/00_profiles.sql`
