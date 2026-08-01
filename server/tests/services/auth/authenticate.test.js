@@ -160,6 +160,31 @@ test("links the volunteer when the email is confirmed", async (t) => {
   assert.equal(volunteerLinkService.linkVolunteerToProfile.mock.callCount(), 1);
 });
 
+test("links the volunteer for a user whose profile already exists", async (t) => {
+  // The case that actually happens. `on_auth_user_created` creates the profiles row
+  // at signup, so by the time any request arrives findById always finds one. Tying
+  // the link to first-provision means it never runs for anybody, and nothing fails
+  // loudly — the volunteer simply stays unlinked forever.
+  stubAll(t, { profile: { id: USER_ID, role: "volunteer", full_name: "Bob" } });
+
+  await resolveAuth(requestWith("Bearer abc.def.ghi"));
+
+  assert.equal(volunteerLinkService.linkVolunteerToProfile.mock.callCount(), 1);
+});
+
+test("does not re-attempt the link when the token was served from cache", async (t) => {
+  stubAll(t, {
+    token: { ...hostileToken(), fromCache: true },
+    profile: { id: USER_ID, role: "volunteer" },
+  });
+
+  await resolveAuth(requestWith("Bearer abc.def.ghi"));
+
+  // The 60s token cache is the throttle. Without this the claim UPDATE would run on
+  // every authenticated request for the life of the account.
+  assert.equal(volunteerLinkService.linkVolunteerToProfile.mock.callCount(), 0);
+});
+
 test("a 409 from claim linking does not block authentication", async (t) => {
   stubAll(t, { profile: null });
   volunteerLinkService.linkVolunteerToProfile.mock.mockImplementation(async () => {
