@@ -54,6 +54,23 @@ Derived from the approved plan file (§Task 3–6, §26 demo priorities):
    returns a `verification_token`; expired code 400s; wrong code 400s and bumps
    attempts; unknown id 404s (privacy — no distinction between wrong code and
    unknown request).
+9. **Attendance auto-sends a thank-you email** — After `markAttendance`,
+   for each attended signup without a `thank_you_email_sent_at` stamp,
+   `sendThankYou` runs and the stamp is written on success. Second attendance
+   mark skips signups already thanked. `no_show` never triggers a send. Send
+   failures are logged but do not block badge award or the API response.
+10. **`EMAIL_MODE=console`** returns a rendered payload (bilingual, respects
+    `volunteer.locale`) with subject + text + up to 3 rebook recommendations.
+    `EMAIL_MODE=live` 400s (not implemented).
+11. **Volunteer captures §23 discovery + feedback** — PATCH /api/volunteer-signups/:id
+    accepts any subset of the seven §23 fields; unknown key 400s; empty body 400s.
+    Feedback fields refused when signup.status !== 'attended'. `feedback_submitted_at`
+    stamped on first non-empty feedback body. Owner check enforced by route
+    against volunteer_id.
+12. **Admin dashboard reads** — GET /api/admin/postings/:id/signups returns the
+    full roster with §23 fields + joined volunteer info; GET /:id/feedback
+    returns aggregate stats (avg rating, would_return %, discovery breakdown).
+    Zero-attended and zero-signup opportunities return null (not NaN).
 
 ## Test guarantees
 
@@ -80,8 +97,26 @@ Derived from the approved plan file (§Task 3–6, §26 demo priorities):
 | 19 | Expired code 400s | ditto | unit | PASS |
 | 20 | Wrong code 400s and bumps attempts | ditto | unit | PASS |
 | 21 | Unknown id 404s (privacy) | ditto | unit | PASS |
+| 22 | Thank-you email console-mode returns rendered payload | `tests/services/email/thank-you.service.test.js` | unit | PASS |
+| 23 | Thank-you respects `volunteer.locale=zh-Hant` | ditto | unit | PASS |
+| 24 | Thank-you falls back to English when zh-Hant title is empty | ditto | unit | PASS |
+| 25 | Thank-you `EMAIL_MODE=live` 400s (not implemented) | ditto | unit | PASS |
+| 26 | Thank-you 400s when volunteer has no email | ditto | unit | PASS |
+| 27 | Attendance sends thank-you per unique signup + stamps `thank_you_email_sent_at` | `tests/services/admin/attendance-email-hook.test.js` | unit | PASS |
+| 28 | Attendance skips send when signup already thanked | ditto | unit | PASS |
+| 29 | Attendance skips send for `no_show` | ditto | unit | PASS |
+| 30 | Attendance email failure logged, does not throw, no stamp written | ditto | unit | PASS |
+| 31 | PATCH signup 404s unknown id | `tests/services/volunteering/signup-feedback.service.test.js` | unit | PASS |
+| 32 | PATCH accepts discovery fields on non-attended signup | ditto | unit | PASS |
+| 33 | PATCH 400s feedback field before attended | ditto | unit | PASS |
+| 34 | PATCH stamps `feedback_submitted_at` on first feedback body | ditto | unit | PASS |
+| 35 | PATCH does not re-stamp on discovery-only body | ditto | unit | PASS |
+| 36 | Admin roster includes every §23 field + joined volunteer | `tests/services/admin/signups.service.test.js` | unit | PASS |
+| 37 | Feedback aggregate averages attended ratings, computes would_return % | ditto | unit | PASS |
+| 38 | Feedback aggregate returns null (not NaN) when no attended | ditto | unit | PASS |
+| 39 | Feedback aggregate returns empty structure for zero signups | ditto | unit | PASS |
 
-Full run: `node --test "tests/**/*.test.js"` → **202/202 pass** (up from 181 pre-merge).
+Full run: `node --test "tests/**/*.test.js"` → **220/220 pass** (up from 181 pre-merge).
 
 ## Validation commands actually run
 

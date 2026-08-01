@@ -92,17 +92,26 @@ These four are **unwrapped** — no `data:` envelope, as they are probes, not re
 | `GET` | `/api/volunteer/me` | Auth | Volunteer profile with hours, badges, signups |
 | `POST` | `/api/volunteer/interest` | Optional auth | Programme or opportunity interest |
 | `POST` | `/api/volunteer-signups` | Optional auth | Create signup |
+| `PATCH` | `/api/volunteer-signups/:id` | Volunteer token | Capture §23 discovery + feedback fields (owner-checked) |
 | `DELETE` | `/api/volunteer/signups/:id` | Auth | Cancel own signup |
 | `GET` | `/api/admin/postings` | Admin | List all opportunities (every status) |
 | `POST` | `/api/admin/postings` | Admin | Create opportunity |
 | `PATCH` | `/api/admin/postings/:id` | Admin | Update opportunity |
 | `DELETE` | `/api/admin/postings/:id` | Admin | Delete opportunity |
-| `POST` | `/api/admin/attendance/:id/attendance` | Admin | Bulk mark attendance + evaluate badges |
+| `GET` | `/api/admin/postings/:id/signups` | Admin | Full signup roster with §23 fields + joined volunteer info |
+| `GET` | `/api/admin/postings/:id/feedback` | Admin | Aggregate: avg rating, would_return %, discovery breakdown |
+| `POST` | `/api/admin/attendance/:id/attendance` | Admin | Bulk mark attendance + evaluate badges + auto-send thank-you email |
 | `POST` | `/api/admin/handson/sync` | Admin | DEMO-ONLY HandsOn stub sync |
 
 > **DEMO-ONLY: `POST /api/admin/handson/sync` returns a stub.** Real integration
 > needs HandsOn partner credentials and an actual client implementation (§17).
 > `HANDSON_MODE=live` currently 400s.
+
+> **DEMO-ONLY: attendance auto-sends a thank-you email via `EMAIL_MODE=console`.**
+> The rendered preview lands in the server log and in the API response
+> (`thank_you_emails_sent: N`). `thank_you_email_sent_at` guards against
+> resending on a second attendance mark. `EMAIL_MODE=live` throws — real send
+> needs Resend credentials + a verified sender domain (§17).
 
 > **DEMO-ONLY: `EMAIL_MODE=console`** returns `demo_code` in the verification
 > start response so the demo can read it back without an inbox. Real version
