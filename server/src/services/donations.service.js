@@ -8,12 +8,14 @@ const donorsRepo = require("../data/donors.repo");
 const donorsService = require("./donors.service");
 
 const VALID_FREQUENCIES = new Set(["once", "weekly", "monthly"]);
-const VALID_PROGRAMMES = new Set(["sports", "fitness", "nutrition", "family", "where_needed"]);
 
 /**
  * Creates a donation record for a donor (DEMO-ONLY: no Stripe, status is immediately succeeded).
  *
- * @param {{ email: string, amount_hkd: number, frequency?: string, programme?: string }} input
+ * Donors do not choose a programme designation — every gift is unrestricted. See PLAN.md §3
+ * ("No designation"); `donations.programme` was dropped from the schema on 1 Aug 2026.
+ *
+ * @param {{ email: string, amount_hkd: number, frequency?: string, campaign_id?: string|null }} input
  */
 async function createDonation(input) {
   const email = normalizeEmail(input.email);
@@ -31,18 +33,12 @@ async function createDonation(input) {
     throw ApiError.badRequest(`frequency must be one of: ${[...VALID_FREQUENCIES].join(", ")}`);
   }
 
-  const programme = input.programme ?? "where_needed";
-  if (!VALID_PROGRAMMES.has(programme)) {
-    throw ApiError.badRequest(`programme must be one of: ${[...VALID_PROGRAMMES].join(", ")}`);
-  }
-
   const donor = await donorsService.upsertDonor({ email, trackingOptIn: true });
 
   const donation = await donationsRepo.insertDonation({
     donor_id: donor.id,
     amount_hkd: amount,
     frequency,
-    programme,
     campaign_id: input.campaign_id ?? null,
     status: "succeeded",
   });

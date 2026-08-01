@@ -6,11 +6,13 @@ const { createDonation } = require("../services/donations.service");
 
 const router = express.Router();
 
+// No `programme` field, deliberately — donors do not choose a designation and every gift is
+// unrestricted (PLAN.md §3). Because this is a strictObject, a client still sending one gets a
+// clear 400 rather than having the value silently dropped.
 const createDonationSchema = z.strictObject({
   email:       z.string().email(),
   amount_hkd:  z.number().int().min(1),
   frequency:   z.enum(["once", "weekly", "monthly"]).optional(),
-  programme:   z.enum(["sports", "fitness", "nutrition", "family", "where_needed"]).optional(),
   campaign_id: z.string().uuid().optional(),
 });
 

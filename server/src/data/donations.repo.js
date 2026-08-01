@@ -1,14 +1,14 @@
 const { getSupabase } = require("../config/supabase");
 
 /**
- * @param {{ donor_id: string, amount_hkd: number, frequency?: string, programme?: string, campaign_id?: string|null, status?: string }} row
+ * @param {{ donor_id: string, amount_hkd: number, frequency?: string, campaign_id?: string|null, status?: string }} row
  * @returns {Promise<object>}
  */
 async function insertDonation(row) {
   const { data, error } = await getSupabase()
     .from("donations")
     .insert({ status: "succeeded", ...row })
-    .select("id, amount_hkd, frequency, programme, status, created_at")
+    .select("id, amount_hkd, frequency, status, created_at")
     .single();
 
   if (error) throw error;
@@ -47,7 +47,7 @@ async function updateDonation(id, updates) {
 async function listByDonor(donorId) {
   const { data, error } = await getSupabase()
     .from("donations")
-    .select("id, amount_hkd, frequency, programme, status, created_at")
+    .select("id, amount_hkd, frequency, status, created_at")
     .eq("donor_id", donorId)
     .eq("status", "succeeded")
     .order("created_at", { ascending: false });
