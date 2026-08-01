@@ -22,7 +22,21 @@ const MILESTONES = [
   { year: '2026', title: T('Beyond limits, together.', '攜手超越界限。'), body: T('The Beyond Limits Banquet celebrates a community that now supports more than 600 families.', 'Beyond Limits 晚宴慶祝一個現已支持超過 600 個家庭的社群。'), image: 'https://images.unsplash.com/photo-1517457373958-b7bdd4587205?auto=format&fit=crop&w=1500&q=85' },
 ]
 
-const BOARD = ['Carol Chan', 'Eleni Symeonidou', 'Jeff Sayed', 'Matthew Hosford', 'Kevin Wong', 'Young-Sook Stewart', 'Lobo Cheung', 'Dan Maley', 'Edith Chen', 'James Barrett', 'Raymond Tam', 'Dr. Ruby Ng']
+// ✅ NEW CODE:
+const BOARD = [
+  { name: 'Carol Chan', image: '/brand/empty.png' },
+  { name: 'Eleni Symeonidou', image: '/brand/eleni symeonidou.jpeg' },
+  { name: 'Jeff Sayed', image: '/brand/jeff-sayed.jpg' },
+  { name: 'Matthew Hosford', image: '/brand/matthew hosford.jpg' },
+  { name: 'Kevin Wong', image: '/brand/empty.png' },
+  { name: 'Young-Sook Stewart', image: '/brand/Youn-Sook-Stewart.jpeg' },
+  { name: 'Lobo Cheung', image: '/brand/lobo cheung.jpeg' },
+  { name: 'Dan Maley', image: '/brand/dan maley.jpg' },
+  { name: 'Edith Chen', image: '/brand/Edith-Chen.jpeg' },
+  { name: 'James Barrett', image: '/brand/James-Barrett.jpeg' },
+  { name: 'Raymond Tam', image: '/brand/raymond tam.jpeg' },
+  { name: 'Dr. Ruby Ng', image: '/brand/empty.png' },
+]
 
 const PROGRAMMES = [
   { id: 'sports', icon: '✦', eyebrow: T('Programme 01', '活動 01'), title: T('Sports', '運動'), body: T('Our sports programme is designed without limitations — a comprehensive range of activities, from football and basketball to surfing and trampoline, alongside strength training, coordination, and mental health support. We run 8+ weekly classes and 50+ activities in total.', '我們的運動計劃不設界限，提供足球、籃球、衝浪、彈床，以及力量、協調和心理健康支援等多元活動。'), action: T('Explore programme', '探索活動'), href: '/programmes/sports', image: '/brand/sports.jpeg' },
@@ -79,7 +93,32 @@ export function AboutPage() {
 
     <section ref={(el) => { pageRefs.current[0] = el }} className="bg-[#f8f7f3] px-5 py-16 sm:px-10 sm:py-24 lg:px-16"><div className="mx-auto max-w-[1120px]"><p className="kicker text-navy/60">{tx(T('Our story', '我們的故事'))}</p><h2 className="mt-3 max-w-3xl font-display text-4xl font-semibold leading-tight text-navy sm:text-6xl">{tx(T('A story written together.', '一個共同書寫的故事。'))}</h2><p className="mt-6 max-w-3xl text-lg leading-relaxed text-navy/80">{tx(T('Love 21 is a charity dedicated to empowering the Down syndrome and autistic community in Hong Kong through sport, nutrition, and holistic support programmes. It began with a simple, personal question: after losing a close friend far too young, our founder started asking why life expectancy in this community was so low in Hong Kong — and found almost no answers. Love 21 exists to change that, one family at a time.', 'Love 21 是一個慈善機構，透過運動、營養和全面支援活動，為香港唐氏綜合症及自閉症社群賦能。它始於一個簡單而個人的問題：為甚麼這個社群在香港的預期壽命如此低？Love 21 的存在，是為了逐一家庭帶來改變。'))}</p><div className="mt-14 space-y-16">{MILESTONES.map((milestone, index) => <article key={milestone.year} className="grid items-center gap-7 lg:grid-cols-2 lg:gap-14"><div className={cn('overflow-hidden rounded-md', index % 2 ? 'lg:order-2' : '')}><img src={milestone.image} alt="" className="aspect-[4/3] w-full object-cover transition-transform duration-700 hover:scale-105" /></div><div className={index % 2 ? 'lg:order-1' : ''}><div className="flex items-center gap-4"><span className="h-3 w-3 rounded-full bg-yellow" /><span className="font-display text-4xl font-semibold text-red">{milestone.year}</span></div><h3 className="mt-4 font-display text-3xl font-semibold text-navy">{tx(milestone.title)}</h3><p className="mt-4 max-w-lg leading-relaxed text-navy/75">{tx(milestone.body)}</p></div></article>)}</div></div></section>
 
-    <section ref={(el) => { pageRefs.current[1] = el }} className="px-5 py-16 sm:px-10 sm:py-24 lg:px-16"><div className="mx-auto max-w-[1120px]"><p className="kicker text-navy/60">{tx(T('The people behind the purpose', '使命背後的團隊'))}</p><h2 className="mt-3 font-display text-4xl font-semibold text-navy sm:text-6xl">{tx(T('Leadership', '領導團隊'))}</h2><p className="mt-5 max-w-2xl leading-relaxed text-navy/75">{tx(T('Our Board of Directors is comprised of caring individuals from diverse professional backgrounds in Hong Kong, who bring their various talents and passion to support and strengthen Love 21.', '我們的董事會由來自香港不同專業背景的關懷人士組成，以各自的才能和熱誠支持 Love 21。'))}</p><div className="mt-10 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">{BOARD.map((name, index) => <div key={name} className="overflow-hidden rounded-md border border-navy/10 bg-white shadow-sm"><div className={cn('flex aspect-[4/3] items-center justify-center bg-cover bg-center', index % 2 ? 'bg-yellow/25' : 'bg-navy/10')} style={index % 2 ? { backgroundImage: `linear-gradient(rgba(244, 197, 66, .82), rgba(244, 197, 66, .82)), url(${GALLERY[index % GALLERY.length]})` } : undefined}><span className="font-display text-4xl font-semibold text-navy">{name.split(' ').map((part) => part[0]).slice(0, 2).join('')}</span></div><div className="p-4"><h3 className="font-bold text-navy">{name}</h3><p className="mt-1 text-sm text-navy/60">{tx(T('Board of Directors', '董事會'))}</p></div></div>)}</div></div></section>
+    <section ref={(el) => { pageRefs.current[1] = el }} className="px-5 py-16 sm:px-10 sm:py-24 lg:px-16">
+      <div className="mx-auto max-w-[1120px]">
+        <p className="kicker text-navy/60">{tx(T('The people behind the purpose', '使命背後的團隊'))}</p>
+        <h2 className="mt-3 font-display text-4xl font-semibold text-navy sm:text-6xl">{tx(T('Leadership', '領導團隊'))}</h2>
+        <p className="mt-5 max-w-2xl leading-relaxed text-navy/75">
+          {tx(T('Our Board of Directors is comprised of caring individuals from diverse professional backgrounds in Hong Kong, who bring their various talents and passion to support and strengthen Love 21.', '我們的董事會由來自香港不同專業背景的關懷人士組成，以各自的才能和熱誠支持 Love 21。'))}
+        </p>
+        <div className="mt-10 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+          {BOARD.map((member) => (
+            <div key={member.name} className="overflow-hidden rounded-md border border-navy/10 bg-white shadow-sm">
+              <div className="aspect-[4/3] w-full overflow-hidden bg-navy/10">
+                <img 
+                  src={member.image} 
+                  alt={member.name} 
+                  className="h-full w-full object-cover transition-transform duration-500 hover:scale-105"
+                />
+              </div>
+              <div className="p-4">
+                <h3 className="font-bold text-navy">{member.name}</h3>
+                <p className="mt-1 text-sm text-navy/60">{tx(T('Board of Directors', '董事會'))}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
 
     <section ref={(el) => { pageRefs.current[2] = el }} className="relative bg-navy"><div className="pointer-events-none absolute inset-0 opacity-25" style={{ backgroundImage: 'radial-gradient(#f4c542 1px, transparent 1px)', backgroundSize: '30px 30px' }} /><div className="relative px-5 pb-6 pt-16 sm:px-10 sm:pt-24 lg:px-16"><div className="mx-auto max-w-[1120px]"><p className="kicker text-yellow">{tx(T('At the heart of Love 21', 'Love 21 的核心'))}</p><h2 className="mt-3 font-display text-4xl font-semibold text-white sm:text-6xl">{tx(T('Our programmes', '我們的活動'))}</h2></div></div><aside className="pointer-events-none absolute right-7 top-[48vh] z-20 hidden -translate-y-1/2 lg:block"><ul className="space-y-3">{PROGRAMMES.map((programme, index) => <li key={programme.id}><button type="button" onClick={() => programmeRefs.current[index]?.scrollIntoView({ behavior: 'smooth' })} className="pointer-events-auto group flex items-center gap-3"><span className={cn('rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wider text-white transition-all', activeProgramme === index ? 'bg-white/20 opacity-100' : 'opacity-0 group-hover:opacity-100')}>{tx(programme.title)}</span><span className={cn('rounded-full border border-white', activeProgramme === index ? 'h-3 w-3 bg-yellow' : 'h-2.5 w-2.5')} /></button></li>)}</ul></aside>{PROGRAMMES.map((programme, index) => <section key={programme.id} data-programme={index} ref={(el) => { programmeRefs.current[index] = el }} className="relative flex min-h-screen items-end overflow-hidden px-5 py-16 sm:px-10 sm:py-20 lg:px-16"><div aria-hidden="true" className={cn('absolute -inset-[5%] bg-cover bg-center bg-fixed transition-transform duration-[1800ms]', activeProgramme === index ? 'scale-105' : 'scale-100')} style={{ backgroundImage: `url('${programme.image}')` }} /><div className="absolute inset-0 bg-gradient-to-r from-navy/90 via-navy/55 to-navy/20" /><div className="relative mx-auto w-full max-w-[1120px]"><span className="inline-flex h-12 w-12 animate-bounce items-center justify-center rounded-full bg-yellow text-xl text-navy [animation-duration:3s]">{programme.icon}</span><p className="mt-6 kicker text-yellow">{tx(programme.eyebrow)}</p><h3 className="mt-3 max-w-4xl font-display text-[clamp(3rem,8vw,7rem)] font-semibold leading-[0.9] text-white">{tx(programme.title)}</h3><p className="mt-6 max-w-xl text-lg leading-relaxed text-white/90 sm:text-xl">{tx(programme.body)}</p><a href={programme.href} className="mt-8 inline-flex items-center gap-3 border-b-2 border-yellow pb-2 text-sm font-bold uppercase tracking-[0.12em] text-white hover:text-yellow">{tx(programme.action)} <span>→</span></a></div></section>)}</section>
 
