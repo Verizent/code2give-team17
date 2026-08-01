@@ -225,3 +225,104 @@ test("a 409 from claim linking does not block authentication", async (t) => {
   // still be able to log in and moderate.
   assert.equal(request.auth.role, "volunteer");
 });
+
+// -----------------------------------------------------------------------------
+// DEMO-ONLY: env-gated + header-opt-in identity bypass for the demo. Real deploys
+// reject this three ways (NODE_ENV, missing env, missing header). See §19.
+// -----------------------------------------------------------------------------
+
+const DEMO_ADMIN_UUID = "22222222-2222-4222-8222-222222222222";
+const DEMO_ADMIN_PROFILE = {
+  id: DEMO_ADMIN_UUID,
+  role: "admin",
+  email: "demo-admin@love21.local",
+  full_name: "Demo Admin",
+  locale: "en",
+};
+
+function setEnv(t, values) {
+  const originals = {};
+  for (const [key, value] of Object.entries(values)) {
+    originals[key] = process.env[key];
+    if (value === undefined) delete process.env[key];
+    else process.env[key] = value;
+  }
+  t.after(() => {
+    for (const [key, original] of Object.entries(originals)) {
+      if (original === undefined) delete process.env[key];
+      else process.env[key] = original;
+    }
+  });
+}
+
+function bypassRequest(extraHeaders = {}) {
+  return { headers: { "x-demo-auth": "admin", ...extraHeaders } };
+}
+
+test("demo bypass: env + header + NODE_ENV=development resolves the seeded admin profile", async (t) => {
+  setEnv(t, { NODE_ENV: "development", DEMO_ADMIN_USER_ID: DEMO_ADMIN_UUID });
+  mock.method(profilesRepo, "findById", async (id) => (id === DEMO_ADMIN_UUID ? DEMO_ADMIN_PROFILE : null));
+  mock.method(verifyToken, "verifySupabaseToken", async () => {
+    throw new Error("verifyToken must not be called on the bypass path");
+  });
+  t.after(() => mock.restoreAll());
+
+  const request = bypassRequest();
+  await resolveAuth(request);
+
+  assert.equal(request.auth.role, "admin");
+  assert.equal(request.auth.userId, DEMO_ADMIN_UUID);
+  assert.equal(request.auth.email, DEMO_ADMIN_PROFILE.email);
+  assert.equal(verifyToken.verifySupabaseToken.mock.callCount(), 0);
+});
+
+test("demo bypass: rejected when NODE_ENV is production even with env + header set", async (t) => {
+  setEnv(t, { NODE_ENV: "production", DEMO_ADMIN_USER_ID: DEMO_ADMIN_UUID });
+  stubAll(t, { profile: DEMO_ADMIN_PROFILE });
+
+  // No Authorization header — bypass is refused, bearer parse fails, we 401.
+  await assert.rejects(
+    () => resolveAuth(bypassRequest()),
+    (error) => error.status === 401,
+  );
+});
+
+test("demo bypass: rejected when the X-Demo-Auth header is absent", async (t) => {
+  setEnv(t, { NODE_ENV: "development", DEMO_ADMIN_USER_ID: DEMO_ADMIN_UUID });
+  stubAll(t, { profile: DEMO_ADMIN_PROFILE });
+
+  await assert.rejects(
+    () => resolveAuth(requestWith(undefined)),
+    (error) => error.status === 401,
+  );
+});
+
+test("demo bypass: throws 500 when DEMO_ADMIN_USER_ID points at a non-existent profile", async (t) => {
+  setEnv(t, { NODE_ENV: "development", DEMO_ADMIN_USER_ID: DEMO_ADMIN_UUID });
+  mock.method(profilesRepo, "findById", async () => null);
+  mock.method(verifyToken, "verifySupabaseToken", async () => hostileToken());
+  t.after(() => mock.restoreAll());
+
+  await assert.rejects(
+    () => resolveAuth(bypassRequest()),
+    (error) => error.status === 500,
+  );
+});
+
+test("demo bypass: short-circuits before verifyToken.verifySupabaseToken runs", async (t) => {
+  // Prove ordering: even if there IS an Authorization header, the bypass path must
+  // not fall through to bearer parsing. Otherwise a misconfigured demo could
+  // accidentally exercise a broken bearer path and mask the misconfiguration.
+  setEnv(t, { NODE_ENV: "development", DEMO_ADMIN_USER_ID: DEMO_ADMIN_UUID });
+  mock.method(profilesRepo, "findById", async () => DEMO_ADMIN_PROFILE);
+  mock.method(verifyToken, "verifySupabaseToken", async () => {
+    throw new Error("bypass must not reach verifyToken");
+  });
+  t.after(() => mock.restoreAll());
+
+  const request = bypassRequest({ authorization: "Bearer whatever" });
+  await resolveAuth(request);
+
+  assert.equal(request.auth.role, "admin");
+  assert.equal(verifyToken.verifySupabaseToken.mock.callCount(), 0);
+});
