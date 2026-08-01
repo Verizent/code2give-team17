@@ -7,7 +7,7 @@
     "start": "node index.js",
     "dev": "node --watch index.js",
     "seed": "node db/seed/seed.js",
-    "test": "node --test",
+    "test": "node --test --test-concurrency=1",
     "test:coverage": "node --test --experimental-test-coverage",
     "test:schema": "node --test --test-concurrency=1 \"test/schema/**/*.test.js\""
   },
