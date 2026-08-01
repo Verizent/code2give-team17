@@ -19,9 +19,12 @@
     "node": ">=18"
   },
   "dependencies": {
+    "@stripe/react-stripe-js": "^6.8.0",
+    "@stripe/stripe-js": "^9.12.1",
     "@supabase/supabase-js": "^2.57.4",
     "dotenv": "^17.2.2",
     "express": "^5.2.1",
+    "stripe": "^22.4.0",
     "zod": "^4.4.3"
   }
 }

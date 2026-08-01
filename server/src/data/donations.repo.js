@@ -1,4 +1,5 @@
 const { getSupabase } = require("../config/supabase");
+const { assertOk } = require("./supabase-error");
 
 /**
  * @param {{ donor_id: string, amount_hkd: number, frequency?: string, campaign_id?: string|null, status?: string }} row
@@ -11,23 +12,49 @@ async function insertDonation(row) {
     .select("id, amount_hkd, frequency, status, created_at")
     .single();
 
-  if (error) throw error;
+  assertOk(error);
   return data;
 }
 
 /**
- * Used for idempotency: same stripe_session_id must never produce two rows.
+ * Second line of defence on idempotency: the same `stripe_session_id` must never produce two
+ * rows. `stripe_events` is the first — see `stripe-events.repo.js`.
+ *
  * @param {string} sessionId
  * @returns {Promise<object|null>}
  */
 async function findByStripeSession(sessionId) {
   const { data, error } = await getSupabase()
     .from("donations")
-    .select("id, status")
+    .select(
+      "id, donor_id, amount_hkd, frequency, status, events_credited, cost_per_event_at_donation, tracking_opt_in, created_at",
+    )
     .eq("stripe_session_id", sessionId)
     .maybeSingle();
 
-  if (error) throw error;
+  assertOk(error);
+  return data;
+}
+
+/**
+ * Creates the `pending` row that a checkout session points at.
+ *
+ * `donor_id` is deliberately absent — the donate form collects nothing Stripe already collects
+ * (CONTEXT.md §15), so the donor is not known until the webhook carries their email. The column
+ * is nullable for exactly this window.
+ *
+ * @param {{ amount_hkd: number, frequency: string, campaign_id?: string|null,
+ *   stripe_session_id: string, tracking_opt_in?: boolean }} row
+ * @returns {Promise<object>}
+ */
+async function insertPendingDonation(row) {
+  const { data, error } = await getSupabase()
+    .from("donations")
+    .insert({ ...row, status: "pending" })
+    .select("id, amount_hkd, frequency, status, stripe_session_id, created_at")
+    .single();
+
+  assertOk(error);
   return data;
 }
 
@@ -37,23 +64,36 @@ async function findByStripeSession(sessionId) {
  */
 async function updateDonation(id, updates) {
   const { error } = await getSupabase().from("donations").update(updates).eq("id", id);
-  if (error) throw error;
+  assertOk(error);
 }
 
 /**
+ * Succeeded donations for a donor, newest first.
+ *
+ * `events_credited` and `created_at` come back because the lifetime strip and the edition
+ * windows are both derived from them (PLAN.md Phase B) — nothing is stored as a counter.
+ *
  * @param {string} donorId
  * @returns {Promise<object[]>}
  */
 async function listByDonor(donorId) {
   const { data, error } = await getSupabase()
     .from("donations")
-    .select("id, amount_hkd, frequency, status, created_at")
+    .select(
+      "id, amount_hkd, frequency, status, events_credited, cost_per_event_at_donation, created_at",
+    )
     .eq("donor_id", donorId)
     .eq("status", "succeeded")
     .order("created_at", { ascending: false });
 
-  if (error) throw error;
+  assertOk(error);
   return data ?? [];
 }
 
-module.exports = { insertDonation, findByStripeSession, updateDonation, listByDonor };
+module.exports = {
+  insertDonation,
+  insertPendingDonation,
+  findByStripeSession,
+  updateDonation,
+  listByDonor,
+};
