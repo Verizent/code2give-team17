@@ -3,6 +3,7 @@
 //            gate — real version needs the §20.5 screening decision before a first
 //            session, and an admin-invite flow instead of hand-run SQL (§19, §26).
 const { ApiError } = require("../../lib/api-error");
+const { normaliseEmail } = require("../../lib/email");
 const profilesRepo = require("../../data/profiles.repo");
 const verifyToken = require("./verify-token");
 const volunteerLinkService = require("./volunteer-link.service");
@@ -53,6 +54,10 @@ async function resolveAuth(request) {
     // self-serve. This is the single line that must never be "improved".
     profile = await profilesRepo.insertIfAbsent({
       id: verified.userId,
+      // NOT NULL, and constrained to lower(btrim(...)). `handle_new_user` coalesces
+      // a missing address to '' rather than failing the insert; match it, because a
+      // phone-auth account with no email must still get a profile.
+      email: verified.email ? normaliseEmail(verified.email) : "",
       full_name: verified.fullName,
       locale: "en",
     });
