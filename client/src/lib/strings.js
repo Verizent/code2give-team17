@@ -40,10 +40,10 @@ export const STRINGS = {
       title: 'Impact you can count',
       updated: 'Last updated 30s ago · Annual Report 2024/25',
       items: [
-        { value: 6859, suffix: '', label: 'sessions offered (2024/25)' },
-        { value: 490, suffix: '', label: 'families supported' },
-        { value: 84, suffix: '', label: 'activity types' },
-        { value: 1000, suffix: '+', label: 'volunteer hours / month' },
+        { id: 'sessions', value: 6859, suffix: '', label: 'sessions offered (2024/25)' },
+        { id: 'families', value: 490, suffix: '', label: 'families supported' },
+        { id: 'activityTypes', value: 84, suffix: '', label: 'activity types' },
+        { id: 'volunteerHours', value: 1000, suffix: '+', label: 'volunteer hours / month' },
       ],
     },
     activities: {
@@ -52,6 +52,18 @@ export const STRINGS = {
       recruiting: 'Volunteers welcome',
       joinCta: 'Join as a volunteer',
       viewCta: 'View activity',
+    },
+    achievements: {
+      eyebrow: 'Achievements & impact',
+      title: 'What the community has built',
+      subhead: 'Collective milestones — no single name attached, because they belong to everyone.',
+    },
+    corporateImpact: {
+      title: 'Companies who show up',
+      subhead: 'Real teams, real shifts, real impact.',
+      wallLabel: 'With thanks to',
+      wallSubhead: 'Corporates, law firms and foundations who’ve backed Love 21 — named in our 2024–25 annual report.',
+      cta: 'Bring your company',
     },
     spotlight: {
       title: 'Ability spotlight',
@@ -139,6 +151,17 @@ export const STRINGS = {
       sliderYourGuess: 'Your guess',
       sliderReal: 'The real figure',
       emptyFilter: 'No moments in this program yet — try another filter.',
+    },
+    mediaNews: {
+      eyebrow: 'In the news',
+      title: 'Media & press coverage',
+      subhead: 'Real coverage of Love 21 — from newsrooms and our own community, in our members’ words.',
+      readMore: 'Read more',
+      prevSlide: 'Previous story',
+      nextSlide: 'Next story',
+      pause: 'Pause slideshow',
+      play: 'Play slideshow',
+      slideLabel: 'Story {n} of {total}',
     },
     volunteer: {
       kicker: 'Take part',
@@ -589,6 +612,20 @@ export const STRINGS = {
       journeyDetailSessionWaiting:
         'After matching, you’ll hear when a {programme} session that this gift supported actually runs.',
     },
+    support: {
+      eyebrow: 'Support',
+      title: 'Looking for support for your family?',
+      intro:
+        'Love 21 runs sport, nutrition and family programmes for the Down syndrome, autistic and neurodiverse community in Hong Kong. If you think we could be a good fit, we would love to meet you.',
+      processTitle: 'Tell us about your family',
+      processBody:
+        'Fill in a short form and our team will contact you as soon as possible to talk through what your family needs.',
+      formCta: 'Fill in the form',
+      emailNote: 'Prefer email? Write to info@love21foundation.com',
+      memberNote: 'Already a Love 21 member?',
+      memberCta: 'Sign in to see your classes',
+      backHome: 'Back to home',
+    },
     admin: {
       kicker: 'Staff',
       hubTitle: 'Staff hub',
@@ -755,10 +792,10 @@ export const STRINGS = {
       title: '看得見的影響',
       updated: '30 秒前更新 · 2024/25 年度報告',
       items: [
-        { value: 6859, suffix: '', label: '課程總節數（2024/25）' },
-        { value: 490, suffix: '', label: '支援家庭' },
-        { value: 84, suffix: '', label: '活動種類' },
-        { value: 1000, suffix: '+', label: '義工時數 / 月' },
+        { id: 'sessions', value: 6859, suffix: '', label: '課程總節數（2024/25）' },
+        { id: 'families', value: 490, suffix: '', label: '支援家庭' },
+        { id: 'activityTypes', value: 84, suffix: '', label: '活動種類' },
+        { id: 'volunteerHours', value: 1000, suffix: '+', label: '義工時數 / 月' },
       ],
     },
     activities: {
@@ -767,6 +804,18 @@ export const STRINGS = {
       recruiting: '歡迎義工',
       joinCta: '成為義工',
       viewCta: '查看活動',
+    },
+    achievements: {
+      eyebrow: '成就與影響力',
+      title: '社群共同創造的成果',
+      subhead: '集體的里程碑——不屬於單一個人，因為它屬於每一位。',
+    },
+    corporateImpact: {
+      title: '願意參與的企業',
+      subhead: '真實的團隊、真實的當值、真實的影響力。',
+      wallLabel: '衷心感謝',
+      wallSubhead: '感謝這些企業、律師事務所及基金會的支持——名單載於 2024–25 年報。',
+      cta: '讓你的公司加入',
     },
     spotlight: {
       title: '能力聚焦',
@@ -854,6 +903,17 @@ export const STRINGS = {
       sliderYourGuess: '你的猜測',
       sliderReal: '真實數字',
       emptyFilter: '此項目暫無時刻——試試其他篩選。',
+    },
+    mediaNews: {
+      eyebrow: '媒體報導',
+      title: '媒體與新聞報導',
+      subhead: '來自新聞媒體與我們社群的真實報導。',
+      readMore: '閱讀全文',
+      prevSlide: '上一則',
+      nextSlide: '下一則',
+      pause: '暫停輪播',
+      play: '播放輪播',
+      slideLabel: '第 {n} 則，共 {total} 則',
     },
     volunteer: {
       kicker: '參與',
@@ -1263,6 +1323,20 @@ export const STRINGS = {
         '等候下一節「{programme}」課堂——舉行時會收到捐助用途通知，不是電子報。',
       journeyDetailSessionWaiting: '配對後，當這筆捐助支持的「{programme}」課堂實際舉行時會通知你。',
     },
+    support: {
+      eyebrow: '支援',
+      title: '想為你的家庭尋找支援？',
+      intro:
+        'Love 21 在香港為唐氏綜合症、自閉症及其他神經多樣人士提供運動、營養及家庭支援活動。如果你覺得我們可能適合你的家庭，我們很樂意與你見面。',
+      processTitle: '告訴我們你的家庭情況',
+      processBody:
+        '填寫一份簡短表格，我們的團隊會盡快聯絡你，了解你家庭的需要。',
+      formCta: '填寫表格',
+      emailNote: '想用電郵？請寫信到 info@love21foundation.com',
+      memberNote: '已經是 Love 21 會員？',
+      memberCta: '登入查看你的課堂',
+      backHome: '返回首頁',
+    },
     admin: {
       kicker: '職員',
       hubTitle: '職員中心',
@@ -1421,10 +1495,10 @@ export const STRINGS = {
       title: '看得见的影响',
       updated: '30 秒前更新 · 2024/25 年度报告',
       items: [
-        { value: 6859, suffix: '', label: '课程总节数（2024/25）' },
-        { value: 490, suffix: '', label: '支援家庭' },
-        { value: 84, suffix: '', label: '活动种类' },
-        { value: 1000, suffix: '+', label: '义工时数 / 月' },
+        { id: 'sessions', value: 6859, suffix: '', label: '课程总节数（2024/25）' },
+        { id: 'families', value: 490, suffix: '', label: '支援家庭' },
+        { id: 'activityTypes', value: 84, suffix: '', label: '活动种类' },
+        { id: 'volunteerHours', value: 1000, suffix: '+', label: '义工时数 / 月' },
       ],
     },
     activities: {
@@ -1433,6 +1507,18 @@ export const STRINGS = {
       recruiting: '欢迎义工',
       joinCta: '成为义工',
       viewCta: '查看活动',
+    },
+    achievements: {
+      eyebrow: '成就与影响力',
+      title: '社群共同创造的成果',
+      subhead: '集体的里程碑——不属于单一个人，因为它属于每一位。',
+    },
+    corporateImpact: {
+      title: '愿意参与的企业',
+      subhead: '真实的团队、真实的当值、真实的影响力。',
+      wallLabel: '衷心感谢',
+      wallSubhead: '感谢这些企业、律师事务所及基金会的支持——名单载于 2024–25 年报。',
+      cta: '让你的公司加入',
     },
     spotlight: {
       title: '能力聚焦',
@@ -1520,6 +1606,17 @@ export const STRINGS = {
       sliderYourGuess: '你的猜测',
       sliderReal: '真实数字',
       emptyFilter: '此项目暂无时刻——试试其他筛选。',
+    },
+    mediaNews: {
+      eyebrow: '媒体报道',
+      title: '媒体与新闻报道',
+      subhead: '来自新闻媒体与我们社群的真实报道。',
+      readMore: '阅读全文',
+      prevSlide: '上一则',
+      nextSlide: '下一则',
+      pause: '暂停轮播',
+      play: '播放轮播',
+      slideLabel: '第 {n} 则，共 {total} 则',
     },
     volunteer: {
       kicker: '参与',
@@ -1928,6 +2025,20 @@ export const STRINGS = {
       journeyDetailSessionProcessing:
         '等候下一节「{programme}」课堂——举行时会收到捐助用途通知，不是电子报。',
       journeyDetailSessionWaiting: '配对后，当这笔捐助支持的「{programme}」课堂实际举行时会通知你。',
+    },
+    support: {
+      eyebrow: '支援',
+      title: '想为你的家庭寻找支援？',
+      intro:
+        'Love 21 在香港为唐氏综合症、自闭症及其他神经多样人士提供运动、营养及家庭支援活动。如果你觉得我们可能适合你的家庭，我们很乐意与你见面。',
+      processTitle: '告诉我们你的家庭情况',
+      processBody:
+        '填写一份简短表格，我们的团队会尽快联系你，了解你家庭的需要。',
+      formCta: '填写表格',
+      emailNote: '想用邮件？请写信到 info@love21foundation.com',
+      memberNote: '已经是 Love 21 会员？',
+      memberCta: '登录查看你的课堂',
+      backHome: '返回首页',
     },
     admin: {
       kicker: '职员',
