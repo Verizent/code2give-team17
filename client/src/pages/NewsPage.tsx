@@ -3,6 +3,7 @@ import { SkipLink } from '@/components/skip-link'
 import { SiteHeader } from '@/components/site-header'
 import { SiteFooter } from '@/components/site-footer'
 import { useSite } from '@/components/site-provider'
+import { BrandPatternBand, LovePatternBg } from '@/components/brand-pattern'
 import { cn } from '@/lib/utils'
 
 type Article = {
@@ -59,16 +60,25 @@ export function NewsPage() {
   const visible = ARTICLES.filter((a) => tab === 'all' || a.category === tab)
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen overflow-x-hidden bg-white">
       <SkipLink />
       <SiteHeader />
       <main id="main">
-        <section className="mx-auto max-w-[1120px] px-4 py-6 sm:px-8 sm:py-8">
-          <header className="mb-4">
-            <h1 className="font-display text-3xl font-extrabold text-navy">{locale === 'en' ? 'News & Updates' : '新聞與更新'}</h1>
-            <p className="mt-3 text-base text-navy/80">{locale === 'en' ? 'Latest updates from Love 21 Foundation.' : 'Love 21 最新消息與項目更新。'}</p>
-          </header>
-        </section>
+        <LovePatternBg variant="red">
+          <div className="mx-auto max-w-[1120px] px-4 py-14 sm:px-8 sm:py-20">
+            <p className="kicker text-yellow">{locale === 'en' ? 'News' : '新聞'}</p>
+            <h1 className="mt-3 max-w-3xl font-display text-[clamp(2.25rem,6vw,3.75rem)] font-semibold text-white">
+              {locale === 'en' ? 'News & Updates' : '新聞與更新'}
+            </h1>
+            <p className="mt-5 max-w-xl text-base leading-relaxed text-white/80 sm:text-lg">
+              {locale === 'en'
+                ? 'Latest updates from Love 21 Foundation.'
+                : 'Love 21 最新消息與項目更新。'}
+            </p>
+          </div>
+        </LovePatternBg>
+
+        <BrandPatternBand variant="yellow" className="easy-hide" />
 
         <div className="sticky top-14 z-20 border-y border-navy/10 bg-white/95 backdrop-blur sm:top-[72px]">
           <div className="no-scrollbar mx-auto flex max-w-[1120px] gap-2 overflow-x-auto px-4 py-3 sm:px-8" role="tablist" aria-label="News categories">
