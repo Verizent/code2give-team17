@@ -168,6 +168,31 @@ async function markAttendance(signupId, patch) {
 }
 
 /**
+ * Full roster for an opportunity — admin dashboard read. Joins volunteer info
+ * and returns every §23 field so the admin UI can render the attendance sheet
+ * with feedback inline. Includes `no_show` rows too.
+ *
+ * @param {string} opportunityId
+ */
+async function listByOpportunity(opportunityId) {
+  const db = getServiceClient();
+  const { data, error } = await db
+    .from("volunteer_signups")
+    .select(
+      `${SIGNUP_COLUMNS},
+       discovery_source, discovery_source_other, signup_motivation,
+       experience_rating, would_return, improvement_note, feedback_submitted_at,
+       thank_you_email_sent_at,
+       volunteers(id, email, full_name, locale)`,
+    )
+    .eq("opportunity_id", opportunityId)
+    .order("created_at", { ascending: true });
+
+  throwIfDbError(error);
+  return data || [];
+}
+
+/**
  * Generic per-signup patch — used by the PATCH /api/volunteer-signups/:id
  * endpoint for §23 discovery + feedback fields. Kept separate from
  * `markAttendance` so a caller cannot accidentally mutate `status` or
@@ -231,6 +256,7 @@ module.exports = {
   findSignupById,
   listSignupsForVolunteer,
   listAttendedForVolunteer,
+  listByOpportunity,
   markAttendance,
   markThankYouSent,
   patchSignupFields,
