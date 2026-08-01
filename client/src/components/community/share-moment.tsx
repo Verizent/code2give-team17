@@ -13,7 +13,7 @@ export function ShareMomentButton({ className }: { className?: string }) {
         type="button"
         onClick={() => setOpen(true)}
         className={cn(
-          'inline-flex min-h-[52px] items-center justify-center gap-2 rounded-xl bg-red px-7 text-base font-semibold text-white shadow-sm transition-transform hover:-translate-y-0.5',
+          'inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-md bg-red px-6 text-base font-semibold text-white sm:w-auto sm:min-h-[52px] sm:rounded-xl sm:px-7',
           className,
         )}
       >

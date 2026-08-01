@@ -1,77 +1,101 @@
-import { Link } from 'react-router-dom'
-import { useState } from 'react'
-import { Heart, Menu, X } from 'lucide-react'
+import { Link, useLocation } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Menu, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useSite } from '@/components/site-provider'
+import { BrandLogo } from '@/components/brand-logo'
 import { LOCALES, type Locale } from '@/lib/strings'
 
-function LanguageSwitch() {
+function LanguageSwitch({ className }: { className?: string }) {
   const { locale, setLocale, t } = useSite()
+  const codes = LOCALES.filter((l) => l.code === 'en' || l.code === 'zh-Hant')
   return (
     <div
       role="group"
       aria-label={t.nav.language}
-      className="inline-flex items-center rounded-lg border border-border bg-card p-0.5"
+      className={cn('inline-flex items-center gap-1 text-[15px] font-medium text-navy', className)}
     >
-      {LOCALES.map((l) => {
-        const active = l.code === locale
+      {codes.map((l, i) => {
+        const active = l.code === locale || (locale === 'zh-Hans' && l.code === 'zh-Hant')
         return (
-          <button
-            key={l.code}
-            type="button"
-            onClick={() => setLocale(l.code as Locale)}
-            aria-pressed={active}
-            className={cn(
-              'min-h-[36px] min-w-[36px] rounded-md px-2.5 text-sm font-medium transition-colors',
-              active
-                ? 'bg-navy text-white'
-                : 'text-ink/70 hover:bg-muted hover:text-ink',
+          <span key={l.code} className="inline-flex items-center gap-1">
+            {i > 0 && (
+              <span className="text-navy/35" aria-hidden>
+                |
+              </span>
             )}
-          >
-            {l.short}
-          </button>
+            <button
+              type="button"
+              onClick={() => setLocale(l.code as Locale)}
+              aria-pressed={active}
+              className={cn(
+                'min-h-[44px] px-1',
+                active ? 'font-semibold text-navy' : 'text-navy/55 hover:text-navy',
+              )}
+            >
+              {l.short === 'EN' ? 'EN' : '繁'}
+            </button>
+          </span>
         )
       })}
     </div>
   )
 }
 
-function EasyReadToggle() {
+function EasyReadToggle({ compact = false }: { compact?: boolean }) {
   const { easyRead, setEasyRead, t } = useSite()
   return (
     <button
       type="button"
       onClick={() => setEasyRead(!easyRead)}
       aria-pressed={easyRead}
+      title={t.nav.easyRead}
       className={cn(
-        'inline-flex min-h-[44px] items-center gap-2 rounded-lg border px-3 text-sm font-medium transition-colors',
+        'header-compact inline-flex min-h-[44px] items-center justify-center rounded-md border-2 font-bold transition-colors',
+        compact ? 'min-w-[44px] px-2 text-sm' : 'gap-1.5 px-3 text-sm',
         easyRead
-          ? 'border-teal bg-teal text-white'
-          : 'border-border bg-card text-ink hover:bg-muted',
+          ? 'border-navy bg-yellow text-navy shadow-sm'
+          : 'border-navy/20 bg-white text-navy hover:border-navy/40',
       )}
     >
-      <span
-        aria-hidden="true"
-        className={cn(
-          'flex h-4 w-7 items-center rounded-full p-0.5 transition-colors',
-          easyRead ? 'bg-white/40' : 'bg-ink/20',
-        )}
-      >
-        <span
-          className={cn(
-            'h-3 w-3 rounded-full bg-white transition-transform',
-            easyRead && 'translate-x-3',
-          )}
-        />
-      </span>
-      {t.nav.easyRead}
+      {compact ? (
+        <span aria-hidden="true">A{easyRead ? '+' : ''}</span>
+      ) : (
+        <>
+          <span aria-hidden="true" className="text-base leading-none">
+            {easyRead ? 'A+' : 'A'}
+          </span>
+          {t.nav.easyRead}
+        </>
+      )}
+      <span className="sr-only">{easyRead ? 'on' : 'off'}</span>
     </button>
   )
 }
 
 export function SiteHeader() {
-  const { t } = useSite()
+  const { t, easyRead, setEasyRead } = useSite()
+  const { pathname } = useLocation()
   const [open, setOpen] = useState(false)
+
+  useEffect(() => {
+    setOpen(false)
+  }, [pathname])
+
+  useEffect(() => {
+    const onResize = () => {
+      if (window.innerWidth >= 1024) setOpen(false)
+    }
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
+
+  useEffect(() => {
+    document.body.style.overflow = open ? 'hidden' : ''
+    return () => {
+      document.body.style.overflow = ''
+    }
+  }, [open])
 
   const navItems = [
     { href: '/', label: t.nav.home },
@@ -81,99 +105,126 @@ export function SiteHeader() {
   ]
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border bg-paper/90 backdrop-blur">
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
-        {/* Logo */}
-        <Link
-          to="/"
-          className="flex items-center gap-2 rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+    <>
+      {easyRead && (
+        <div
+          role="status"
+          className="border-b border-navy/10 bg-yellow px-4 py-2 text-center text-sm font-bold text-navy sm:text-base"
         >
-          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-red text-white">
-            <Heart className="h-5 w-5" fill="currentColor" aria-hidden="true" />
-          </span>
-          <span className="font-display text-lg font-bold leading-tight text-navy">
-            Love 21
-          </span>
-        </Link>
-
-        {/* Desktop nav */}
-        <nav
-          aria-label="Primary"
-          className="hidden items-center gap-1 lg:flex"
-        >
-          {navItems.map((item) => (
-            <Link
-              key={item.href}
-              to={item.href}
-              className="flex min-h-[44px] items-center rounded-lg px-3 text-base font-medium text-ink transition-colors hover:bg-muted"
-            >
-              {item.label}
-            </Link>
-          ))}
-        </nav>
-
-        {/* Right controls */}
-        <div className="hidden items-center gap-2 lg:flex">
-          <LanguageSwitch />
-          <EasyReadToggle />
-          <Link
-            to="/give"
-            className="inline-flex min-h-[44px] items-center gap-2 rounded-lg bg-red px-5 text-base font-semibold text-white shadow-sm transition-transform hover:-translate-y-0.5 hover:bg-red/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-          >
-            <Heart className="h-4 w-4" fill="currentColor" aria-hidden="true" />
-            {t.nav.donate}
-          </Link>
-        </div>
-
-        {/* Mobile controls */}
-        <div className="flex items-center gap-2 lg:hidden">
-          <Link
-            to="/give"
-            className="inline-flex min-h-[44px] items-center gap-1.5 rounded-lg bg-red px-4 text-sm font-semibold text-white"
-          >
-            <Heart className="h-4 w-4" fill="currentColor" aria-hidden="true" />
-            {t.nav.donate}
-          </Link>
+          Easy Read is on — larger text, clearer buttons.{' '}
           <button
             type="button"
-            onClick={() => setOpen(!open)}
-            aria-expanded={open}
-            aria-controls="mobile-menu"
-            aria-label="Menu"
-            className="flex h-11 w-11 items-center justify-center rounded-lg border border-border bg-card text-navy"
+            className="underline underline-offset-2"
+            onClick={() => setEasyRead(false)}
           >
-            {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            Turn off
           </button>
         </div>
-      </div>
+      )}
+      <header className="site-header sticky top-0 z-50 border-b border-black/5 bg-white">
+        <div className="mx-auto flex h-14 max-w-[1120px] items-center gap-3 px-4 sm:h-[72px] sm:gap-6 sm:px-8">
+          <Link to="/" className="min-w-0 shrink-0" aria-label="Love 21 home">
+            <BrandLogo markClassName="h-8 w-auto sm:h-10" />
+          </Link>
 
-      {/* Mobile menu */}
-      {open && (
-        <div
-          id="mobile-menu"
-          className="border-t border-border bg-paper lg:hidden"
-        >
           <nav
             aria-label="Primary"
-            className="mx-auto flex max-w-6xl flex-col gap-1 px-4 py-4"
+            className="ml-auto hidden items-center gap-5 lg:flex xl:gap-6"
           >
-            {navItems.map((item) => (
-              <Link
-                key={item.href}
-                to={item.href}
-                onClick={() => setOpen(false)}
-                className="flex min-h-[44px] items-center rounded-lg px-3 text-base font-medium text-ink hover:bg-muted"
-              >
-                {item.label}
-              </Link>
-            ))}
-            <div className="mt-3 flex flex-wrap items-center gap-3">
-              <LanguageSwitch />
-              <EasyReadToggle />
-            </div>
+            {navItems.map((item) => {
+              const active =
+                item.href === '/' ? pathname === '/' : pathname.startsWith(item.href)
+              return (
+                <Link
+                  key={item.href}
+                  to={item.href}
+                  className={cn(
+                    'relative flex min-h-[44px] items-center text-[15px] font-medium text-navy',
+                    active &&
+                      'after:absolute after:right-0 after:bottom-2 after:left-0 after:h-0.5 after:bg-red',
+                  )}
+                >
+                  {item.label}
+                </Link>
+              )
+            })}
+            <LanguageSwitch />
           </nav>
+
+          <div className="hidden items-center gap-2 lg:flex">
+            <EasyReadToggle />
+            <Link
+              to="/volunteer"
+              className="inline-flex h-10 items-center rounded-md border border-red px-4 text-[14px] font-semibold text-red hover:bg-red/5 xl:px-5"
+            >
+              {t.nav.volunteer}
+            </Link>
+            <Link
+              to="/give"
+              className="inline-flex h-10 items-center rounded-md bg-red px-4 text-[14px] font-bold text-white shadow-sm hover:bg-red/90 xl:px-5"
+            >
+              {t.nav.donate}
+            </Link>
+          </div>
+
+          <div className="ml-auto flex items-center gap-1.5 sm:gap-2 lg:hidden">
+            <EasyReadToggle compact />
+            <Link
+              to="/give"
+              className="header-compact inline-flex h-9 items-center rounded-md bg-red px-2.5 text-[13px] font-semibold text-white sm:h-10 sm:px-3 sm:text-sm"
+            >
+              {t.nav.donate}
+            </Link>
+            <button
+              type="button"
+              onClick={() => setOpen(!open)}
+              aria-expanded={open}
+              aria-controls="mobile-menu"
+              aria-label={open ? 'Close menu' : 'Open menu'}
+              className="header-compact flex h-9 w-9 items-center justify-center rounded-md border border-navy/15 text-navy sm:h-10 sm:w-10"
+            >
+              {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </button>
+          </div>
         </div>
-      )}
-    </header>
+
+        {open && (
+          <div
+            id="mobile-menu"
+            className="max-h-[calc(100dvh-3.5rem)] overflow-y-auto border-t border-black/5 bg-white lg:hidden"
+          >
+            <nav className="flex flex-col px-4 py-3 sm:px-5">
+              {navItems.map((item) => (
+                <Link
+                  key={item.href}
+                  to={item.href}
+                  onClick={() => setOpen(false)}
+                  className="flex min-h-[48px] items-center border-b border-black/5 text-base font-medium text-navy"
+                >
+                  {item.label}
+                </Link>
+              ))}
+              <div className="flex min-h-[48px] items-center border-b border-black/5">
+                <LanguageSwitch />
+              </div>
+              <Link
+                to="/volunteer"
+                onClick={() => setOpen(false)}
+                className="mt-3 flex min-h-[48px] items-center justify-center rounded-md border border-red font-semibold text-red"
+              >
+                {t.nav.volunteer}
+              </Link>
+              <Link
+                to="/give"
+                onClick={() => setOpen(false)}
+                className="mt-2 flex min-h-[48px] items-center justify-center rounded-md bg-red font-semibold text-white"
+              >
+                {t.nav.donate}
+              </Link>
+            </nav>
+          </div>
+        )}
+      </header>
+    </>
   )
 }
