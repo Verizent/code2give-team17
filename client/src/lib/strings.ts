@@ -10,6 +10,8 @@ type Strings = {
   nav: {
     home: string
     community: string
+    about: string
+    news: string
     volunteer: string
     give: string
     donate: string
@@ -274,6 +276,8 @@ export const STRINGS: Record<Locale, Strings> = {
     nav: {
       home: 'Home',
       community: 'Community',
+      about: 'About',
+      news: 'News',
       volunteer: 'Volunteer',
       give: 'Give',
       donate: 'Donate',
@@ -598,6 +602,8 @@ volunteer: {
     nav: {
       home: '首頁',
       community: '社群',
+      about: '關於',
+      news: '新聞',
       volunteer: '義工',
       give: '捐助',
       donate: '捐款',
@@ -912,6 +918,8 @@ volunteer: {
     nav: {
       home: '首页',
       community: '社群',
+        about: '关于',
+        news: '新闻',
       volunteer: '义工',
       give: '捐助',
       donate: '捐款',
