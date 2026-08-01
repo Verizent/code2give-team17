@@ -1,17 +1,17 @@
 import { Link } from 'react-router-dom'
 import { CalendarDays, MapPin, ArrowRight } from 'lucide-react'
 import { useSite } from '@/components/site-provider'
-import { activities, type Activity } from '@/lib/mock'
+import { activities } from '@/lib/mock'
 import { cn } from '@/lib/utils'
 
-const accentBar: Record<Activity['accent'], string> = {
+const accentBar = {
   teal: 'bg-teal',
   pink: 'bg-pink',
   yellow: 'bg-yellow',
   navy: 'bg-navy',
 }
 
-function ActivityCard({ activity }: { activity: Activity }) {
+function ActivityCard({ activity }) {
   const { locale, t } = useSite()
   const isVolunteer = activity.recruiting
   const href = isVolunteer ? '/volunteer' : '/community'

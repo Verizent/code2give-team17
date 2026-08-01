@@ -1,41 +1,10 @@
-import type { Locale } from '@/lib/strings'
-
 /**
  * Mock data layer. Everything the home page renders comes from here so it can
  * later be swapped for a real API by changing only this file.
  */
 
-export type Localized = Record<Locale, string>
-
-export type Activity = {
-  id: string
-  title: Localized
-  date: Localized
-  place: Localized
-  category: Localized
-  recruiting: boolean
-  accent: 'teal' | 'pink' | 'yellow' | 'navy'
-}
-
-export type Spotlight = {
-  id: string
-  achievement: Localized
-  name: string
-  detail: Localized
-  category: Localized
-  accent: 'teal' | 'pink' | 'yellow' | 'navy'
-}
-
-export type Place = {
-  id: string
-  name: Localized
-  activity: Localized
-  lat: number
-  lng: number
-}
-
 /** Neighbourhoods across Hong Kong where Love 21 activities happen. */
-export const places: Place[] = [
+export const places = [
   {
     id: 'kennedy-town',
     name: { en: 'Kennedy Town', 'zh-Hant': '堅尼地城', 'zh-Hans': '坚尼地城' },
@@ -81,7 +50,7 @@ export const places: Place[] = [
   },
 ]
 
-export const activities: Activity[] = [
+export const activities = [
   {
     id: 'dragon-boat',
     title: {
@@ -154,17 +123,7 @@ export const activities: Activity[] = [
 ]
 
 /** Community story feed — activity-type filters */
-export type ActivityType =
-  | 'sport'
-  | 'art'
-  | 'nutrition'
-  | 'family'
-  | 'fitness'
-  | 'special'
-  | 'outings'
-  | 'csr'
-
-export const ACTIVITY_TYPES: ActivityType[] = [
+export const ACTIVITY_TYPES = [
   'sport',
   'art',
   'nutrition',
@@ -175,36 +134,10 @@ export const ACTIVITY_TYPES: ActivityType[] = [
   'csr',
 ]
 
-export type Story = {
-  id: string
-  type: ActivityType
-  title: Localized
-  line: Localized
-  author: string
-  accent: 'teal' | 'pink' | 'yellow' | 'navy'
-}
-
-export type KnowledgeKind = 'dots' | 'slider'
-
-export type KnowledgeStat = {
-  id: string
-  kind: KnowledgeKind
-  headline: Localized
-  body: Localized
-  /** Insert after this many stories in the unfiltered feed */
-  afterStoryCount: number
-}
-
-export type ActivityAbility = {
-  id: string
-  name: Localized
-  blurb: Localized
-}
-
 /** Live count for the Ability Wall header. Bump as real moments are logged. */
 export const MOMENTS_OF_ABILITY_COUNT = 1247
 
-export const stories: Story[] = [
+export const stories = [
   // Real: RHKYC × Love 21 dragon-boat programme, 2021 (love21foundation.com/media, SCMP).
   {
     id: 's1',
@@ -221,6 +154,8 @@ export const stories: Story[] = [
     },
     author: 'RHKYC × Love 21',
     accent: 'navy',
+    images: ['/brand/hero-group.jpg', '/brand/activity.jpg'],
+    celebrateCount: 342,
   },
   {
     id: 's2',
@@ -237,6 +172,8 @@ export const stories: Story[] = [
     },
     author: 'Aya',
     accent: 'yellow',
+    images: ['/brand/class.jpg'],
+    celebrateCount: 128,
   },
   {
     id: 's3',
@@ -253,6 +190,8 @@ export const stories: Story[] = [
     },
     author: 'Ken',
     accent: 'pink',
+    images: ['/brand/hero-huddle.jpg'],
+    celebrateCount: 76,
   },
   {
     id: 's4',
@@ -269,6 +208,8 @@ export const stories: Story[] = [
     },
     author: 'Sam',
     accent: 'yellow',
+    images: ['/brand/class.jpg'],
+    celebrateCount: 54,
   },
   {
     id: 's5',
@@ -285,6 +226,8 @@ export const stories: Story[] = [
     },
     author: 'Mrs. Chan',
     accent: 'teal',
+    images: ['/brand/hero-group.jpg'],
+    celebrateCount: 91,
   },
   {
     id: 's6',
@@ -301,6 +244,8 @@ export const stories: Story[] = [
     },
     author: 'Leo',
     accent: 'teal',
+    images: ['/brand/activity.jpg', '/brand/hero-climb.jpg'],
+    celebrateCount: 63,
   },
   // Real: Love 21 Employment Training Programme, SCMP 8 Nov 2021 (love21foundation.com/media).
   // Roles verified from the article subhead — don't add unverified job titles.
@@ -319,6 +264,8 @@ export const stories: Story[] = [
     },
     author: 'Love 21 team',
     accent: 'pink',
+    images: ['/brand/class.jpg', '/brand/hero-huddle.jpg'],
+    celebrateCount: 210,
   },
   {
     id: 's8',
@@ -335,6 +282,8 @@ export const stories: Story[] = [
     },
     author: 'Jay',
     accent: 'navy',
+    images: ['/brand/hero-climb.jpg'],
+    celebrateCount: 47,
   },
   {
     id: 's9',
@@ -351,6 +300,8 @@ export const stories: Story[] = [
     },
     author: 'Mei',
     accent: 'teal',
+    images: ['/brand/activity.jpg'],
+    celebrateCount: 88,
   },
   {
     id: 's10',
@@ -367,6 +318,8 @@ export const stories: Story[] = [
     },
     author: 'Chris',
     accent: 'navy',
+    images: ['/brand/hero-huddle.jpg'],
+    celebrateCount: 156,
   },
   {
     id: 's11',
@@ -383,6 +336,8 @@ export const stories: Story[] = [
     },
     author: 'Nina',
     accent: 'pink',
+    images: ['/brand/class.jpg'],
+    celebrateCount: 39,
   },
   {
     id: 's12',
@@ -399,10 +354,12 @@ export const stories: Story[] = [
     },
     author: 'Ellie',
     accent: 'yellow',
+    images: ['/brand/hero-group.jpg'],
+    celebrateCount: 72,
   },
 ]
 
-export const knowledgeStats: KnowledgeStat[] = [
+export const knowledgeStats = [
   {
     id: 'k-dots',
     kind: 'dots',
@@ -441,7 +398,7 @@ export const knowledgeStats: KnowledgeStat[] = [
  * Employment/Opportunities block — 'cafe' is the clearest real employment-ability
  * example: real shifts, real customers, real skills.
  */
-export const activityAbilities: ActivityAbility[] = [
+export const activityAbilities = [
   {
     id: 'dragon-boat',
     name: {
@@ -522,7 +479,7 @@ export const activityAbilities: ActivityAbility[] = [
   },
 ]
 
-export const spotlights: Spotlight[] = [
+export const spotlights = [
   {
     id: 'ken',
     achievement: {

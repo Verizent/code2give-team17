@@ -4,9 +4,9 @@ import { Menu, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useSite } from '@/components/site-provider'
 import { BrandLogo } from '@/components/brand-logo'
-import { LOCALES, type Locale } from '@/lib/strings'
+import { LOCALES } from '@/lib/strings'
 
-function LanguageSwitch({ className }: { className?: string }) {
+function LanguageSwitch({ className }) {
   const { locale, setLocale, t } = useSite()
   const codes = LOCALES.filter((l) => l.code === 'en' || l.code === 'zh-Hant')
   return (
@@ -26,7 +26,7 @@ function LanguageSwitch({ className }: { className?: string }) {
             )}
             <button
               type="button"
-              onClick={() => setLocale(l.code as Locale)}
+              onClick={() => setLocale(l.code)}
               aria-pressed={active}
               className={cn(
                 'min-h-[44px] px-1',
@@ -42,7 +42,7 @@ function LanguageSwitch({ className }: { className?: string }) {
   )
 }
 
-function EasyReadToggle({ compact = false }: { compact?: boolean }) {
+function EasyReadToggle({ compact = false }) {
   const { easyRead, setEasyRead, t } = useSite()
   return (
     <button
@@ -152,12 +152,6 @@ export function SiteHeader() {
           </nav>
 
           <div className="hidden items-center gap-3 lg:flex">
-            <Link
-              to="/support"
-              className="min-h-[44px] px-1 text-[13px] font-medium text-navy/55 underline-offset-4 hover:text-navy hover:underline"
-            >
-              {t.nav.askForHelp}
-            </Link>
             <EasyReadToggle />
             <Link
               to="/volunteer"
@@ -171,6 +165,12 @@ export function SiteHeader() {
             >
               {t.nav.donate}
             </Link>
+            <Link
+              to="/support"
+              className="inline-flex h-10 items-center rounded-md bg-teal px-4 text-[14px] font-bold text-white shadow-sm hover:bg-teal/90 xl:px-5"
+            >
+              {t.nav.askForHelp}
+            </Link>
           </div>
 
           <div className="ml-auto flex items-center gap-1.5 sm:gap-2 lg:hidden">
@@ -180,6 +180,12 @@ export function SiteHeader() {
               className="header-compact inline-flex h-9 items-center rounded-md bg-red px-2.5 text-[13px] font-semibold text-white sm:h-10 sm:px-3 sm:text-sm"
             >
               {t.nav.donate}
+            </Link>
+            <Link
+              to="/support"
+              className="header-compact inline-flex h-9 items-center rounded-md bg-teal px-2.5 text-[13px] font-semibold text-white sm:h-10 sm:px-3 sm:text-sm"
+            >
+              {t.nav.askForHelp}
             </Link>
             <button
               type="button"
@@ -214,13 +220,6 @@ export function SiteHeader() {
                 <LanguageSwitch />
               </div>
               <Link
-                to="/support"
-                onClick={() => setOpen(false)}
-                className="flex min-h-[44px] items-center border-b border-black/5 text-[14px] font-medium text-navy/55"
-              >
-                {t.nav.askForHelp}
-              </Link>
-              <Link
                 to="/volunteer"
                 onClick={() => setOpen(false)}
                 className="mt-3 flex min-h-[48px] items-center justify-center rounded-md border border-red font-semibold text-red"
@@ -233,6 +232,13 @@ export function SiteHeader() {
                 className="mt-2 flex min-h-[48px] items-center justify-center rounded-md bg-red font-semibold text-white"
               >
                 {t.nav.donate}
+              </Link>
+              <Link
+                to="/support"
+                onClick={() => setOpen(false)}
+                className="mt-2 flex min-h-[48px] items-center justify-center rounded-md bg-teal font-semibold text-white"
+              >
+                {t.nav.askForHelp}
               </Link>
             </nav>
           </div>

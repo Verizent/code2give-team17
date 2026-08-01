@@ -218,3 +218,24 @@ html[data-easy-read='true'] .text-ink\/85 {
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
+
+/* Small celebrate-button burst — 8-10 pieces, ~600ms, never full-screen. */
+@keyframes confetti-piece {
+  0% {
+    transform: translate(-50%, -50%) translate(0, 0) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) translate(var(--tx), var(--ty)) rotate(var(--tr));
+    opacity: 0;
+  }
+}
+.confetti-piece {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  border-radius: 2px;
+  animation: confetti-piece 600ms ease-out forwards;
+}

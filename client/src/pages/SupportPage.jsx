@@ -1,12 +1,14 @@
 import { Link } from 'react-router-dom'
-import { Mail, ArrowRight } from 'lucide-react'
+import { ArrowRight, Mail } from 'lucide-react'
 import { SiteHeader } from '@/components/site-header'
 import { SiteFooter } from '@/components/site-footer'
 import { SkipLink } from '@/components/skip-link'
 import { useSite } from '@/components/site-provider'
 
-// Real login page on love21foundation.com — no public "request help" form exists yet,
-// so the honest path is email first, then a centre visit.
+// Real love21foundation.com URLs — form is their live family/registration intake,
+// login is the real member portal where classes/schedules live.
+const SUPPORT_FORM_URL =
+  'https://docs.google.com/forms/d/e/1FAIpQLScxXfbxdMlHBDphqwJhMZS1YuUuF9anGC8Mb_ncgpwiEes-Pw/viewform'
 const MEMBER_LOGIN_URL = 'https://love21foundation.com/login/'
 const SUPPORT_EMAIL = 'info@love21foundation.com'
 
@@ -29,11 +31,20 @@ export function SupportPage() {
           <p className="font-display text-lg font-semibold text-navy">{s.processTitle}</p>
           <p className="mt-2 text-[14px] leading-relaxed text-navy/70">{s.processBody}</p>
           <a
-            href={`mailto:${SUPPORT_EMAIL}`}
+            href={SUPPORT_FORM_URL}
+            target="_blank"
+            rel="noreferrer"
             className="mt-5 inline-flex min-h-[44px] items-center gap-2 rounded-md bg-red px-5 text-[14px] font-semibold text-white shadow-sm hover:bg-red/90"
           >
-            <Mail className="h-4 w-4" aria-hidden="true" />
-            {s.emailCta}
+            {s.formCta}
+            <ArrowRight className="h-4 w-4" aria-hidden="true" />
+          </a>
+          <a
+            href={`mailto:${SUPPORT_EMAIL}`}
+            className="mt-3 flex min-h-[44px] items-center gap-1.5 text-[13px] font-medium text-navy/60 underline-offset-4 hover:text-navy hover:underline"
+          >
+            <Mail className="h-3.5 w-3.5" aria-hidden="true" />
+            {s.emailNote}
           </a>
         </div>
 

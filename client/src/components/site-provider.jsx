@@ -1,25 +1,9 @@
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-  type ReactNode,
-} from 'react'
-import { getStrings, type Locale } from '@/lib/strings'
+import { createContext, useContext, useEffect, useMemo, useState } from 'react'
+import { getStrings } from '@/lib/strings'
 
-type SiteContextValue = {
-  locale: Locale
-  setLocale: (locale: Locale) => void
-  /** UK Easy Read: short words + pictures + clear layout (not just bigger text) */
-  easyRead: boolean
-  setEasyRead: (value: boolean) => void
-  t: ReturnType<typeof getStrings>
-}
+const SiteContext = createContext(null)
 
-const SiteContext = createContext<SiteContextValue | null>(null)
-
-const LOCALE_LANG: Record<Locale, string> = {
+const LOCALE_LANG = {
   en: 'en',
   'zh-Hant': 'zh-Hant',
   'zh-Hans': 'zh-Hans',
@@ -32,15 +16,15 @@ function readStoredEasyRead() {
   return localStorage.getItem('love21-reading-mode') === 'true'
 }
 
-export function SiteProvider({ children }: { children: ReactNode }) {
-  const [locale, setLocale] = useState<Locale>(() => {
+export function SiteProvider({ children }) {
+  const [locale, setLocale] = useState(() => {
     const saved = localStorage.getItem('love21-locale')
     if (saved === 'en' || saved === 'zh-Hant' || saved === 'zh-Hans') return saved
     return 'en'
   })
   const [easyRead, setEasyReadState] = useState(readStoredEasyRead)
 
-  function setEasyRead(value: boolean) {
+  function setEasyRead(value) {
     setEasyReadState(value)
     localStorage.setItem('love21-easy-read', String(value))
     localStorage.removeItem('love21-reading-mode')
@@ -55,7 +39,7 @@ export function SiteProvider({ children }: { children: ReactNode }) {
     document.documentElement.dataset.easyRead = easyRead ? 'true' : 'false'
   }, [easyRead])
 
-  const value = useMemo<SiteContextValue>(
+  const value = useMemo(
     () => ({
       locale,
       setLocale,

@@ -36,7 +36,7 @@ export function ThreePaths() {
       body: 'text-navy/70',
       cta: 'text-red',
     },
-  ] as const
+  ]
 
   return (
     <section aria-labelledby="paths-title" className="bg-red py-16 sm:py-24">

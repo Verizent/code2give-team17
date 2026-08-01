@@ -3,7 +3,7 @@ import { Camera, Sparkles, X } from 'lucide-react'
 import { useSite } from '@/components/site-provider'
 import { cn } from '@/lib/utils'
 
-export function ShareMomentButton({ className }: { className?: string }) {
+export function ShareMomentButton({ className }) {
   const { t } = useSite()
   const [open, setOpen] = useState(false)
 
@@ -25,7 +25,7 @@ export function ShareMomentButton({ className }: { className?: string }) {
   )
 }
 
-function ShareMomentDialog({ onClose }: { onClose: () => void }) {
+function ShareMomentDialog({ onClose }) {
   const { t } = useSite()
   const titleId = useId()
   const [line, setLine] = useState('')
@@ -33,7 +33,7 @@ function ShareMomentDialog({ onClose }: { onClose: () => void }) {
   const [sent, setSent] = useState(false)
 
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
+    const onKey = (e) => {
       if (e.key === 'Escape') onClose()
     }
     window.addEventListener('keydown', onKey)

@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 import { ArrowUpRight } from 'lucide-react'
 import { useSite } from '@/components/site-provider'
 import { EasyReadRow, EasyReadSentences } from '@/components/easy-read-row'
-import { spotlights, type Spotlight } from '@/lib/mock'
+import { spotlights } from '@/lib/mock'
 import { cn } from '@/lib/utils'
 
 // Real Love 21 moment photos — not tied 1:1 to any card's specific text.
@@ -13,7 +13,7 @@ const SPOTLIGHT_IMAGES = [
   '/brand/hero-huddle.jpg',
   '/brand/activity.jpg',
   '/brand/class.jpg',
-] as const
+]
 
 // Single dark scrim for every card (not per-accent): measured against all 4
 // photos' brightest/darkest pixels, navy/75 keeps white text >=5.5:1 (AA
@@ -22,14 +22,14 @@ const SPOTLIGHT_IMAGES = [
 // threshold. Accent identity lives in the avatar ring below instead.
 const PHOTO_SCRIM = 'bg-navy/75'
 
-const avatarRing: Record<Spotlight['accent'], string> = {
+const avatarRing = {
   teal: 'bg-teal/15 text-teal',
   pink: 'bg-pink/40 text-navy',
   yellow: 'bg-yellow/50 text-navy',
   navy: 'bg-navy/10 text-navy',
 }
 
-function SpotlightCard({ item, photoSrc }: { item: Spotlight; photoSrc: string }) {
+function SpotlightCard({ item, photoSrc }) {
   const { locale, t } = useSite()
 
   return (

@@ -1,290 +1,10 @@
-export type Locale = 'en' | 'zh-Hant' | 'zh-Hans'
-
-export const LOCALES: { code: Locale; label: string; short: string }[] = [
+export const LOCALES = [
   { code: 'zh-Hant', label: '繁體中文', short: '繁' },
   { code: 'zh-Hans', label: '简体中文', short: '简' },
   { code: 'en', label: 'English', short: 'EN' },
 ]
 
-type Strings = {
-  nav: {
-    home: string
-    community: string
-    volunteer: string
-    give: string
-    donate: string
-    login: string
-    easyRead: string
-    language: string
-    skipToContent: string
-    askForHelp: string
-  }
-  hero: {
-    eyebrow: string
-    line1: string
-    line2: string
-    subhead: string
-    cta: string
-  }
-  stats: {
-    title: string
-    updated: string
-    items: {
-      id: 'families' | 'sessions' | 'activityTypes' | 'volunteerHours'
-      value: number
-      suffix: string
-      label: string
-    }[]
-  }
-  activities: {
-    title: string
-    subhead: string
-    recruiting: string
-    joinCta: string
-    viewCta: string
-  }
-  spotlight: {
-    title: string
-    subhead: string
-    reveal: string
-    readMore: string
-  }
-  map: {
-    kicker: string
-    title: string
-    subhead: string
-  }
-  paths: {
-    title: string
-    subhead: string
-    witness: { tag: string; title: string; body: string; cta: string }
-    take: { tag: string; title: string; body: string; cta: string }
-    support: { tag: string; title: string; body: string; cta: string }
-  }
-  footer: {
-    tax: string
-    portal: string
-    support: string
-    followUs: string
-    rights: string
-  }
-  community: {
-    eyebrow: string
-    title: string
-    subhead: string
-    filterAll: string
-    filters: Record<
-      | 'sport'
-      | 'art'
-      | 'nutrition'
-      | 'family'
-      | 'fitness'
-      | 'special'
-      | 'outings'
-      | 'csr',
-      string
-    >
-    toldBy: string
-    shareCta: string
-    shareTitle: string
-    shareHint: string
-    sharePhoto: string
-    shareLine: string
-    shareLinePlaceholder: string
-    shareAiLabel: string
-    shareAiDraft: string
-    shareReviewNote: string
-    shareSubmit: string
-    shareClose: string
-    shareSent: string
-    knowledgeHook: string
-    dotsCaption: string
-    sliderGuess: string
-    sliderReveal: string
-    sliderYourGuess: string
-    sliderReal: string
-    sliderUnit: string
-    emptyFilter: string
-    momentsLabel: string
-    revealPrompt: string
-  }
-  volunteer: {
-    kicker: string
-    title: string
-    subhead: string
-    communityLink: string
-    demoMatch: string
-    modeTitle: string
-    individualTag: string
-    individualTitle: string
-    individualBody: string
-    individualCta: string
-    corporateTag: string
-    corporateTitle: string
-    corporateBody: string
-    corporateCta: string
-    skillsTitle: string
-    skillsHint: string
-    skills: Record<
-      | 'patient'
-      | 'sports'
-      | 'music'
-      | 'kitchen'
-      | 'photography'
-      | 'youth14'
-      | 'cantonese',
-      string
-    >
-    clearSkills: string
-    listTitle: string
-    emptyList: string
-    recruiting: string
-    spots: string
-    sourceLove21: string
-    sourceHandson: string
-    viewDetail: string
-    backToHub: string
-    detailWhat: string
-    detailEligibility: string
-    detailSafeguard: string
-    handsonCapacity: string
-    registerInterest: string
-    completeHandson: string
-    joinSession: string
-    formIntro: string
-    interestChineseName: string
-    interestEnglishName: string
-    interestAgeGroup: string
-    ageGroups: Record<'age14_15' | 'age16_17' | 'age18', string>
-    interestGender: string
-    genders: Record<'female' | 'male' | 'prefer_not', string>
-    interestEmail: string
-    interestPhone: string
-    interestRoles: string
-    roles: Record<'assistant' | 'host' | 'event' | 'other', string>
-    interestRoleOther: string
-    interestAbout: string
-    interestDiscovery: string
-    discovery: Record<'existing' | 'social' | 'edm' | 'company' | 'other', string>
-    interestDiscoveryOther: string
-    interestSubmit: string
-    interestCancel: string
-    hubSignupTitle: string
-    hubSignupSubhead: string
-    hubSignupCta: string
-    joinConfirmTitle: string
-    joinConfirmBody: string
-    joinConfirmYes: string
-    joinConfirmNo: string
-    successTitle: string
-    successBody: string
-    successGiveCta: string
-    successHome: string
-    corporatePanelTitle: string
-    corporateBullets: string[]
-    corporateFormTitle: string
-    corporateOrg: string
-    corporateContact: string
-    corporateEmail: string
-    corporateMessage: string
-    corporateSubmit: string
-    corporateThanks: string
-    changeMode: string
-  }
-  give: {
-    kicker: string
-    title: string
-    subhead: string
-    demoBanner: string
-    tabMoney: string
-    tabWishlist: string
-    tabFundraise: string
-    amountLabel: string
-    customAmountLabel: string
-    customAmountHint: string
-    everyDollarCounts: string
-    impactLabel: string
-    impactSmall: string
-    once: string
-    weekly: string
-    monthly: string
-    programmeLabel: string
-    receiptNote: string
-    otherMeansTitle: string
-    otherMeansBank: string
-    otherMeansCheque: string
-    otherMeansAddress: string
-    programmes: Record<
-      'sports' | 'fitness' | 'nutrition' | 'family' | 'where_needed',
-      string
-    >
-    section88: string
-    trustStrip: string
-    emailLabel: string
-    emailHint: string
-    donateCta: string
-    wishlistTitle: string
-    wishlistSubhead: string
-    needed: string
-    pledged: string
-    pledgeCta: string
-    pledgeTitle: string
-    pledgeQty: string
-    pledgeNote: string
-    pledgeSubmit: string
-    pledgeSuccess: string
-    pledgeClose: string
-    wishlistEmpty: string
-    fundraiseTitle: string
-    fundraiseSubhead: string
-    fundraiseSteps: string[]
-    fundraisePendingNote: string
-    createCampaignCta: string
-    yourCampaigns: string
-    noCampaigns: string
-    formTitle: string
-    formStory: string
-    formGoal: string
-    formCover: string
-    formEnd: string
-    formSubmit: string
-    campaignProgress: string
-    campaignShare: string
-    campaignShareDone: string
-    campaignDonate: string
-    campaignPending: string
-    campaignNotFound: string
-    stickyDonate: string
-    thanksAck: string
-    thanksNotifyLabel: string
-    thanksNotifyHelper: string
-    thanksEmail: string
-    thanksNotifyToast: string
-    thanksSampleUpdate: string
-    thanksCreateAccount: string
-    thanksCreateAccountBody: string
-    thanksCreateCta: string
-    thanksNoThanks: string
-    thanksExistingBody: string
-    thanksViewGiving: string
-    thanksVolunteer: string
-    thanksShareCampaign: string
-    thanksHome: string
-  }
-  support: {
-    eyebrow: string
-    title: string
-    intro: string
-    processTitle: string
-    processBody: string
-    emailCta: string
-    memberNote: string
-    memberCta: string
-    backHome: string
-  }
-}
-
-export const STRINGS: Record<Locale, Strings> = {
+export const STRINGS = {
   en: {
     nav: {
       home: 'Home',
@@ -379,7 +99,6 @@ export const STRINGS: Record<Locale, Strings> = {
         outings: 'Outings',
         csr: 'CSR',
       },
-      toldBy: 'Told by',
       shareCta: 'Share a moment',
       shareTitle: 'Share a moment',
       shareHint: 'A coach or family posts a photo and one line. AI drafts the full post.',
@@ -402,7 +121,9 @@ export const STRINGS: Record<Locale, Strings> = {
       sliderUnit: 'activities',
       emptyFilter: 'No moments in this program yet — try another filter.',
       momentsLabel: 'moments of ability and counting',
-      revealPrompt: 'See who did this',
+      celebrateCta: 'Celebrate',
+      photoAlt: 'Love 21 members taking part in an activity',
+      imageLabel: 'Photo',
     },
 volunteer: {
       kicker: 'Take part',
@@ -612,12 +333,13 @@ volunteer: {
       title: 'Looking for support for your family?',
       intro:
         'Love 21 runs sport, nutrition and family programmes for the Down syndrome, autistic and neurodiverse community in Hong Kong. If you think we could be a good fit, we would love to meet you.',
-      processTitle: 'How to reach us',
+      processTitle: 'Tell us about your family',
       processBody:
-        'There is no online application yet — the fastest way in is a quick email. We will get back to you, talk through your family’s needs, and if it looks like a good fit, arrange a visit to meet the team at our centre.',
-      emailCta: 'Email info@love21foundation.com',
+        'Fill in a short form and our team will contact you as soon as possible to talk through what your family needs.',
+      formCta: 'Fill in the form',
+      emailNote: 'Prefer email? Write to info@love21foundation.com',
       memberNote: 'Already a Love 21 member?',
-      memberCta: 'Sign in to your account',
+      memberCta: 'Sign in to see your classes',
       backHome: 'Back to home',
     },
   },
@@ -715,7 +437,6 @@ volunteer: {
         outings: '外出',
         csr: '企業社會責任',
       },
-      toldBy: '講述者',
       shareCta: '分享一個時刻',
       shareTitle: '分享一個時刻',
       shareHint: '教練或家人貼上照片與一句話，AI 會起草完整貼文。',
@@ -738,7 +459,9 @@ volunteer: {
       sliderUnit: '種活動',
       emptyFilter: '此項目暫無時刻——試試其他篩選。',
       momentsLabel: '個能力時刻，持續累積中',
-      revealPrompt: '看看是誰做到的',
+      celebrateCta: '慶祝',
+      photoAlt: 'Love 21 學員參與活動的照片',
+      imageLabel: '照片',
     },
 volunteer: {
       kicker: '參與',
@@ -939,12 +662,13 @@ volunteer: {
       title: '想為你的家庭尋找支援？',
       intro:
         'Love 21 在香港為唐氏綜合症、自閉症及其他神經多樣人士提供運動、營養及家庭支援活動。如果你覺得我們可能適合你的家庭，我們很樂意與你見面。',
-      processTitle: '如何聯絡我們',
+      processTitle: '告訴我們你的家庭情況',
       processBody:
-        '我們暫時未有網上申請——最快的方法是先發一封電郵。我們會回覆你，了解你家庭的需要，如果合適，會再安排你到中心參觀，認識我們的團隊。',
-      emailCta: '電郵 info@love21foundation.com',
+        '填寫一份簡短表格，我們的團隊會盡快聯絡你，了解你家庭的需要。',
+      formCta: '填寫表格',
+      emailNote: '想用電郵？請寫信到 info@love21foundation.com',
       memberNote: '已經是 Love 21 會員？',
-      memberCta: '登入你的帳戶',
+      memberCta: '登入查看你的課堂',
       backHome: '返回首頁',
     },
   },
@@ -1042,7 +766,6 @@ volunteer: {
         outings: '外出',
         csr: '企业社会责任',
       },
-      toldBy: '讲述者',
       shareCta: '分享一个时刻',
       shareTitle: '分享一个时刻',
       shareHint: '教练或家人贴上照片与一句话，AI 会起草完整贴文。',
@@ -1065,7 +788,9 @@ volunteer: {
       sliderUnit: '种活动',
       emptyFilter: '此项目暂无时刻——试试其他筛选。',
       momentsLabel: '个能力时刻，持续累积中',
-      revealPrompt: '看看是谁做到的',
+      celebrateCta: '庆祝',
+      photoAlt: 'Love 21 学员参与活动的照片',
+      imageLabel: '照片',
     },
 volunteer: {
       kicker: '参与',
@@ -1266,24 +991,21 @@ volunteer: {
       title: '想为你的家庭寻找支援？',
       intro:
         'Love 21 在香港为唐氏综合症、自闭症及其他神经多样人士提供运动、营养及家庭支援活动。如果你觉得我们可能适合你的家庭，我们很乐意与你见面。',
-      processTitle: '如何联系我们',
+      processTitle: '告诉我们你的家庭情况',
       processBody:
-        '我们暂时还没有网上申请——最快的方法是先发一封邮件。我们会回复你，了解你家庭的需要，如果合适，会再安排你到中心参观，认识我们的团队。',
-      emailCta: '邮件 info@love21foundation.com',
+        '填写一份简短表格，我们的团队会尽快联系你，了解你家庭的需要。',
+      formCta: '填写表格',
+      emailNote: '想用邮件？请写信到 info@love21foundation.com',
       memberNote: '已经是 Love 21 会员？',
-      memberCta: '登录你的账户',
+      memberCta: '登录查看你的课堂',
       backHome: '返回首页',
     },
   },
 }
 
-type DeepPartial<T> = {
-  [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]> : T[K]
-}
-
-function deepMerge<T extends Record<string, unknown>>(base: T, over: DeepPartial<T>): T {
+function deepMerge(base, over) {
   const out = { ...base }
-  for (const key of Object.keys(over) as (keyof T)[]) {
+  for (const key of Object.keys(over)) {
     const b = base[key]
     const o = over[key]
     if (
@@ -1294,12 +1016,9 @@ function deepMerge<T extends Record<string, unknown>>(base: T, over: DeepPartial
       typeof b === 'object' &&
       !Array.isArray(b)
     ) {
-      out[key] = deepMerge(
-        b as Record<string, unknown>,
-        o as DeepPartial<Record<string, unknown>>,
-      ) as T[keyof T]
+      out[key] = deepMerge(b, o)
     } else if (o !== undefined) {
-      out[key] = o as T[keyof T]
+      out[key] = o
     }
   }
   return out
@@ -1307,7 +1026,7 @@ function deepMerge<T extends Record<string, unknown>>(base: T, over: DeepPartial
 
 /** UK Easy Read overlays — short sentences, no contractions, everyday words.
  *  Pictures are paired in components (image left, words right). */
-const EASY_READ_EN: DeepPartial<Strings> = {
+const EASY_READ_EN = {
   // Keep nav labels stable (Community stays Community) — only body copy simplifies.
   hero: {
     eyebrow: 'Love 21',
@@ -1374,7 +1093,6 @@ const EASY_READ_EN: DeepPartial<Strings> = {
     title: 'What people can do',
     subhead: 'Read short stories. Learn facts. Share a moment if you want.',
     momentsLabel: 'good moments. And counting.',
-    revealPrompt: 'Tap to see who',
   },
   volunteer: {
     kicker: 'Help out',
@@ -1411,9 +1129,10 @@ const EASY_READ_EN: DeepPartial<Strings> = {
     eyebrow: 'Support',
     title: 'Need help for your family?',
     intro: 'Love 21 helps people with Down syndrome, autism, and other needs. We do sport, food help, and family support.',
-    processTitle: 'How to talk to us',
-    processBody: 'Send us an email. We will write back. We will ask about your family. Then we may invite you to visit us.',
-    emailCta: 'Email us',
+    processTitle: 'Tell us about you',
+    processBody: 'Fill in a form. We will contact you soon.',
+    formCta: 'Fill in the form',
+    emailNote: 'Or email us',
     memberNote: 'Already a member?',
     memberCta: 'Sign in',
     backHome: 'Home',
@@ -1421,13 +1140,13 @@ const EASY_READ_EN: DeepPartial<Strings> = {
 }
 
 /** Standard copy, or UK Easy Read overlay when easyRead is on (EN first; zh falls back). */
-export function getStrings(locale: Locale, easyRead: boolean): Strings {
+export function getStrings(locale, easyRead) {
   const base = STRINGS[locale]
   if (!easyRead) return base
   if (locale === 'en') return deepMerge(base, EASY_READ_EN)
   // Traditional / Simplified: keep structure; still apply EN easy nav labels lightly via layout
   return deepMerge(base, {
     nav: { easyRead: locale === 'zh-Hans' ? '简易阅读' : '簡易閱讀' },
-  } as DeepPartial<Strings>)
+  })
 }
 

@@ -3,7 +3,7 @@ import { useSite } from '@/components/site-provider'
 import { EasyReadRow, EasyReadSentences } from '@/components/easy-read-row'
 
 /** Honest annual-report chip — pulls the sessions stat from strings.ts, no live claim. */
-function SessionsChip({ t }: { t: ReturnType<typeof useSite>['t'] }) {
+function SessionsChip({ t }) {
   const sessions = t.stats.items.find((item) => item.id === 'sessions')
   if (!sessions) return null
 

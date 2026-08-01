@@ -1,36 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSite } from '@/components/site-provider'
-import {
-  ACTIVITY_TYPES,
-  MOMENTS_OF_ABILITY_COUNT,
-  knowledgeStats,
-  stories,
-  type ActivityType,
-  type KnowledgeStat,
-  type Story,
-} from '@/lib/mock'
+import { ACTIVITY_TYPES, MOMENTS_OF_ABILITY_COUNT, knowledgeStats, stories } from '@/lib/mock'
 import { cn } from '@/lib/utils'
+import { useReducedMotion } from '@/lib/use-reduced-motion'
 import { FadeRise } from '@/components/community/fade-rise'
 import { StoryCard } from '@/components/community/story-card'
 import { KnowledgeCard } from '@/components/community/knowledge-card'
-
-function useReducedMotion() {
-  const [reduced, setReduced] = useState(false)
-  useEffect(() => {
-    const mq = window.matchMedia('(prefers-reduced-motion: reduce)')
-    setReduced(mq.matches)
-    const handler = () => setReduced(mq.matches)
-    mq.addEventListener('change', handler)
-    return () => mq.removeEventListener('change', handler)
-  }, [])
-  return reduced
-}
 
 /** Count-up header for the Ability Wall. Plays once, on first scroll into view. */
 function MomentsCounter() {
   const { t } = useSite()
   const reduced = useReducedMotion()
-  const ref = useRef<HTMLParagraphElement>(null)
+  const ref = useRef(null)
   const [display, setDisplay] = useState(reduced ? MOMENTS_OF_ABILITY_COUNT : 0)
 
   useEffect(() => {
@@ -45,7 +26,7 @@ function MomentsCounter() {
         io.disconnect()
         const duration = 1200
         const start = performance.now()
-        const step = (now: number) => {
+        const step = (now) => {
           const progress = Math.min((now - start) / duration, 1)
           const eased = 1 - Math.pow(1 - progress, 3)
           setDisplay(Math.round(eased * MOMENTS_OF_ABILITY_COUNT))
@@ -71,15 +52,11 @@ function MomentsCounter() {
   )
 }
 
-type FeedEntry =
-  | { key: string; kind: 'story'; story: Story }
-  | { key: string; kind: 'knowledge'; knowledge: KnowledgeStat }
-
-function buildFeed(filter: ActivityType | 'all'): FeedEntry[] {
+function buildFeed(filter) {
   const filtered =
     filter === 'all' ? stories : stories.filter((s) => s.type === filter)
 
-  const entries: FeedEntry[] = []
+  const entries = []
   let storyCount = 0
 
   for (const story of filtered) {
@@ -101,10 +78,10 @@ function buildFeed(filter: ActivityType | 'all'): FeedEntry[] {
 
 export function StoryFeed() {
   const { t } = useSite()
-  const [filter, setFilter] = useState<ActivityType | 'all'>('all')
+  const [filter, setFilter] = useState('all')
   const feed = useMemo(() => buildFeed(filter), [filter])
 
-  const tabs: { id: ActivityType | 'all'; label: string }[] = [
+  const tabs = [
     { id: 'all', label: t.community.filterAll },
     ...ACTIVITY_TYPES.map((id) => ({ id, label: t.community.filters[id] })),
   ]

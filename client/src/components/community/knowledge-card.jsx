@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowRight } from 'lucide-react'
 import { useSite } from '@/components/site-provider'
-import type { KnowledgeStat } from '@/lib/mock'
 import { cn } from '@/lib/utils'
 
 const DOT_COUNT = 700
@@ -96,7 +95,7 @@ function SliderVisual() {
   )
 }
 
-export function KnowledgeCard({ item }: { item: KnowledgeStat }) {
+export function KnowledgeCard({ item }) {
   const { locale, t } = useSite()
 
   return (

@@ -1,16 +1,8 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { cn } from '@/lib/utils'
 
-export function FadeRise({
-  children,
-  className,
-  delayMs = 0,
-}: {
-  children: ReactNode
-  className?: string
-  delayMs?: number
-}) {
-  const ref = useRef<HTMLDivElement>(null)
+export function FadeRise({ children, className, delayMs = 0 }) {
+  const ref = useRef(null)
   const [visible, setVisible] = useState(false)
 
   useEffect(() => {

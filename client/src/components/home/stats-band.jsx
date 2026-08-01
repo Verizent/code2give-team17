@@ -13,17 +13,7 @@ function useReducedMotion() {
   return reduced
 }
 
-function CountUp({
-  value,
-  suffix,
-  play,
-  reduced,
-}: {
-  value: number
-  suffix: string
-  play: boolean
-  reduced: boolean
-}) {
+function CountUp({ value, suffix, play, reduced }) {
   const [display, setDisplay] = useState(reduced ? value : 0)
 
   useEffect(() => {
@@ -35,7 +25,7 @@ function CountUp({
     let raf = 0
     const duration = 1200
     const start = performance.now()
-    const step = (now: number) => {
+    const step = (now) => {
       const progress = Math.min((now - start) / duration, 1)
       const eased = 1 - Math.pow(1 - progress, 3)
       setDisplay(Math.round(eased * value))
@@ -57,7 +47,7 @@ export function StatsBand() {
   const { t } = useSite()
   const reduced = useReducedMotion()
   const [play, setPlay] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
+  const ref = useRef(null)
 
   useEffect(() => {
     const node = ref.current
