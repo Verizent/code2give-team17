@@ -1,5 +1,8 @@
 const crypto = require("node:crypto");
-const { getServiceClient } = require("../../config/supabase");
+// Required as a module rather than destructured: a destructured binding is captured
+// at load time, which left this file - the riskiest in the auth layer - impossible
+// to stub and therefore untested.
+const supabaseConfig = require("../../config/supabase");
 const { ApiError } = require("../../lib/api-error");
 
 /**
@@ -90,7 +93,7 @@ async function verifySupabaseToken(token) {
 
   try {
     result = await Promise.race([
-      getServiceClient().auth.getUser(token),
+      supabaseConfig.getServiceClient().auth.getUser(token),
       new Promise((_, reject) =>
         setTimeout(
           () => reject(new ApiError(503, "Authentication provider timed out")),
