@@ -19,7 +19,9 @@ package manager — install and run per workspace.
 cd server && npm install
 cd server && npm run dev       # node --watch index.js
 cd server && npm start         # node index.js
-cd server && npm test          # node --test (built-in runner, no framework)
+cd server && npm test          # BOTH trees — unit + live-DB schema (~11s, writes to Supabase)
+cd server && npm run test:schema                       # the live-DB tree alone
+cd server && node --test tests/                        # the offline unit tree alone
 cd server && npm run test:coverage
 cd server && node --test tests/lib/slug.test.js        # a single file
 cd server && node --test --test-name-pattern "slug"    # a single test by name
@@ -34,13 +36,30 @@ cd client && npm run preview   # vite preview
 ```
 
 The server test runner is Node's built-in `node:test` — **no Vitest, no Jest, no framework
-dependency.** Tests live under `server/tests/`, mirroring the `src/` tree they cover
-(`tests/lib/slug.test.js` ↔ `src/lib/slug.js`, `tests/services/content/articles.service.test.js`
-↔ `src/services/content/articles.service.js`), using `const { test } = require("node:test")`
-and `node:assert/strict`. **They are not colocated** — a test importing its subject reaches
-back through `../../src/`, so check the depth when adding one under `tests/services/content/`.
-The client has **no test tooling at all**, and no `lint` script exists on the server. Adding
-either is a shared-file change — flag it in the PR body (§25).
+dependency.** Since the volunteer merge there are **two test trees, and the singular/plural
+is not a typo**:
+
+| Tree | What it is | Needs a database |
+|---|---|---|
+| `server/tests/` | Unit tests, mirroring `src/` (`tests/lib/slug.test.js` ↔ `src/lib/slug.js`) | No — repos are stubbed with `mock.method()` |
+| `server/test/schema/` | Volunteer-track SQL contract tests, CRUD against real tables | **Yes — the live shared project** |
+
+`npm test` is bare `node --test`, which discovers **both**. So running it:
+
+- **writes rows to the shared Supabase project** using the service-role key, taking `.env` via
+  `test/schema/_helpers.js`. It cleans up after itself, but it is not a local sandbox — do not
+  run it while someone is rehearsing the demo.
+- **skips the schema tree cleanly** when `SUPABASE_SERVICE_ROLE_KEY` is absent, with a stated
+  reason rather than a wall of empty-result failures. A pass on a machine with no `.env` has
+  only exercised the unit tree.
+- **drops `--test-concurrency=1`**, which `test:schema` sets deliberately. The suites pass
+  today, but they share tables, so a future flake here is a concurrency artefact and not a
+  real failure. Fixing it means putting the flag on `test`, not chasing the assertion.
+
+Unit tests are **not colocated** — a test reaches back through `../../src/`, so check the
+depth when adding one under `tests/services/content/`. The client has **no test tooling at
+all**, and no `lint` script exists on the server. Adding either is a shared-file change —
+flag it in the PR body (§25).
 
 ### Env
 
@@ -76,10 +95,9 @@ stub nothing imports, and `Navbar.jsx`, `PageNotFound.jsx`, `news/Articles.jsx` 
 empty files. Only `react` and `react-dom` are installed — react-router, TanStack Query,
 i18next, supabase-js and react-markdown are not.
 
-**Server — routing skeleton plus a tested utility layer, validation middleware, and the content
-API.** `GET /`, `GET /api`, `GET /api/health`, `GET /api/health/supabase`, a 404 and an error
-handler. Tests live under `server/tests/`, mirroring the `src/` tree
-(`tests/lib/slug.test.js` ↔ `src/lib/slug.js`, etc.). Built and tested:
+**Server — routing skeleton, a tested utility layer, validation middleware, the content API,
+and (since the volunteer merge) the volunteer SQL schema.** `GET /`, `GET /api`,
+`GET /api/health`, `GET /api/health/supabase`, a 404 and an error handler. Built and tested:
 
 - `src/lib/` — `ApiError` + `codeForStatus`/`labelForStatus`, `envelope(data, meta)`,
   `resolveLocale(row, fields, locale)`,
@@ -94,14 +112,31 @@ handler. Tests live under `server/tests/`, mirroring the `src/` tree
 - `GET /api/articles`, `GET /api/articles/:slug`, `GET /api/impact` — all live and tested.
 - `server/db/seed/` — articles, impact, community-posts; `npm run seed` is safe to re-run
   (upserts only, never truncates).
+- `server/src/schema/` — the volunteer track's SQL: `volunteers`, `volunteer_opportunities`,
+  `volunteer_signups`, `volunteer_interests`, `badges`, `volunteer_badges`,
+  `volunteer_email_verifications`. **Applied to the live project**, and covered by
+  `server/test/schema/`.
 
-**`server/supabase/migrations/` — SQL written, deliberately NOT applied.** Four timestamped
-files (`_1000_common`, `_1020_articles`, `_1030_community_posts`, `_1040_impact_periods`)
-covering `set_updated_at()`, the public `media` bucket, and three tables with RLS on and zero
-policies. They are additive only and touch nobody else's tables. **The live Supabase project
-does not have them** — it currently holds only the volunteer track's seven tables. Apply them
-in the SQL editor, and announce it first: an `alter` while someone is rehearsing breaks them
-mid-run.
+### Two SQL homes — know which one you are in
+
+The merge left the repo with **two directories of schema SQL, in different conventions, and
+neither is wrong**:
+
+| | `server/supabase/migrations/` | `server/src/schema/` |
+|---|---|---|
+| Convention | Supabase CLI, `YYYYMMDD_HHMM` prefixes | Domain-numbered, `00_shared` / `10_volunteers` |
+| Owns | articles, community_posts, impact_periods, media bucket | the seven volunteer tables |
+| Applied to live? | **No** | **Yes** |
+
+`public.set_updated_at()` is defined in **both** (`_1000_common.sql` and
+`00_shared/00_set_updated_at.sql`). That is survivable only because both use
+`create or replace` **and both pin `set search_path = ''`** — drop the pin from either and
+whichever runs last silently un-hardens the function for every table that triggers off it.
+Check both files when touching it.
+
+**The content migrations are still NOT applied.** They are additive and touch nobody else's
+tables. Apply them in the SQL editor, and announce it first: an `alter` while someone is
+rehearsing breaks them mid-run.
 
 Two things are **deliberately absent** from those files. `profiles` is contested — BE1 owns
 identity in §30 — and two `create table profiles` files is a SQL conflict git merges cleanly
