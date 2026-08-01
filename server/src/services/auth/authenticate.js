@@ -56,7 +56,15 @@ async function resolveAuth(request) {
       full_name: verified.fullName,
       locale: "en",
     });
+  }
 
+  // Deliberately NOT tied to first provision. `on_auth_user_created` inserts the
+  // profiles row at signup, so the branch above almost never runs — gating the link
+  // on it meant the link never ran for anybody, silently.
+  //
+  // The token cache is the throttle instead: at most one attempt per token per TTL,
+  // rather than a claim UPDATE on every authenticated request.
+  if (!verified.fromCache) {
     await linkVolunteerIfProven(verified);
   }
 

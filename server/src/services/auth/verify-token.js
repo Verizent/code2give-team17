@@ -85,8 +85,10 @@ async function verifySupabaseToken(token) {
   const key = cacheKey(token);
   const cached = readCache(key);
 
+  // `fromCache` is not stored, only reported: callers use it to throttle work that
+  // should happen once per token rather than once per request.
   if (cached) {
-    return cached;
+    return { ...cached, fromCache: true };
   }
 
   let result;
@@ -132,7 +134,7 @@ async function verifySupabaseToken(token) {
 
   writeCache(key, value);
 
-  return value;
+  return { ...value, fromCache: false };
 }
 
 module.exports = { verifySupabaseToken };
