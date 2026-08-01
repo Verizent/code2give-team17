@@ -61,4 +61,33 @@ async function donorHasHistory(email) {
   return existing !== null;
 }
 
-module.exports = { createDonation, donorHasHistory };
+/**
+ * Post-payment optional feedback (PLAN.md §Phase C3). Never on the donate form (§15) —
+ * only after payment succeeded, since the fields exist to say something about a gift the
+ * donor already made.
+ *
+ * All fields optional. An empty body still updates (touching `updated_at`); the client
+ * doesn't have to filter its payload.
+ *
+ * @param {string} donationId
+ * @param {{ message?: string, referral_source?: string, referral_source_other?: string,
+ *   is_anonymous?: boolean }} fields
+ */
+async function submitFeedback(donationId, fields) {
+  const donation = await donationsRepo.findById(donationId);
+  if (!donation) throw ApiError.notFound("Donation not found");
+  if (donation.status !== "succeeded") {
+    throw ApiError.badRequest("Feedback can only be submitted on a succeeded donation");
+  }
+
+  // Whitelist — never spread an untrusted body straight into an UPDATE.
+  const clean = {};
+  if (fields.message !== undefined) clean.message = fields.message;
+  if (fields.referral_source !== undefined) clean.referral_source = fields.referral_source;
+  if (fields.referral_source_other !== undefined) clean.referral_source_other = fields.referral_source_other;
+  if (fields.is_anonymous !== undefined) clean.is_anonymous = fields.is_anonymous;
+
+  return donationsRepo.updateFeedback(donationId, clean);
+}
+
+module.exports = { createDonation, donorHasHistory, submitFeedback };

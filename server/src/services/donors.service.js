@@ -92,6 +92,17 @@ async function buildTrackView(donor, opts = {}) {
       )
     : null;
 
+  // people_reached: total attendance across completed sessions the donor supported.
+  // Load these sessions once here so buildLifetime and buildPeriodBlock share the same map.
+  const completedSessionIds = [
+    ...new Set(
+      allocations.filter((a) => a.status === "completed").map((a) => a.session_id),
+    ),
+  ];
+  const completedSessions = completedSessionIds.length
+    ? await sessionsRepo.listByIds(completedSessionIds)
+    : [];
+
   const period = selectPeriod(periods, opts.periodId);
   const periodBlock = period
     ? await buildPeriodBlock({ period, allocations, succeeded, donor })
@@ -102,25 +113,33 @@ async function buildTrackView(donor, opts = {}) {
       full_name: donor.full_name,
       supporter_since: supporterSince,
     },
-    lifetime: buildLifetime(allocations, succeeded),
+    lifetime: buildLifetime(allocations, succeeded, completedSessions),
     period: periodBlock,
     periods: periods.map(toArchiveEntry),
   };
 }
 
-function buildLifetime(allocations, succeeded) {
-  const completedSessions = new Set();
-  const onTheWaySessions = new Set();
+function buildLifetime(allocations, succeeded, completedSessionRows = []) {
+  const completedIds = new Set();
+  const onTheWayIds = new Set();
   for (const a of allocations) {
-    if (a.status === "completed") completedSessions.add(a.session_id);
-    if (a.status === "pending" || a.status === "planned") onTheWaySessions.add(a.session_id);
+    if (a.status === "completed") completedIds.add(a.session_id);
+    if (a.status === "pending" || a.status === "planned") onTheWayIds.add(a.session_id);
   }
 
+  // people_reached: SUM(attendance_count) over the distinct completed sessions.
+  // Null attendance counts as 0 — session ran but staff haven't recorded headcount yet;
+  // truthful under-count is better than dropping it from the total entirely.
+  const peopleReached = completedSessionRows
+    .filter((s) => completedIds.has(s.id))
+    .reduce((sum, s) => sum + (Number(s.attendance_count) || 0), 0);
+
   return {
-    sessions_supported: completedSessions.size,
-    sessions_on_the_way: onTheWaySessions.size,
+    sessions_supported: completedIds.size,
+    sessions_on_the_way: onTheWayIds.size,
     total_given_hkd: succeeded.reduce((sum, d) => sum + Number(d.amount_hkd || 0), 0),
     donation_count: succeeded.length,
+    people_reached: peopleReached,
   };
 }
 

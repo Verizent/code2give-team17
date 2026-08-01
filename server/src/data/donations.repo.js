@@ -90,10 +90,45 @@ async function listByDonor(donorId) {
   return data ?? [];
 }
 
+/**
+ * Fetch a single donation by id — for post-payment feedback (§Phase C3).
+ * @param {string} id
+ * @returns {Promise<object|null>}
+ */
+async function findById(id) {
+  const { data, error } = await getSupabase()
+    .from("donations")
+    .select("id, donor_id, amount_hkd, frequency, status, events_credited, cost_per_event_at_donation, tracking_opt_in, created_at, message, referral_source, is_anonymous")
+    .eq("id", id)
+    .maybeSingle();
+  assertOk(error);
+  return data;
+}
+
+/**
+ * Whitelist-writing update for post-payment feedback. Fields already narrowed at the
+ * service layer — repo just persists.
+ * @param {string} id
+ * @param {{ message?: string, referral_source?: string, referral_source_other?: string, is_anonymous?: boolean }} fields
+ * @returns {Promise<object>}
+ */
+async function updateFeedback(id, fields) {
+  const { data, error } = await getSupabase()
+    .from("donations")
+    .update(fields)
+    .eq("id", id)
+    .select("id, message, referral_source, referral_source_other, is_anonymous, updated_at")
+    .single();
+  assertOk(error);
+  return data;
+}
+
 module.exports = {
   insertDonation,
   insertPendingDonation,
   findByStripeSession,
+  findById,
   updateDonation,
+  updateFeedback,
   listByDonor,
 };

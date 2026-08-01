@@ -3,7 +3,7 @@ const assert = require("node:assert/strict");
 
 const donorsService = require("../../src/services/donors.service");
 const donationsRepo = require("../../src/data/donations.repo");
-const { createDonation } = require("../../src/services/donations.service");
+const { createDonation, submitFeedback } = require("../../src/services/donations.service");
 
 const stubDonor = {
   id: "aaaaaaaa-0000-0000-0000-aaaaaaaaaaaa",
@@ -64,4 +64,67 @@ test("createDonation returns access_token from the donor record", async (t) => {
   mockDeps(t);
   const result = await createDonation({ email: "donor@example.com", amount_hkd: 500 });
   assert.equal(result.access_token, stubDonor.access_token);
+});
+
+/**
+ * submitFeedback — the post-payment optional form (PLAN.md §Phase C3).
+ * Fills message, referral_source, referral_source_other, is_anonymous on a succeeded donation.
+ */
+
+test("submitFeedback updates the succeeded donation with the provided fields", async (t) => {
+  mock.method(donationsRepo, "findById", async () => ({
+    id: stubDonation.id, status: "succeeded",
+  }));
+  const updateFeedback = mock.method(donationsRepo, "updateFeedback", async (id, fields) => ({
+    id, ...fields,
+  }));
+  t.after(() => mock.restoreAll());
+
+  await submitFeedback(stubDonation.id, {
+    message: "For the kids",
+    referral_source: "friend",
+    is_anonymous: true,
+  });
+
+  const [id, fields] = updateFeedback.mock.calls[0].arguments;
+  assert.equal(id, stubDonation.id);
+  assert.equal(fields.message, "For the kids");
+  assert.equal(fields.referral_source, "friend");
+  assert.equal(fields.is_anonymous, true);
+});
+
+test("submitFeedback rejects when the donation is not succeeded — 400", async (t) => {
+  mock.method(donationsRepo, "findById", async () => ({
+    id: stubDonation.id, status: "pending",
+  }));
+  t.after(() => mock.restoreAll());
+
+  await assert.rejects(() => submitFeedback(stubDonation.id, { message: "hi" }), (err) => {
+    assert.equal(err.status, 400);
+    return true;
+  });
+});
+
+test("submitFeedback throws 404 when the donation does not exist", async (t) => {
+  mock.method(donationsRepo, "findById", async () => null);
+  t.after(() => mock.restoreAll());
+
+  await assert.rejects(() => submitFeedback("no-such-id", { message: "hi" }), (err) => {
+    assert.equal(err.status, 404);
+    return true;
+  });
+});
+
+test("submitFeedback with an empty body still succeeds — every field is optional", async (t) => {
+  mock.method(donationsRepo, "findById", async () => ({
+    id: stubDonation.id, status: "succeeded",
+  }));
+  const updateFeedback = mock.method(donationsRepo, "updateFeedback", async (id, fields) => ({
+    id, ...fields,
+  }));
+  t.after(() => mock.restoreAll());
+
+  await submitFeedback(stubDonation.id, {});
+
+  assert.equal(updateFeedback.mock.callCount(), 1);
 });

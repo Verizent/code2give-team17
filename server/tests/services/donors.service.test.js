@@ -126,6 +126,30 @@ test("buildTrackView.donor carries full_name and supporter_since only (email opt
   assert.equal(view.donor.supporter_since, "2026-06-01T00:00:00Z");
 });
 
+test("buildTrackView.lifetime.people_reached sums attendance_count over completed sessions", async (t) => {
+  // The 'cumulative page' requirement: total people from completed sessions the donor supported.
+  // Null attendance (session ran but staff haven't entered a count) → treated as 0, not omitted,
+  // so the number is truthful. Same session appearing on two allocations counts once.
+  stubTrackDeps(t, {
+    allocs: [
+      { session_id: "s1", status: "completed", donor_period_id: "p1", cost_at_allocation: 500 },
+      { session_id: "s1", status: "completed", donor_period_id: "p1", cost_at_allocation: 500 },
+      { session_id: "s2", status: "completed", donor_period_id: "p1", cost_at_allocation: 500 },
+      { session_id: "s3", status: "completed", donor_period_id: "p1", cost_at_allocation: 500 },
+      { session_id: "s4", status: "pending",   donor_period_id: "p2", cost_at_allocation: 500 },
+    ],
+    sessions: [
+      { id: "s1", title_en: "One",   attendance_count: 12 },
+      { id: "s2", title_en: "Two",   attendance_count: 8 },
+      { id: "s3", title_en: "Three", attendance_count: null }, // ran, headcount not entered — counts as 0
+      { id: "s4", title_en: "Four",  attendance_count: 999 },  // pending → excluded
+    ],
+  });
+
+  const view = await buildTrackView(trackDonor);
+  assert.equal(view.lifetime.people_reached, 20, "s1(12) + s2(8) + s3(null→0) — s4 pending excluded");
+});
+
 test("buildTrackView.lifetime.sessions_supported counts DISTINCT completed session_ids", async (t) => {
   // Same session appears twice — two of the donor's gifts landed on it.
   // §15 requires DISTINCT or the count silently inflates.

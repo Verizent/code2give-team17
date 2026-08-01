@@ -3,7 +3,7 @@ const { validate } = require("../middleware/validate");
 const { z } = require("zod");
 const { envelope } = require("../lib/envelope");
 const { ApiError } = require("../lib/api-error");
-const { createDonation } = require("../services/donations.service");
+const { createDonation, submitFeedback } = require("../services/donations.service");
 const { createCheckoutSession } = require("../services/donations/checkout.service");
 const donationsRepo = require("../data/donations.repo");
 
@@ -30,6 +30,16 @@ const checkoutSchema = z.strictObject({
 });
 
 const sessionParamSchema = z.object({ session_id: z.string().min(1) });
+
+// PLAN.md §Phase C3 — post-payment optional feedback. Every field optional; strictObject
+// so a client sending an unknown key gets a 400 rather than silently losing the value.
+const feedbackParamSchema = z.object({ id: z.string().uuid() });
+const feedbackBodySchema = z.strictObject({
+  message: z.string().max(2000).optional(),
+  referral_source: z.string().max(120).optional(),
+  referral_source_other: z.string().max(200).optional(),
+  is_anonymous: z.boolean().optional(),
+});
 
 // POST /api/donations/checkout — the real payment path.
 router.post("/checkout", validate({ body: checkoutSchema }), async (request, response, next) => {
@@ -79,5 +89,25 @@ router.post("/", validate({ body: createDonationSchema }), async (request, respo
     next(error);
   }
 });
+
+/**
+ * POST /api/donations/:id/feedback
+ *
+ * Post-payment optional feedback (PLAN.md §Phase C3): message, referral_source,
+ * referral_source_other, is_anonymous. Rejects if the donation is not `succeeded`.
+ * Never on the donate form — the donate form deliberately collects nothing extra (§15).
+ */
+router.post(
+  "/:id/feedback",
+  validate({ params: feedbackParamSchema, body: feedbackBodySchema }),
+  async (request, response, next) => {
+    try {
+      const result = await submitFeedback(request.validatedParams.id, request.body);
+      response.json(envelope(result));
+    } catch (error) {
+      next(error);
+    }
+  },
+);
 
 module.exports = router;

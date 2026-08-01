@@ -6,8 +6,10 @@
  * one figure to hold.
  */
 
-/** The divisor. Snapshotted onto each donation as `cost_per_event_at_donation`. */
-const COST_PER_EVENT_HKD = 100;
+/** The divisor. Snapshotted onto each donation as `cost_per_event_at_donation`.
+ *  Per updated donor-track spec (2026-08-02): 500. Placeholder until Love 21 confirms
+ *  real per-event cost (§20.1). Change here + the two test files reference it. */
+const COST_PER_EVENT_HKD = 500;
 
 /**
  * Display limit, applied identically on the tracking page and in the edition email.

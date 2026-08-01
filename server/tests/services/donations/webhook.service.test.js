@@ -15,10 +15,10 @@ const stubDonor = {
   access_token: "tok_demo",
 };
 
-/** A pending donation of HKD 510 — the amount that makes the ceil/floor difference visible. */
+/** A pending donation of HKD 2500 — five events at the new 500 divisor. */
 const pendingDonation = {
   id: "bbbbbbbb-0000-0000-0000-bbbbbbbbbbbb",
-  amount_hkd: 510,
+  amount_hkd: 2500,
   frequency: "once",
   status: "pending",
   tracking_opt_in: true,
@@ -99,9 +99,9 @@ test("checkout.session.completed snapshots the credit and flips to succeeded", a
   assert.equal(updates.status, "succeeded");
   assert.equal(updates.donor_id, stubDonor.id);
   assert.equal(updates.stripe_payment_intent, "pi_test_1");
-  // HKD 510 at 100/event is 6, not 5 — the ceil case.
-  assert.equal(updates.events_credited, 6);
-  assert.equal(updates.cost_per_event_at_donation, 100);
+  // HKD 2500 at 500/event = 5 events; snapshot 500 as cost_per_event_at_donation.
+  assert.equal(updates.events_credited, 5);
+  assert.equal(updates.cost_per_event_at_donation, 500);
 });
 
 test("an already-succeeded donation is not re-credited", async (t) => {
