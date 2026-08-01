@@ -49,8 +49,11 @@ either is a shared-file change — flag it in the PR body (§25).
 `STRIPE_WEBHOOK_SECRET`, `RESEND_API_KEY`, `EMAIL_FROM`, `HANDSON_MODE`, `HANDSON_BASE_URL`,
 `HANDSON_API_KEY`. The server holds the **service-role** key, not the anon key.
 
-`NODE_ENV=production` suppresses `message` on 5xx only; 4xx messages always survive because
-forms have to display them. Keep it `development` locally or 500s go blind.
+`NODE_ENV=production` suppresses `message` on **every** error, 4xx included — `code` is what
+survives, which is the whole reason it exists. Keep it `development` locally or every error
+goes blind. **Open question:** forms need to display 4xx detail, so either the client maps
+`code` to its own copy, or the handler stops suppressing 4xx. Decide before deploy; it does
+not bite locally ([§29](CONTEXT.md#29-api-contract)).
 
 `client/.env.local` (copy from `client/.env.example`) — `VITE_API_BASE_URL`, `VITE_API_MODE`,
 `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`. Every `VITE_`-prefixed variable compiles into
@@ -78,7 +81,8 @@ API.** `GET /`, `GET /api`, `GET /api/health`, `GET /api/health/supabase`, a 404
 handler. Tests live under `server/tests/`, mirroring the `src/` tree
 (`tests/lib/slug.test.js` ↔ `src/lib/slug.js`, etc.). Built and tested:
 
-- `src/lib/` — `httpError(status, message)`, `resolveLocale(row, fields, locale)`,
+- `src/lib/` — `ApiError` + `codeForStatus`/`labelForStatus`, `envelope(data, meta)`,
+  `resolveLocale(row, fields, locale)`,
   `parsePaging`/`buildMeta`, `readingTime(blocks)`, `slugify`/`uniqueSlug`,
   `visitorHash(ip, userAgent, day)`.
 - `src/schemas/` — Zod (`zod` v4, CommonJS `require`): `blocks.schema.js` (the block union),
@@ -113,6 +117,64 @@ rate limiting, pino, and any client-side test tooling.
 the tiebreaker: **where another section describes something as built and §28 does not list
 it, §28 is right.** Read a file before writing code that depends on it.
 
+## Server coding patterns
+
+### 3-layer structure
+
+Every domain follows `routes/<name>.routes.js` → `services/<domain>/<name>.service.js` →
+`data/<name>.repo.js`. Routes are registered in `routes/index.js` — **add new entries
+alphabetically** to minimise merge conflicts when multiple tracks land at once.
+
+```
+routes/articles.routes.js        # thin: validate → service → envelope → json
+services/content/articles.service.js  # all business rules
+data/articles.repo.js            # Supabase queries only, no rules
+```
+
+### Supabase queries
+
+Every repo call destructures `{ data, error }` and immediately calls `assertOk(error)` from
+`src/data/supabase-error.js`. Never throw manually on a DB error — `assertOk` converts any
+PostgREST error into an `ApiError(500, ...)` that the error handler formats correctly.
+
+Repos use **explicit column lists** (named constants `LIST_COLUMNS` / `DETAIL_COLUMNS`) —
+never `select('*')`. List queries omit `body_en` / `body_zh`; detail queries include them.
+
+### Bilingual columns
+
+The DB stores `<field>_en` and `<field>_zh` (e.g. `title_en`, `title_zh`). The suffix in
+the DB is always `_zh`, not `_zh_Hant`. `resolveLocale(row, ['title', 'excerpt'], locale)`
+collapses both suffixes into plain `title`, `excerpt` on the returned object, falling back
+to English when the `_zh` value is null or empty — it never mutates the row.
+
+### Article categories
+
+`articles.category` is `'news' | 'education' | 'report'` only. **Voices are not an article
+category** — they live in `community_posts` (with the moderation state the tab needs).
+
+### Zod v4 specifics
+
+`require("zod")` on this project gives Zod v4 (`"zod": "^4.4.3"`). Use `z.strictObject`
+for request bodies and `z.object` for query schemas. Validation errors carry `.issues[]`,
+not `.errors[]` — `validate.js` checks `Array.isArray(error?.issues)`.
+
+### Service test pattern
+
+Use Node's built-in `mock.method()` to stub the repo, always restoring in `t.after`:
+
+```js
+const { test, mock } = require("node:test");
+const assert = require("node:assert/strict");
+const articlesRepo = require("../../../src/data/articles.repo");
+const { listArticles } = require("../../../src/services/content/articles.service");
+
+test("description", async (t) => {
+  mock.method(articlesRepo, "listPublished", async () => ({ rows: [], total: 0 }));
+  t.after(() => mock.restoreAll());
+  // ...assert
+});
+```
+
 ## Architecture — the parts a single file can't show
 
 - **Frontend never queries Supabase directly.** Every read/write goes through the Express
@@ -127,15 +189,20 @@ it, §28 is right.** Read a file before writing code that depends on it.
   HandsOn's API would take; `live` is unimplemented. External volunteer hours therefore
   **only appear** to count toward badges — never claim otherwise to a judge
   ([§17](CONTEXT.md#17-integration-setup-notes)).
-- **Response envelope: the resource itself, unwrapped.** No `data` key. Collections are
-  `{ items, meta }` where `meta` comes from `buildMeta`; errors are `{ error, message }` and
-  nothing else — `error` is the `node:http` status label, and there is deliberately **no
-  `code` field and no error class**, because the status line is the only machine-readable
-  signal. Throw `httpError(status, message)` from `lib/http-error` and let
+- **Response envelope: the resource under `data`.** Collections are `{ data: [...], meta }`
+  where `meta` comes from `buildMeta` and sits *beside* `data`, never inside it. Build it
+  with `envelope(data, meta)` from `lib/envelope`, **in the route layer only** — services
+  return domain results (`listArticles` still returns `{ items, meta }`) so their tests never
+  assert on transport. `/api/health` and `/api/` stay unwrapped: they are probes, not
+  resources. Errors are `{ error, message, code }` — and **never** a `data: null` alongside,
+  because success and failure are told apart by which key is present. `error` is the
+  `node:http` status label; `code` is the machine-readable field, derived from the status by
+  `codeForStatus` unless passed explicitly. Throw `ApiError` from `lib/api-error`
+  (`ApiError.notFound(msg)`, `ApiError.badRequest(msg)`, or `new ApiError(500, msg)`) and let
   `middleware/error-handler.js` format it — never `response.status(...).json(...)` in a
-  route, which is how the envelope drifts. **Clients branch on the HTTP status, never on the
-  body.** Money is `amount_hkd` integer dollars; the ×100 to Stripe cents lives server-side
-  and never crosses this API ([§29](CONTEXT.md#29-api-contract)).
+  route or in `not-found.js`, which is how the envelope drifts. Money is `amount_hkd` integer
+  dollars; the ×100 to Stripe cents lives server-side and never crosses this API
+  ([§29](CONTEXT.md#29-api-contract)).
 - **Validation asymmetry, on purpose.** Request **bodies** are `z.strictObject` — an unknown
   key is a 400, because silently stripping it means a save that looks like it worked and
   quietly lost a field. Request **queries** (`listQuerySchema`) strip undeclared keys

@@ -1572,9 +1572,9 @@ code is the contract.
 
 | | |
 |---|---|
-| **Envelope** | The resource itself, unwrapped. No `data` key |
-| **Lists** | `{ items: [...], meta: { total, page, limit } }` |
-| **Errors** | `{ error, message }` — `error` is the HTTP status label, `message` the human detail. **Clients branch on the HTTP status**, not on the body |
+| **Envelope** | `{ data: … }`. The resource is always under `data`, single or collection |
+| **Lists** | `{ data: [...], meta: { total, page, limit } }` — `meta` sits **beside** `data`, not inside it |
+| **Errors** | `{ error, message, code }` — `error` is the HTTP status label, `message` the human detail (**absent outside development**), `code` the machine-readable field |
 | **Naming** | `snake_case`, matching Postgres, so there is no mapping layer |
 | **Dates** | ISO 8601 UTC. The client formats; the server never sends display strings |
 | **Money** | `amount_hkd` is **integer dollars**. Stripe wants cents; that ×100 lives server-side and never crosses this API |
@@ -1582,53 +1582,78 @@ code is the contract.
 | **Auth** | `Authorization: Bearer <supabase-jwt>` |
 
 ```
-GET /api/health   →  200  { "status": "ok", "timestamp": "2026-07-31T…" }
-GET /api/impact   →  200  { "families_supported": 490, "total_sessions": 6859, … }
-GET /api/articles →  200  { "items": [ … ], "meta": { "total": 12, … } }
-GET /api/nope     →  404  { "error": "Not Found",
-                            "message": "No route exists for GET /api/nope" }
+GET /api/health       →  200  { "status": "ok", "timestamp": "2026-07-31T…" }
+GET /api/impact       →  200  { "data": { "families_supported": 490, … } }
+GET /api/articles     →  200  { "data": [ … ], "meta": { "total": 12, … } }
+GET /api/articles/:s  →  200  { "data": { "slug": "…", "title": "…", … } }
+GET /api/nope         →  404  { "error": "Not Found", "code": "NOT_FOUND",
+                                "message": "No route exists for GET /api/nope" }
+                              ↑ `message` only in development; `error` + `code` always
 ```
 
-Two notes on where that came from. **Only the single-resource and error shapes are set by
-existing code** — `middleware/not-found.js` and `middleware/error-handler.js` produce
-`{ error, message }`, and `health.routes.js` returns its object bare. The `{ items, meta }`
-collection shape is an extension chosen to sit consistently alongside them; the first
-list endpoint to ship fixes it, so if it needs to be something else, change it there and
-change it here in the same PR.
+**Success and failure are distinguished by which key is present, not by a flag.** A 2xx
+carries `data` and never `error`; an error carries `error` and never `data`. Neither side
+nulls out the other's key to make the two shapes match, and there is deliberately **no
+`success` boolean** — it would be a third encoding of something the status line and the key
+already say twice.
 
-**Two fields, and the status carries the meaning.** `error` is the HTTP status label —
-`"Not Found"`, `"Unprocessable Content"` — derived from `node:http`'s `STATUS_CODES`, so it
-tracks the status automatically. `message` is human-facing detail.
+That means `"data" in body` is **not** the check. The check is the HTTP status, exactly as
+it was before the wrapper existed. The wrapper buys one thing: room to add response-level
+keys — `meta` today, a `warnings` or `cursor` later — without any of them colliding with a
+field name on the resource itself. An article with its own `meta_title` was already one
+rename away from ambiguity.
 
-**Clients branch on the HTTP status, never on the response body.**
+**`/api/health` and `/api/` are deliberately unwrapped.** They are operational probes, not
+resources — uptime monitors and container health checks read `status` at the top level, and
+burying it under `data` breaks that for no gain. Wrap resources; leave probes bare.
 
-- Never branch on `message`. It is prose, it will be reworded, and it is **absent on 5xx in
-  production** (below).
+`lib/envelope.js` has the only definition, and it is applied in the **route layer**.
+Services return domain results (`{ items, meta }` from `listArticles`), so service tests
+assert on the resource and stay unaffected when transport changes — which is why this change
+moved 3 route files and 0 service tests.
+
+**Three fields.** `error` is the HTTP status label — `"Not Found"`, `"Conflict"` — derived
+from `node:http`'s `STATUS_CODES`, so it tracks the status automatically. `message` is
+human-facing detail. `code` is the machine-readable field, derived from the status by
+`codeForStatus()` unless a caller passes one explicitly.
+
+**Clients branch on the HTTP status or on `code` — never on `message` or `error`.**
+
+- Never branch on `message`. It is prose, it will be reworded, and it is **absent whenever
+  `NODE_ENV` is not `development`** (below), which is the case that matters.
 - Never branch on `error`. It is derived from the status, so it carries nothing the status
-  does not already give you — and it is one `STATUS_CODES` lookup away from being reworded
-  by Node itself.
-- Where a client must tell two failures with the same status apart, that is a signal the two
-  deserve **different statuses** — a validation failure is 422, a conflict is 409. If they
-  genuinely cannot be separated that way, add a field to the resource shape and record it
-  here, rather than reintroducing a general-purpose `code`.
+  does not already give you.
+- `code` earns its place because `message` does not survive production. Its closed set lives
+  in `CODE_BY_STATUS`; unmapped statuses fall back by class (4xx → `VALIDATION_FAILED`,
+  otherwise `INTERNAL`) so no error ever ships without one. **Adding a code is a contract
+  change: add it here first, then to the map.**
+- Where two failures share a status and a client must tell them apart, prefer **different
+  statuses** — a conflict is 409, a validation failure is 400. Reach for an explicit `code`
+  argument only when they genuinely cannot be separated that way.
 
-> **A machine-readable `code` field was specified here and has been removed (1 Aug 2026).**
-> Earlier drafts of this section, and a `lib/api-error.js` carrying an `ApiError` class and a
-> status→code map, made `code` the only field a client could branch on. **Do not rebuild
-> either.** The status line already carries that signal, `fetch` exposes it as
-> `response.status`, and a second parallel taxonomy is one more thing to keep in sync across
-> six people. If a reader finds a stale reference to `ApiError` or to `code`, this paragraph
-> is what is current.
+> **Reversed 1 Aug 2026.** An earlier revision of this section removed `code` and deleted
+> `lib/api-error.js`, on the reasoning that the status line was signal enough. That held only
+> while `message` survived on 4xx. The volunteer track's handler — now the one in the tree —
+> suppresses `message` on **every** status outside development, which leaves `code` as the
+> only machine-readable field on a production 400. Both are restored. `lib/http-error.js` and
+> its `httpError()` helper were the alternative and have been **deleted**; if a reader finds a
+> reference to `httpError`, it is stale and `ApiError` is what is current.
 
 > The money rule is worth the emphasis. Converting in both directions cancels out in testing
 > and only surfaces as a 100× error in front of an audience.
 
-`error-handler.js` omits `message` for **5xx only** when `NODE_ENV=production`, sending just
-the label. Deliberate — it keeps stack details and driver strings out of responses, while 4xx
-messages survive, because those are strings we wrote on purpose and a form has to be able to
-show them. Anything the user genuinely needs to read must therefore be thrown as a **handled**
-error with its own 4xx status, not left to fall through to the 500 path, or it will be silent
-in production and verbose in development, which is the reverse of what is wanted.
+`error-handler.js` omits `message` on **every** status unless `NODE_ENV === "development"`,
+sending `{ error, code }` alone. That reliably keeps stack details and driver strings out of
+responses, and it is why `code` exists at all.
+
+> **Open decision — settle before deploy, harmless until then.** It also means a production
+> 400 carries no readable detail, so `validate.js`'s field-level messages ("locale: Invalid
+> option…") vanish exactly where a form needs them. Two ways out: the **client** maps `code`
+> plus the field to its own copy, which is better i18n practice anyway since server strings
+> are English-only; or `error-handler.js` keeps `message` on 4xx and suppresses 5xx only. The
+> first fits the bilingual requirement (§20) better. Nothing breaks locally, because
+> `NODE_ENV` is `development` — the failure appears only once something is deployed, which is
+> the reason to write it down now rather than discover it on demo day.
 
 Endpoints, against the §14 surface reduced to the §27 scope:
 
@@ -1660,8 +1685,13 @@ above.
 
 **Validation is 422, not 400.** The two are separated deliberately: 400 means we could not
 parse the request, 422 means we parsed it and it failed the schema. A client that needs to
-render field-level errors is looking for 422, and collapsing both into 400 is exactly the
-ambiguity the removed `code` field existed to resolve.
+render field-level errors is looking for 422, and collapsing both into 400 loses that split.
+
+> **Known mismatch:** `middleware/validate.js` currently throws **400**, not 422, so schema
+> failures arrive with `code: "VALIDATION_FAILED"` on a 400. `CODE_BY_STATUS` has no 422
+> entry either — it falls back by class to the same code. Either move `validate.js` to 422
+> and give 422 its own entry, or drop this rule. Do not leave the doc and the handler
+> disagreeing.
 
 **Five of these have no producer yet** — 400, 401, 403, 422 and 429 wait on Zod, `requireAuth`,
 `requireRole` and rate limiting, none of which are built (§28). The table exists now so they
