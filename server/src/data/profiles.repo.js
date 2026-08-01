@@ -1,4 +1,5 @@
 const { getSupabase } = require("../config/supabase");
+const { ApiError } = require("../lib/api-error");
 const { assertOk } = require("./supabase-error");
 
 const PROFILE_COLUMNS = ["id", "role", "full_name", "locale"].join(", ");
@@ -42,7 +43,16 @@ async function insertIfAbsent(profile) {
 
   assertOk(error);
 
-  return findById(profile.id);
+  const row = await findById(profile.id);
+
+  if (!row) {
+    // Declared as returning a row, and `authenticate.js` reads `.role` off it
+    // immediately. Returning null here would surface as a TypeError and a bare 500
+    // with nothing naming the cause.
+    throw new ApiError(503, "Profile was provisioned but could not be read back");
+  }
+
+  return row;
 }
 
 module.exports = { findById, insertIfAbsent, PROFILE_COLUMNS };

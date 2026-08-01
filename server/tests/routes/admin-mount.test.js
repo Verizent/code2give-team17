@@ -40,7 +40,11 @@ test("exactly one router is mounted under /api/admin", () => {
 test("the admin router applies requireRole before any of its sub-routes", () => {
   const [first] = adminRouter.stack;
 
+  // Asserted before reading through it: with optional chaining an empty stack —
+  // the guard removed entirely — would compare undefined to undefined and pass.
+  assert.ok(first, "admin router has no layers, so no guard is mounted");
+
   // Position matters, not merely presence: a guard mounted after a sub-route would
   // leave that route reachable.
-  assert.equal(first?.handle?.name, "requireRoleMiddleware");
+  assert.equal(first.handle.name, "requireRoleMiddleware");
 });
