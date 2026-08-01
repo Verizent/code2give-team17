@@ -123,6 +123,24 @@ export const activities = [
 ]
 
 /**
+ * Fallback for GET /api/impact — same shape as the server response (server/src/
+ * services/content/impact.service.js), so mock and real mode render identically.
+ * Used when VITE_API_MODE=mock, and as a safety net if the real call fails.
+ * Numbers are the 2024–25 annual report figures (CONTEXT.md §3).
+ */
+export const impactFixture = {
+  label: '2024–25',
+  period_start: '2024-07-01',
+  period_end: '2025-06-30',
+  families_served: 490,
+  total_sessions: 6859,
+  activity_types: 84,
+  yoy_growth_pct: 30,
+  programme_spend_pct: 86,
+  by_programme: { sports: 2792, fitness: 1504, nutrition: 1489, family_support: 930 },
+}
+
+/**
  * Collective milestones for the Home page "Achievements & Impact" band.
  * No individual names — these are org-level facts, safe to publish as-is.
  * `icon` maps to a lucide-react icon in achievements-band.jsx.
@@ -335,6 +353,13 @@ export const ACTIVITY_TYPES = [
 export const MOMENTS_OF_ABILITY_COUNT = 1247
 
 /**
+ * "Share a moment" submitter relationship — matches the `relationship` values
+ * used in server/db/seed/community-posts.seed.js (POST /api/community-posts
+ * expects any non-empty string, but these three keep the form/seed consistent).
+ */
+export const RELATIONSHIP_OPTIONS = ['volunteer', 'parent', 'supporter']
+
+/**
  * DEMO-ONLY signed-in profile for the Share-a-moment form. There is no real
  * login screen yet — swap this for the real Supabase Auth session later.
  */
@@ -424,6 +449,11 @@ export const firstSessionSteps = [
   },
 ]
 
+// NOTE: this Ability Wall (photos, tags, celebrate counts) is a different data
+// model from the backend's planned `community_posts` / Voices (text testimonial +
+// consent + moderation, no photos or reactions — see server/src/schemas/
+// community-post.schema.js). Not reconciled yet; needs a team decision before
+// wiring this feed to a real API.
 export const stories = [
   // Real: RHKYC × Love 21 dragon-boat programme, 2021 (love21foundation.com/media, SCMP).
   {

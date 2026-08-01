@@ -1,5 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { useSite } from '@/components/site-provider'
+import { getImpact } from '@/features/content/api'
+
+/** stats.items id -> GET /api/impact field. volunteerHours has no API field yet. */
+const IMPACT_FIELD_BY_STAT_ID = {
+  families: 'families_served',
+  sessions: 'total_sessions',
+  activityTypes: 'activity_types',
+}
 
 function useReducedMotion() {
   const [reduced, setReduced] = useState(false)
@@ -44,10 +52,27 @@ function CountUp({ value, suffix, play, reduced }) {
 }
 
 export function StatsBand() {
-  const { t } = useSite()
+  const { t, locale } = useSite()
   const reduced = useReducedMotion()
   const [play, setPlay] = useState(false)
+  const [impact, setImpact] = useState(null)
   const ref = useRef(null)
+
+  useEffect(() => {
+    let cancelled = false
+    getImpact(locale).then((data) => {
+      if (!cancelled) setImpact(data)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [locale])
+
+  const items = t.stats.items.map((item) => {
+    const field = IMPACT_FIELD_BY_STAT_ID[item.id]
+    const value = field && impact ? impact[field] : item.value
+    return { ...item, value }
+  })
 
   useEffect(() => {
     const node = ref.current
@@ -76,7 +101,7 @@ export function StatsBand() {
       <div ref={ref} className="mx-auto max-w-[1120px] px-5 py-10 sm:px-8 sm:py-14">
         <p className="kicker text-yellow">{t.stats.title}</p>
         <div className="mt-8 grid grid-cols-2 gap-x-4 gap-y-10 sm:gap-x-6 md:grid-cols-4 md:gap-8">
-          {t.stats.items.map((item) => (
+          {items.map((item) => (
             <div key={item.id}>
               <p className="font-display text-[clamp(2.5rem,7vw,4rem)] leading-none font-extrabold break-words text-yellow">
                 <CountUp

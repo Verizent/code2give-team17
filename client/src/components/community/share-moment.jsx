@@ -2,8 +2,13 @@ import { useEffect, useId, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Camera, X } from 'lucide-react'
 import { useSite } from '@/components/site-provider'
-import { ACTIVITY_TYPES, DEMO_SIGNED_IN_PROFILE } from '@/lib/mock'
+import { DEMO_SIGNED_IN_PROFILE, RELATIONSHIP_OPTIONS } from '@/lib/mock'
+import { submitVoice } from '@/features/content/api'
 import { cn } from '@/lib/utils'
+
+// Matches MIN_STORY_LENGTH in server/src/schemas/community-post.schema.js —
+// enforced here too so mock and real mode behave the same.
+const MIN_STORY_LENGTH = 40
 
 export function ShareMomentButton({ className }) {
   const { t } = useSite()
@@ -30,10 +35,15 @@ export function ShareMomentButton({ className }) {
 function ShareMomentDialog({ onClose }) {
   const { locale, t } = useSite()
   const titleId = useId()
+  const [authorName, setAuthorName] = useState(DEMO_SIGNED_IN_PROFILE.name[locale])
   const [line, setLine] = useState('')
   const [hasPhoto, setHasPhoto] = useState(false)
-  const [type, setType] = useState(ACTIVITY_TYPES[0])
+  const [relationship, setRelationship] = useState(RELATIONSHIP_OPTIONS[0])
   const [consent, setConsent] = useState(false)
+  // Honeypot for POST /api/community-posts — real users never see or fill this.
+  const [website, setWebsite] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState(null)
   const [sent, setSent] = useState(false)
 
   useEffect(() => {
@@ -47,6 +57,23 @@ function ShareMomentDialog({ onClose }) {
       document.body.style.overflow = ''
     }
   }, [onClose])
+
+  const storyReady = line.trim().length >= MIN_STORY_LENGTH
+  const canSubmit = consent && storyReady && authorName.trim().length > 0 && !submitting
+
+  async function handleSubmit() {
+    setError(null)
+    setSubmitting(true)
+    try {
+      await submitVoice({ authorName: authorName.trim(), relationship, story: line.trim(), website })
+      setSent(true)
+    } catch (err) {
+      console.error('submitVoice failed', err)
+      setError(t.community.shareError)
+    } finally {
+      setSubmitting(false)
+    }
+  }
 
   // Portal to <body> — this dialog must escape the page's own stacking/layout
   // context (e.g. the hero's `relative` wrapper) so `fixed` truly means the
@@ -83,10 +110,16 @@ function ShareMomentDialog({ onClose }) {
         </div>
 
         <div className="space-y-5 px-5 py-5">
-          <p className="text-sm text-ink/70">
-            {t.community.shareAsLabel}{' '}
-            <span className="font-semibold text-navy">{DEMO_SIGNED_IN_PROFILE.name[locale]}</span>
-          </p>
+          <label className="block">
+            <span className="kicker text-teal">{t.community.shareAuthorLabel}</span>
+            <input
+              type="text"
+              value={authorName}
+              onChange={(e) => setAuthorName(e.target.value)}
+              placeholder={t.community.shareAuthorPlaceholder}
+              className="mt-2 w-full rounded-xl border border-border bg-card px-4 py-3 text-base text-ink outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            />
+          </label>
 
           <label className="block">
             <span className="kicker text-teal">{t.community.shareLine}</span>
@@ -97,6 +130,11 @@ function ShareMomentDialog({ onClose }) {
               rows={3}
               className="mt-2 w-full resize-none rounded-xl border border-border bg-card px-4 py-3 text-base text-ink outline-none focus-visible:ring-2 focus-visible:ring-ring"
             />
+            <span className={cn('mt-1.5 block text-xs', storyReady ? 'text-ink/50' : 'text-red')}>
+              {t.community.shareLengthHint
+                .replace('{min}', MIN_STORY_LENGTH)
+                .replace('{n}', line.trim().length)}
+            </span>
           </label>
 
           <div>
@@ -113,25 +151,37 @@ function ShareMomentDialog({ onClose }) {
             >
               <Camera className="h-7 w-7" aria-hidden="true" />
               <span className="text-sm font-medium">
-                {hasPhoto ? 'Photo attached (preview)' : 'Add a photo'}
+                {hasPhoto ? t.community.sharePhotoAttached : t.community.sharePhotoAdd}
               </span>
             </button>
           </div>
 
           <label className="block">
-            <span className="kicker text-teal">{t.community.shareTagLabel}</span>
+            <span className="kicker text-teal">{t.community.shareRelationshipLabel}</span>
             <select
-              value={type}
-              onChange={(e) => setType(e.target.value)}
+              value={relationship}
+              onChange={(e) => setRelationship(e.target.value)}
               className="mt-2 w-full rounded-xl border border-border bg-card px-4 py-3 text-base text-ink outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              {ACTIVITY_TYPES.map((id) => (
+              {RELATIONSHIP_OPTIONS.map((id) => (
                 <option key={id} value={id}>
-                  {t.community.filters[id]}
+                  {t.community.relationships[id]}
                 </option>
               ))}
             </select>
           </label>
+
+          {/* Honeypot — visually hidden, never focusable by a keyboard/screen-reader user. */}
+          <input
+            type="text"
+            name="website"
+            value={website}
+            onChange={(e) => setWebsite(e.target.value)}
+            tabIndex={-1}
+            autoComplete="off"
+            aria-hidden="true"
+            className="absolute h-0 w-0 overflow-hidden opacity-0"
+          />
 
           <label className="flex items-start gap-3 text-sm text-ink/85">
             <input
@@ -147,13 +197,15 @@ function ShareMomentDialog({ onClose }) {
             {t.community.shareReviewNote}
           </p>
 
+          {error && <p className="text-sm font-medium text-red">{error}</p>}
+
           {sent ? (
             <p className="font-medium text-teal">{t.community.shareSent}</p>
           ) : (
             <button
               type="button"
-              disabled={!consent || line.trim().length < 4}
-              onClick={() => setSent(true)}
+              disabled={!canSubmit}
+              onClick={handleSubmit}
               className="inline-flex min-h-[48px] w-full items-center justify-center rounded-xl bg-navy px-5 text-base font-semibold text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-40"
             >
               {t.community.shareSubmit}

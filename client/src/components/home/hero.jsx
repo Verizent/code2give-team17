@@ -1,10 +1,28 @@
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useSite } from '@/components/site-provider'
 import { EasyReadRow, EasyReadSentences } from '@/components/easy-read-row'
+import { getImpact } from '@/features/content/api'
 
-/** Honest annual-report chip — pulls the sessions stat from strings.ts, no live claim. */
-function SessionsChip({ t }) {
+/**
+ * Same figure as StatsBand's "sessions" stat — fetched independently (no
+ * shared cache/query layer yet) so the two never disagree once real data
+ * lands, instead of one reading a stale hardcoded number.
+ */
+function SessionsChip({ t, locale }) {
   const sessions = t.stats.items.find((item) => item.id === 'sessions')
+  const [total, setTotal] = useState(sessions?.value)
+
+  useEffect(() => {
+    let cancelled = false
+    getImpact(locale).then((data) => {
+      if (!cancelled && data?.total_sessions) setTotal(data.total_sessions)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [locale])
+
   if (!sessions) return null
 
   return (
@@ -12,7 +30,7 @@ function SessionsChip({ t }) {
       <img src="/brand/logo.png?v=user-asset" alt="" className="h-10 w-auto shrink-0 sm:h-11" />
       <div className="min-w-0 pr-2 sm:pr-4">
         <p className="font-display text-[1.35rem] leading-none font-bold tracking-[-0.02em] text-navy sm:text-[1.6rem]">
-          {sessions.value.toLocaleString()}
+          {total.toLocaleString()}
           {sessions.suffix} <span className="font-semibold">{sessions.label}</span>
         </p>
         <p className="mt-1.5 text-[12px] font-medium text-navy/65 sm:text-[13px]">
@@ -24,7 +42,7 @@ function SessionsChip({ t }) {
 }
 
 export function Hero() {
-  const { t, easyRead } = useSite()
+  const { t, easyRead, locale } = useSite()
 
   if (easyRead) {
     return (
@@ -87,7 +105,7 @@ export function Hero() {
             </Link>
           </div>
 
-          <SessionsChip t={t} />
+          <SessionsChip t={t} locale={locale} />
         </div>
 
         {/* Photo + mockup white fade (no red panel) */}
