@@ -1,4 +1,4 @@
-const { codeForStatus, labelForStatus } = require("../lib/api-error");
+const { ApiError, codeForStatus, labelForStatus } = require("../lib/api-error");
 
 /**
  * Formats every error into the CONTEXT.md §29 envelope: `{ error, message, code }`.
@@ -25,7 +25,11 @@ function errorHandler(error, request, response, next) {
   /** @type {{ error: string, code: string, message?: string }} */
   const body = {
     error: labelForStatus(status),
-    code: error.code || codeForStatus(status),
+    // Only an ApiError may name its own code. Anything else carries a vocabulary
+    // that is not ours — Supabase throws `bad_jwt`, Node throws `ENOTFOUND`,
+    // PostgREST throws `PGRST116` — and `code` is the field clients branch on and
+    // the only one that survives production message suppression.
+    code: error instanceof ApiError ? error.code : codeForStatus(status),
   };
 
   if (process.env.NODE_ENV !== "production") {

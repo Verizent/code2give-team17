@@ -112,8 +112,17 @@ and (since the volunteer merge) the volunteer SQL schema.** `GET /`, `GET /api`,
 - `src/data/articles.repo.js`, `src/data/impact.repo.js` — Supabase data access.
 - `src/services/content/articles.service.js`, `src/services/content/impact.service.js`.
 - `GET /api/articles`, `GET /api/articles/:slug`, `GET /api/impact` — all live and tested.
+- **Auth (server-side only — no client auth exists).** `src/lib/email.js` (`normaliseEmail`,
+  shared with the donor track), `src/data/profiles.repo.js`, `src/data/volunteer-links.repo.js`,
+  `src/services/auth/{verify-token,authenticate,volunteer-link.service}.js`,
+  `src/middleware/{require-auth,require-role}.js`, `src/routes/admin/index.js`.
+  **There are no auth endpoints** — signup/login happen browser→Supabase, and the `profiles`
+  row is provisioned just-in-time on the first authenticated request. Every `/api/admin/*`
+  route is gated by `requireRole('admin')` applied once in `routes/admin/index.js`.
 - `server/db/seed/` — articles, impact, community-posts; `npm run seed` is safe to re-run
   (upserts only, never truncates).
+- `server/src/schema/05_identity/` — `profiles` (`id` = `auth.users.id`, `role` is
+  `volunteer | admin`). **Written, not yet applied to the live project.**
 - `server/src/schema/` — the volunteer track's SQL: `volunteers`, `volunteer_opportunities`,
   `volunteer_signups`, `volunteer_interests`, `badges`, `volunteer_badges`,
   `volunteer_email_verifications`. **Applied to the live project**, and covered by
@@ -278,6 +287,16 @@ test("description", async (t) => {
   dishonest option; `resolveLocale` returns a new object and never mutates the row.
 - **`SERVER_SECRET` throws lazily, at hash time, not at boot.** A missing secret must not
   stop a teammate's server from starting when they pull.
+- **The token cache in `verify-token.js` evicts FIFO, not LRU.** `writeCache` deletes
+  `cache.keys().next().value` — Map insertion order — so past `CACHE_MAX_ENTRIES` (500) the
+  *oldest-inserted* entry goes, which may well be the busiest token rather than the coldest.
+  Correct at demo scale and one cache miss is only one extra `auth.getUser` call, so this is
+  not worth an LRU rewrite; know it before reading the line as a bug. Two related properties
+  of the same cache, also deliberate: entries carry a **60s TTL of their own and no JWT
+  `exp`**, so a signed-out or revoked token keeps working until the entry lapses, and the
+  cache holds **only the token→user lookup, never `role`** — the profile row is re-read every
+  request precisely so a grant or revoke lands on the next call
+  (`src/schema/05_identity/90_grant_admin.example.txt`).
 
 ### Two constraints to get right rather than discover late
 
