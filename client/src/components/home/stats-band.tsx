@@ -33,11 +33,10 @@ function CountUp({
       return
     }
     let raf = 0
-    const duration = 1400
+    const duration = 1200
     const start = performance.now()
     const step = (now: number) => {
       const progress = Math.min((now - start) / duration, 1)
-      // ease-out cubic
       const eased = 1 - Math.pow(1 - progress, 3)
       setDisplay(Math.round(eased * value))
       if (progress < 1) raf = requestAnimationFrame(step)
@@ -72,7 +71,7 @@ export function StatsBand() {
           }
         }
       },
-      { threshold: 0.35 },
+      { threshold: 0.2 },
     )
     observer.observe(node)
     return () => observer.disconnect()
@@ -81,33 +80,15 @@ export function StatsBand() {
   return (
     <section
       id="stats"
-      aria-labelledby="stats-title"
+      aria-label={t.stats.title}
       className="scroll-mt-20 bg-navy text-white"
     >
-      <div ref={ref} className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24">
-        <p className="kicker flex items-center gap-2 text-yellow">
-          <span
-            className="inline-block h-2 w-2 rounded-full bg-red"
-            aria-hidden="true"
-          />
-          Live impact
-        </p>
-        <h2
-          id="stats-title"
-          className="mt-3 font-display text-3xl font-bold text-white sm:text-4xl"
-        >
-          {t.stats.title}
-        </h2>
-
-        <dl className="mt-12 grid grid-cols-2 gap-x-6 gap-y-10 lg:grid-cols-4">
-          {t.stats.items.map((item, i) => (
-            <div
-              key={item.label}
-              className="border-t border-white/15 pt-5"
-              style={{ animationDelay: `${i * 80}ms` }}
-            >
-              <dt className="sr-only">{item.label}</dt>
-              <dd className="font-display text-5xl font-bold tabular-nums text-yellow sm:text-6xl">
+      <div ref={ref} className="mx-auto max-w-[1120px] px-5 py-10 sm:px-8 sm:py-14">
+        <p className="kicker text-yellow">{t.stats.title}</p>
+        <div className="mt-8 grid grid-cols-2 gap-x-6 gap-y-10 md:grid-cols-4 md:gap-8">
+          {t.stats.items.map((item) => (
+            <div key={item.label}>
+              <p className="font-display text-[clamp(2rem,5vw,3rem)] leading-none font-extrabold break-words text-yellow">
                 <CountUp
                   value={item.value}
                   suffix={item.suffix}
@@ -116,17 +97,16 @@ export function StatsBand() {
                 />
                 <span className="sr-only">
                   {item.value.toLocaleString()}
-                  {item.suffix}
+                  {item.suffix} {item.label}
                 </span>
-              </dd>
-              <p className="mt-3 text-base leading-snug font-medium text-white/80">
+              </p>
+              <p className="mt-3 text-[14px] leading-snug font-medium text-white/80 sm:text-[15px]">
                 {item.label}
               </p>
             </div>
           ))}
-        </dl>
-
-        <p className="mt-12 font-mono text-xs tracking-wide text-white/55">
+        </div>
+        <p className="mt-10 text-[12px] tracking-wide text-white/50 uppercase">
           {t.stats.updated}
         </p>
       </div>

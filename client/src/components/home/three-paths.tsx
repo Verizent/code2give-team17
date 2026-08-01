@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { Eye, HandHeart, Heart, ArrowRight } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 import { useSite } from '@/components/site-provider'
 
 export function ThreePaths() {
@@ -10,89 +10,70 @@ export function ThreePaths() {
       key: 'witness',
       data: t.paths.witness,
       href: '/community',
-      Icon: Eye,
-      cardClass: 'bg-card border-border',
-      iconClass: 'bg-teal/15 text-teal',
-      ctaClass: 'text-navy',
+      surface: 'bg-white border-black/8',
+      tag: 'text-teal',
+      title: 'text-navy',
+      body: 'text-navy/70',
+      cta: 'text-navy',
     },
     {
       key: 'take',
       data: t.paths.take,
       href: '/volunteer',
-      Icon: HandHeart,
-      cardClass: 'bg-navy border-navy text-white',
-      iconClass: 'bg-white/15 text-white',
-      ctaClass: 'text-white',
+      surface: 'bg-navy border-navy',
+      tag: 'text-yellow',
+      title: 'text-white',
+      body: 'text-white/75',
+      cta: 'text-yellow',
     },
     {
       key: 'support',
       data: t.paths.support,
       href: '/give',
-      Icon: Heart,
-      cardClass: 'bg-card border-border',
-      iconClass: 'bg-red/10 text-red',
-      ctaClass: 'text-red',
+      surface: 'bg-white border-black/8',
+      tag: 'text-red',
+      title: 'text-navy',
+      body: 'text-navy/70',
+      cta: 'text-red',
     },
   ] as const
 
   return (
-    <section aria-labelledby="paths-title" className="py-24">
-      <div className="mx-auto max-w-6xl px-4 sm:px-6">
-        <span aria-hidden="true" className="block h-1 w-10 bg-red" />
+    <section aria-labelledby="paths-title" className="bg-red py-16 sm:py-24">
+      <div className="mx-auto max-w-[1120px] px-5 sm:px-8">
         <h2
           id="paths-title"
-          className="mt-4 font-display text-4xl font-bold text-navy sm:text-5xl"
+          className="font-display text-[clamp(2rem,4.5vw,2.75rem)] font-extrabold tracking-[-0.02em] text-white"
         >
           {t.paths.title}
         </h2>
-        <p className="mt-3 text-lg text-ink/75">{t.paths.subhead}</p>
+        <p className="section-lede mt-3 max-w-xl text-lg leading-relaxed font-medium text-white/85 sm:text-xl">
+          {t.paths.subhead}
+        </p>
 
-        <div className="mt-10 grid gap-6 md:grid-cols-3">
-          {paths.map(({ key, data, href, Icon, cardClass, iconClass, ctaClass }) => {
-            const isDark = key === 'take'
-            return (
-              <Link
-                key={key}
-                to={href}
-                className={`group flex flex-col rounded-2xl border p-7 shadow-sm transition-transform hover:-translate-y-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${cardClass}`}
-              >
-                <span
-                  className={`flex h-12 w-12 items-center justify-center rounded-xl ${iconClass}`}
+        <div className="mt-10 grid gap-5 sm:mt-12 md:grid-cols-3">
+          {paths.map(({ key, data, href, surface, tag, title, body, cta }) => (
+            <Link
+              key={key}
+              to={href}
+              className={`group flex flex-col rounded-xl border p-6 transition-shadow hover:shadow-[0_8px_24px_rgba(20,40,75,0.06)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:p-8 ${surface}`}
+            >
+              <span className={`text-[11px] font-semibold tracking-[0.06em] uppercase ${tag}`}>
+                {data.tag}
+              </span>
+              <h3 className={`mt-3 font-display text-[1.4rem] leading-tight font-semibold sm:text-[1.55rem] ${title}`}>
+                {data.title}
+              </h3>
+              <p className={`mt-3 flex-1 text-[15px] leading-relaxed ${body}`}>{data.body}</p>
+              <span className={`mt-6 inline-flex items-center gap-2 text-[14px] font-semibold ${cta}`}>
+                {data.cta}
+                <ArrowRight
+                  className="h-4 w-4 transition-transform group-hover:translate-x-1"
                   aria-hidden="true"
-                >
-                  <Icon className="h-6 w-6" />
-                </span>
-                <span
-                  className={`kicker mt-5 ${isDark ? 'text-yellow' : 'text-teal'}`}
-                >
-                  {data.tag}
-                </span>
-                <h3
-                  className={`mt-2 font-display text-3xl font-bold ${
-                    isDark ? 'text-white' : 'text-navy'
-                  }`}
-                >
-                  {data.title}
-                </h3>
-                <p
-                  className={`mt-3 flex-1 text-base leading-relaxed ${
-                    isDark ? 'text-white/85' : 'text-ink/85'
-                  }`}
-                >
-                  {data.body}
-                </p>
-                <span
-                  className={`mt-6 inline-flex items-center gap-2 text-base font-semibold ${ctaClass}`}
-                >
-                  {data.cta}
-                  <ArrowRight
-                    className="h-5 w-5 transition-transform group-hover:translate-x-1"
-                    aria-hidden="true"
-                  />
-                </span>
-              </Link>
-            )
-          })}
+                />
+              </span>
+            </Link>
+          ))}
         </div>
       </div>
     </section>
