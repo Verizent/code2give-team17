@@ -80,11 +80,33 @@ These four are **unwrapped** — no `data:` envelope, as they are probes, not re
 | `GET` | `/api/community-posts` | None | Approved Voices posts, paginated |
 | `POST` | `/api/community-posts` | None | Submit a Voices post (goes to moderation queue) |
 | `GET` | `/api/impact` | None | Current impact period figures |
-| `GET` | `/api/admin/community-posts` | Admin¹ | Moderation queue (all pending posts) |
-| `POST` | `/api/admin/community-posts/:id/moderate` | Admin¹ | Approve or reject a Voices post |
+| `GET` | `/api/admin/community-posts` | Admin | Moderation queue (all pending posts) |
+| `POST` | `/api/admin/community-posts/:id/moderate` | Admin | Approve or reject a Voices post |
+| `GET` | `/api/opportunities` | None | Volunteer opportunity listings (open/full) |
+| `GET` | `/api/opportunities/:id` | None | Single opportunity |
+| `POST` | `/api/email-verifications` | Rate-limited | Start email verification |
+| `PUT` | `/api/email-verifications/:id/confirmation` | None | Confirm 6-digit code, receive `verification_token` |
+| `POST` | `/api/volunteers` | None | Register volunteer with `verification_token` |
+| `GET` | `/api/volunteers/:token` | None | Volunteer page (by anonymous token) |
+| `PUT` | `/api/volunteers/:token/account` | Auth | Claim permanent account by linking auth user |
+| `GET` | `/api/volunteer/me` | Auth | Volunteer profile with hours, badges, signups |
+| `POST` | `/api/volunteer/interest` | Optional auth | Programme or opportunity interest |
+| `POST` | `/api/volunteer-signups` | Optional auth | Create signup |
+| `DELETE` | `/api/volunteer/signups/:id` | Auth | Cancel own signup |
+| `GET` | `/api/admin/postings` | Admin | List all opportunities (every status) |
+| `POST` | `/api/admin/postings` | Admin | Create opportunity |
+| `PATCH` | `/api/admin/postings/:id` | Admin | Update opportunity |
+| `DELETE` | `/api/admin/postings/:id` | Admin | Delete opportunity |
+| `POST` | `/api/admin/attendance/:id/attendance` | Admin | Bulk mark attendance + evaluate badges |
+| `POST` | `/api/admin/handson/sync` | Admin | DEMO-ONLY HandsOn stub sync |
 
-> ¹ **DEMO-ONLY: admin routes have no auth guard yet.** `requireRole('admin')` will be added
-> once BE1 ships the `profiles` table and auth middleware (CONTEXT.md §30).
+> **DEMO-ONLY: `POST /api/admin/handson/sync` returns a stub.** Real integration
+> needs HandsOn partner credentials and an actual client implementation (§17).
+> `HANDSON_MODE=live` currently 400s.
+
+> **DEMO-ONLY: `EMAIL_MODE=console`** returns `demo_code` in the verification
+> start response so the demo can read it back without an inbox. Real version
+> uses Resend delivery and omits the plaintext code from the API response.
 
 > **DEMO-ONLY: `POST /api/community-posts` has no rate limit.** Real version needs
 > `express-rate-limit` (adds to the shared lockfile — flag in the PR).
