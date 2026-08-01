@@ -10,26 +10,26 @@ export function CommunityPage() {
   const { t } = useSite()
 
   return (
-    <div className="min-h-screen bg-paper">
+    <div className="min-h-screen bg-white">
       <SkipLink />
       <SiteHeader />
       <main id="main">
-        <section className="relative overflow-hidden">
-          <div className="mx-auto max-w-6xl px-4 pt-14 pb-8 sm:px-6 sm:pt-20">
-            <p className="kicker text-teal">{t.community.eyebrow}</p>
-            <h1 className="mt-4 max-w-3xl font-display text-5xl leading-[0.98] font-bold text-navy sm:text-7xl">
+        <section className="border-b border-black/5 bg-white">
+          <div className="mx-auto max-w-[1120px] px-4 py-10 sm:px-8 sm:py-16">
+            <p className="kicker text-red">{t.community.eyebrow}</p>
+            <h1 className="mt-3 max-w-3xl font-display text-[clamp(2rem,7vw,3.75rem)] leading-[1.1] font-extrabold text-navy">
               {t.community.title}
             </h1>
-            <p className="mt-5 max-w-2xl text-lg leading-relaxed text-ink/90 sm:text-xl">
+            <p className="section-lede mt-4 max-w-2xl text-base leading-relaxed text-navy/80 sm:mt-5 sm:text-xl">
               {t.community.subhead}
             </p>
-            <div className="mt-8">
+            <div className="mt-6 sm:mt-8">
               <ShareMomentButton />
             </div>
           </div>
         </section>
 
-        <div className="mx-auto max-w-6xl px-4 pb-20 sm:px-6">
+        <div className="mx-auto max-w-[1120px] px-4 py-10 sm:px-8 sm:py-16">
           <FollowProgramPanel />
           <StoryFeed />
         </div>

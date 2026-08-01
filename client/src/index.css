@@ -1,15 +1,19 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
 
+/* Love 21 — Prism identity + CONTEXT §24
+   Paper ground · crimson CTA · navy type · real L2VE / 21 marks */
+
 @theme inline {
-  --color-paper: #f4f1e8;
-  --color-ink: #23272e;
-  --color-navy: #17233f;
-  --color-sage: #cdddd0;
-  --color-teal: #3c766a;
-  --color-yellow: #e0a52c;
-  --color-red: #c9503a;
-  --color-pink: #d8b7ac;
+  --color-paper: #fffdf7;
+  --color-ink: #1a1a1a;
+  --color-navy: #14284b;
+  --color-amber: #fff3d1;
+  --color-teal: #00857d;
+  --color-yellow: #ffc72c;
+  --color-red: #e4002b;
+  --color-pink: #f5a3b6;
+  --color-sage: #fff3d1;
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -31,43 +35,44 @@
   --color-ring: var(--ring);
 
   --font-sans: var(--font-inter), var(--font-noto-tc), var(--font-noto-sc), ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-zilla), var(--font-noto-tc), var(--font-noto-sc), Georgia, 'Times New Roman', serif;
-  --font-mono: var(--font-roboto-mono), ui-monospace, 'SF Mono', Menlo, monospace;
+  --font-display: var(--font-serif), var(--font-noto-tc), var(--font-noto-sc), Georgia, 'Times New Roman', serif;
+  --font-mono: ui-monospace, 'SF Mono', Menlo, monospace;
 
-  --radius-sm: 4px;
-  --radius-md: 6px;
-  --radius-lg: 8px;
-  --radius-xl: 10px;
-  --radius-2xl: 14px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-2xl: 24px;
 }
 
 :root {
   color-scheme: light;
   --font-inter: 'Inter', ui-sans-serif, system-ui, sans-serif;
-  --font-zilla: 'Zilla Slab', Georgia, 'Times New Roman', serif;
-  --font-roboto-mono: 'Roboto Mono', ui-monospace, Menlo, monospace;
+  --font-serif: 'Source Serif 4', Georgia, 'Times New Roman', serif;
   --font-noto-tc: 'Noto Sans TC', sans-serif;
   --font-noto-sc: 'Noto Sans SC', sans-serif;
 
-  --background: #f4f1e8;
-  --foreground: #23272e;
+  --background: #ffffff;
+  --foreground: #1a1a1a;
   --card: #ffffff;
-  --card-foreground: #23272e;
+  --card-foreground: #1a1a1a;
   --popover: #ffffff;
-  --popover-foreground: #23272e;
-  --primary: #c9503a;
+  --popover-foreground: #1a1a1a;
+  --primary: #e4002b;
   --primary-foreground: #ffffff;
-  --secondary: #17233f;
+  --secondary: #14284b;
   --secondary-foreground: #ffffff;
-  --muted: #e9e4d6;
-  --muted-foreground: #55585f;
-  --accent: #e0a52c;
-  --accent-foreground: #23272e;
-  --destructive: #c9503a;
-  --border: #ded7c6;
-  --input: #ded7c6;
-  --ring: #17233f;
-  --radius: 8px;
+  --muted: #f7f5f0;
+  --muted-foreground: #5a5a5a;
+  --accent: #ffc72c;
+  --accent-foreground: #1a1a1a;
+  --destructive: #e4002b;
+  --border: rgba(20, 40, 75, 0.1);
+  --input: rgba(20, 40, 75, 0.14);
+  --ring: #14284b;
+  --radius: 10px;
+  --text-base: 16px;
+  --text-lh: 1.6;
 }
 
 @layer base {
@@ -76,12 +81,20 @@
   }
   html {
     scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
   }
   body {
     @apply bg-background text-foreground antialiased;
     font-family: var(--font-sans);
-    font-size: 18px;
-    line-height: 1.6;
+    font-size: var(--text-base);
+    line-height: var(--text-lh);
+    overflow-x: hidden;
+  }
+  img,
+  video,
+  svg {
+    max-width: 100%;
+    height: auto;
   }
   h1,
   h2,
@@ -89,12 +102,100 @@
   h4 {
     @apply font-display text-balance;
     color: var(--color-navy);
-    letter-spacing: -0.01em;
+    letter-spacing: -0.015em;
+    font-weight: 600;
   }
   .kicker {
-    @apply font-mono text-xs font-medium uppercase;
-    letter-spacing: 0.18em;
+    font-family: var(--font-sans);
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
   }
+}
+
+/* UK Easy Read — short words + pictures left / text right + large clear type.
+   Not a browser “reading mode” (bigger text only). */
+html[data-easy-read='true'] {
+  --text-base: 22px;
+  --text-lh: 1.8;
+}
+
+@media (min-width: 640px) {
+  html[data-easy-read='true'] {
+    --text-base: 24px;
+    --text-lh: 1.85;
+  }
+}
+
+html[data-easy-read='true'] body {
+  letter-spacing: 0.01em;
+  color: #111;
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+html[data-easy-read='true'] h1 {
+  font-size: clamp(2rem, 6vw, 3.25rem) !important;
+  line-height: 1.2 !important;
+  letter-spacing: 0 !important;
+  font-weight: 700 !important;
+}
+
+html[data-easy-read='true'] h2 {
+  font-size: clamp(1.5rem, 4vw, 2.25rem) !important;
+  line-height: 1.3 !important;
+  font-weight: 700 !important;
+}
+
+html[data-easy-read='true'] h3 {
+  font-size: 1.35rem !important;
+  line-height: 1.35 !important;
+  font-weight: 700 !important;
+}
+
+html[data-easy-read='true'] .kicker {
+  font-size: 1rem;
+  letter-spacing: 0.04em;
+  text-transform: none;
+}
+
+html[data-easy-read='true'] a:not(.sr-only),
+html[data-easy-read='true'] button:not(.sr-only) {
+  min-height: 52px;
+}
+
+html[data-easy-read='true'] .site-header .header-compact {
+  min-height: 48px;
+}
+
+html[data-easy-read='true'] .brand-pattern-band,
+html[data-easy-read='true'] .easy-hide {
+  display: none !important;
+}
+
+html[data-easy-read='true'] .hero-lede,
+html[data-easy-read='true'] .section-lede,
+html[data-easy-read='true'] .easy-read-words p {
+  font-size: 1.15em;
+  line-height: 1.7;
+  max-width: 40rem;
+  color: #1a1a1a;
+}
+
+html[data-easy-read='true'] .easy-read-row {
+  margin-block: 0.25rem;
+}
+
+html[data-easy-read='true'] .easy-read-pic {
+  box-shadow: none;
+}
+
+html[data-easy-read='true'] .text-navy\/60,
+html[data-easy-read='true'] .text-navy\/55,
+html[data-easy-read='true'] .text-navy\/70,
+html[data-easy-read='true'] .text-ink\/75,
+html[data-easy-read='true'] .text-ink\/85 {
+  color: #1a1a1a !important;
+  opacity: 1;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -116,18 +217,4 @@
 }
 .no-scrollbar::-webkit-scrollbar {
   display: none;
-}
-
-@keyframes fade-rise {
-  from {
-    opacity: 0;
-    transform: translateY(12px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-.animate-fade-rise {
-  animation: fade-rise 0.5s ease-out both;
 }
