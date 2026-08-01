@@ -78,6 +78,8 @@ These four are **unwrapped** — no `data:` envelope, as they are probes, not re
 | `GET` | `/api/articles` | None | Paginated article list |
 | `GET` | `/api/articles/:slug` | None | Single article by slug |
 | `GET` | `/api/impact` | None | Current impact period figures |
+| `GET` | `/api/opportunities` | None | Upcoming volunteer listings (`starts_at` from Supabase) |
+| `GET` | `/api/opportunities/:id` | None | Single open/full listing by UUID |
 
 **`GET /api/articles`** query parameters:
 

@@ -4,6 +4,7 @@ import { Menu, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useSite } from '@/components/site-provider'
 import { BrandLogo } from '@/components/brand-logo'
+import { useAuth } from '@/features/auth/AuthProvider'
 import { LOCALES, type Locale } from '@/lib/strings'
 
 function LanguageSwitch({ className }: { className?: string }) {
@@ -75,6 +76,7 @@ function EasyReadToggle({ compact = false }: { compact?: boolean }) {
 
 export function SiteHeader() {
   const { t, easyRead, setEasyRead } = useSite()
+  const auth = useAuth()
   const { pathname } = useLocation()
   const [open, setOpen] = useState(false)
 
@@ -155,6 +157,21 @@ export function SiteHeader() {
 
           <div className="hidden items-center gap-2 lg:flex">
             <EasyReadToggle />
+            {auth.user ? (
+              <Link
+                to="/me"
+                className="inline-flex h-10 items-center rounded-md px-3 text-[14px] font-semibold text-navy hover:bg-navy/5"
+              >
+                {t.me.title}
+              </Link>
+            ) : (
+              <Link
+                to="/login"
+                className="inline-flex h-10 items-center rounded-md px-3 text-[14px] font-semibold text-navy hover:bg-navy/5"
+              >
+                {t.nav.login}
+              </Link>
+            )}
             <Link
               to="/volunteer"
               className="inline-flex h-10 items-center rounded-md border border-red px-4 text-[14px] font-semibold text-red hover:bg-red/5 xl:px-5"
@@ -215,6 +232,13 @@ export function SiteHeader() {
                 className="mt-3 flex min-h-[48px] items-center justify-center rounded-md border border-red font-semibold text-red"
               >
                 {t.nav.volunteer}
+              </Link>
+              <Link
+                to={auth.user ? '/me' : '/login'}
+                onClick={() => setOpen(false)}
+                className="mt-2 flex min-h-[48px] items-center justify-center rounded-md border border-navy font-semibold text-navy"
+              >
+                {auth.user ? t.me.title : t.nav.login}
               </Link>
               <Link
                 to="/give"

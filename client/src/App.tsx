@@ -2,10 +2,12 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import { HomePage } from '@/pages/HomePage'
 import { CommunityPage } from '@/pages/CommunityPage'
 import { MyImpactPage } from '@/pages/MyImpactPage'
+import { LoginPage } from '@/pages/LoginPage'
 import { AdminPage } from '@/pages/AdminPage'
 import { VolunteerPage } from '@/pages/VolunteerPage'
 import { VolunteerDetailPage } from '@/pages/VolunteerDetailPage'
 import { VolunteerSuccessPage } from '@/pages/VolunteerSuccessPage'
+import { VolunteerBriefingPage } from '@/pages/VolunteerBriefingPage'
 import { GivePage } from '@/pages/GivePage'
 import { GiveWishlistPage } from '@/pages/GiveWishlistPage'
 import { CampaignCreatePage } from '@/pages/CampaignCreatePage'
@@ -19,8 +21,10 @@ export default function App() {
     <Routes>
       <Route path="/" element={<HomePage />} />
       <Route path="/community" element={<CommunityPage />} />
+      <Route path="/login" element={<LoginPage />} />
       <Route path="/volunteer" element={<VolunteerPage />} />
       <Route path="/volunteer/success" element={<VolunteerSuccessPage />} />
+      <Route path="/volunteer/briefing/:signupId" element={<VolunteerBriefingPage />} />
       <Route path="/volunteer/:id" element={<VolunteerDetailPage />} />
       <Route path="/give" element={<GivePage />} />
       <Route path="/give/wishlist" element={<GiveWishlistPage />} />

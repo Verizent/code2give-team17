@@ -9,6 +9,7 @@ export function VolunteerSuccessPage() {
   const v = t.volunteer
   const [params] = useSearchParams()
   const session = params.get('session') || 'this session'
+  const signupId = params.get('signup')
 
   return (
     <div className="min-h-screen bg-paper">
@@ -20,7 +21,15 @@ export function VolunteerSuccessPage() {
           {v.successTitle.replace('{session}', session)}
         </h1>
         <p className="mt-4 text-lg leading-relaxed text-navy/75">{v.successBody}</p>
-        <div className="mt-10 flex flex-col gap-3 sm:flex-row">
+        <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+          {signupId && (
+            <Link
+              to={`/volunteer/briefing/${signupId}`}
+              className="inline-flex min-h-12 items-center justify-center rounded-md bg-navy px-6 text-[15px] font-bold text-white"
+            >
+              {v.successBriefingCta}
+            </Link>
+          )}
           <Link
             to="/give"
             className="inline-flex min-h-12 items-center justify-center rounded-md bg-red px-6 text-[15px] font-bold text-white hover:bg-red/90"
@@ -28,8 +37,14 @@ export function VolunteerSuccessPage() {
             {v.successGiveCta}
           </Link>
           <Link
-            to="/"
+            to={`/login?redirect=/me&email=${encodeURIComponent(params.get('email') || '')}`}
             className="inline-flex min-h-12 items-center justify-center rounded-md border border-navy px-6 text-[15px] font-semibold text-navy"
+          >
+            {v.successSaveCta}
+          </Link>
+          <Link
+            to="/"
+            className="inline-flex min-h-12 items-center justify-center rounded-md border border-navy/30 px-6 text-[15px] font-semibold text-navy"
           >
             {v.successHome}
           </Link>

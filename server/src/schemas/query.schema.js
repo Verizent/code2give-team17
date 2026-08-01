@@ -54,9 +54,28 @@ const slugParamSchema = z.object({
   slug: z.string().min(1).max(120),
 });
 
+/**
+ * `GET /api/opportunities` — upcoming volunteer listings from Supabase.
+ */
+const opportunityListQuerySchema = listQuerySchema
+  .omit({ locale: true })
+  .extend({
+    programme: z
+      .enum(["sports", "fitness", "nutrition", "family_support", "community_education"])
+      .optional(),
+    source: z.enum(["internal", "handson"]).optional(),
+  });
+
+/** `GET /api/opportunities/:id`. */
+const opportunityIdParamSchema = z.object({
+  id: z.string().uuid(),
+});
+
 module.exports = {
   listQuerySchema,
   localeQuerySchema,
   articleListQuerySchema,
   slugParamSchema,
+  opportunityListQuerySchema,
+  opportunityIdParamSchema,
 };

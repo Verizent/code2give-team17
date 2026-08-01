@@ -181,21 +181,42 @@ html[data-easy-read='true'] .easy-read-words p {
   color: #1a1a1a;
 }
 
+/* Dark heroes (navy / teal / red) — keep lede white, not ink */
+html[data-easy-read='true'] .section-lede-on-dark,
+html[data-easy-read='true'] .hero-lede-on-dark {
+  color: #ffffff !important;
+}
+
+html[data-easy-read='true'] .text-white\/80,
+html[data-easy-read='true'] .text-white\/85,
+html[data-easy-read='true'] .text-white\/75,
+html[data-easy-read='true'] .text-white\/70 {
+  color: #ffffff !important;
+  opacity: 1;
+}
+
+html[data-easy-read='true'] .text-navy\/60,
+html[data-easy-read='true'] .text-navy\/55,
+html[data-easy-read='true'] .text-navy\/70,
+html[data-easy-read='true'] .text-navy\/45,
+html[data-easy-read='true'] .text-ink\/75,
+html[data-easy-read='true'] .text-ink\/85 {
+  color: #1a1a1a !important;
+  opacity: 1;
+}
+
+/* Mode / choice cards need a clear border in Easy Read */
+html[data-easy-read='true'] .easy-choice-card {
+  border-color: #14284b !important;
+  border-width: 2px;
+}
+
 html[data-easy-read='true'] .easy-read-row {
   margin-block: 0.25rem;
 }
 
 html[data-easy-read='true'] .easy-read-pic {
   box-shadow: none;
-}
-
-html[data-easy-read='true'] .text-navy\/60,
-html[data-easy-read='true'] .text-navy\/55,
-html[data-easy-read='true'] .text-navy\/70,
-html[data-easy-read='true'] .text-ink\/75,
-html[data-easy-read='true'] .text-ink\/85 {
-  color: #1a1a1a !important;
-  opacity: 1;
 }
 
 @media (prefers-reduced-motion: reduce) {

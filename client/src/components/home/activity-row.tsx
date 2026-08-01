@@ -1,6 +1,9 @@
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { CalendarDays, MapPin, ArrowRight } from 'lucide-react'
 import { useSite } from '@/components/site-provider'
+import { loadOpportunities } from '@/features/volunteering/api'
+import type { VolunteerOpportunity } from '@/features/volunteering/fixtures'
 import { activities, type Activity } from '@/lib/mock'
 import { cn } from '@/lib/utils'
 
@@ -11,10 +14,24 @@ const accentBar: Record<Activity['accent'], string> = {
   navy: 'bg-navy',
 }
 
+const ACCENTS: Activity['accent'][] = ['pink', 'teal', 'navy', 'yellow']
+
+function toActivity(opportunity: VolunteerOpportunity, index: number): Activity {
+  return {
+    id: opportunity.id,
+    title: opportunity.title,
+    date: opportunity.when,
+    place: opportunity.place,
+    category: opportunity.programme,
+    recruiting: opportunity.recruiting,
+    accent: ACCENTS[index % ACCENTS.length],
+  }
+}
+
 function ActivityCard({ activity }: { activity: Activity }) {
   const { locale, t } = useSite()
   const isVolunteer = activity.recruiting
-  const href = isVolunteer ? '/volunteer' : '/community'
+  const href = isVolunteer ? `/volunteer/${activity.id}` : '/community'
 
   return (
     <Link
@@ -63,6 +80,22 @@ function ActivityCard({ activity }: { activity: Activity }) {
 
 export function ActivityRow() {
   const { t } = useSite()
+  const [items, setItems] = useState<Activity[]>(activities)
+
+  useEffect(() => {
+    let cancelled = false
+    void loadOpportunities()
+      .then((opps) => {
+        if (cancelled || opps.length === 0) return
+        setItems(opps.slice(0, 5).map(toActivity))
+      })
+      .catch(() => {
+        /* Keep mock activities when the opportunities API is down. */
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   return (
     <section aria-labelledby="activities-title" className="bg-amber py-16 sm:py-24">
@@ -88,7 +121,7 @@ export function ActivityRow() {
           className="pointer-events-none absolute inset-y-0 right-0 z-10 w-4 bg-gradient-to-l from-amber to-transparent sm:w-10"
         />
         <ul className="no-scrollbar mx-auto flex max-w-[1120px] snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain px-4 pb-2 sm:gap-5 sm:px-8">
-          {activities.map((activity) => (
+          {items.map((activity) => (
             <li key={activity.id} className="flex">
               <ActivityCard activity={activity} />
             </li>

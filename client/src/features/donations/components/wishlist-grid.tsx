@@ -1,14 +1,21 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { useSite } from '@/components/site-provider'
 import { listWishlist, type WishlistItem } from '@/features/donations/api'
+import { addPledge, getExtraPledged } from '@/features/donations/wishlist-store'
 import { trackEvent } from '@/lib/analytics'
 
 export function WishlistGrid() {
   const { locale, t } = useSite()
   const g = t.give
-  const items = listWishlist()
+  const baseItems = listWishlist()
+  const [, setTick] = useState(0)
+  const items = baseItems.map((item) => ({
+    ...item,
+    pledged: item.pledged + getExtraPledged(item.id),
+  }))
   const [selected, setSelected] = useState<WishlistItem | null>(null)
   const [sent, setSent] = useState(false)
+  const [qty, setQty] = useState(1)
 
   useEffect(() => {
     if (!selected) return
@@ -19,10 +26,10 @@ export function WishlistGrid() {
 
   function submit(event: FormEvent) {
     event.preventDefault()
-    if (selected) {
-      trackEvent('wishlist_pledge', { id: selected.id })
-      console.log('[DEMO-ONLY] wishlist pledge', selected.id)
-    }
+    if (!selected) return
+    addPledge(selected.id, qty)
+    trackEvent('wishlist_pledge', { id: selected.id, qty })
+    setTick((n) => n + 1)
     setSent(true)
   }
 
@@ -59,6 +66,7 @@ export function WishlistGrid() {
                     disabled={item.pledged >= item.needed}
                     onClick={() => {
                       setSent(false)
+                      setQty(1)
                       setSelected(item)
                     }}
                     className="mt-5 inline-flex min-h-11 w-full items-center justify-center rounded-md bg-navy px-5 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40"
@@ -103,11 +111,7 @@ export function WishlistGrid() {
             ) : (
               <form onSubmit={submit} className="mt-6 space-y-4">
                 <label className="block text-sm font-semibold text-navy">
-                  Name
-                  <input required className="mt-2 min-h-12 w-full rounded-md border border-navy/20 px-4" />
-                </label>
-                <label className="block text-sm font-semibold text-navy">
-                  Email
+                  {g.emailLabel}
                   <input
                     required
                     type="email"
@@ -119,11 +123,16 @@ export function WishlistGrid() {
                   <input
                     required
                     type="number"
-                    min="1"
-                    max={selected.needed - selected.pledged}
-                    defaultValue="1"
+                    min={1}
+                    max={Math.max(1, selected.needed - selected.pledged)}
+                    value={qty}
+                    onChange={(e) => setQty(Number(e.target.value) || 1)}
                     className="mt-2 min-h-12 w-full rounded-md border border-navy/20 px-4"
                   />
+                </label>
+                <label className="block text-sm font-semibold text-navy">
+                  {g.pledgeNote}
+                  <input className="mt-2 min-h-12 w-full rounded-md border border-navy/20 px-4" />
                 </label>
                 <button
                   type="submit"

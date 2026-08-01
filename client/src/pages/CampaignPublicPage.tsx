@@ -1,13 +1,12 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { SiteHeader } from '@/components/site-header'
 import { SiteFooter } from '@/components/site-footer'
 import { SkipLink } from '@/components/skip-link'
 import { useSite } from '@/components/site-provider'
-import { getCampaign } from '@/features/donations/api'
+import { getCampaign, type Campaign } from '@/features/donations/api'
 import { CampaignProgress } from '@/features/donations/components/campaign-progress'
 import { ImpactLadder } from '@/features/donations/components/impact-ladder'
-import { trackEvent } from '@/lib/analytics'
 
 export function CampaignPublicPage() {
   const { slug = '' } = useParams()
@@ -15,7 +14,30 @@ export function CampaignPublicPage() {
   const g = t.give
   const navigate = useNavigate()
   const [showDonate, setShowDonate] = useState(false)
-  const campaign = getCampaign(slug)
+  const [campaign, setCampaign] = useState<Campaign | null | undefined>(undefined)
+
+  useEffect(() => {
+    let cancelled = false
+    void getCampaign(slug).then((row) => {
+      if (!cancelled) setCampaign(row ?? null)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [slug])
+
+  if (campaign === undefined) {
+    return (
+      <div className="min-h-screen bg-paper">
+        <SkipLink />
+        <SiteHeader />
+        <main id="main" className="mx-auto max-w-2xl px-4 py-16">
+          <p className="text-navy/70">…</p>
+        </main>
+        <SiteFooter />
+      </div>
+    )
+  }
 
   if (!campaign) {
     return (
@@ -36,6 +58,8 @@ export function CampaignPublicPage() {
     )
   }
 
+  const isLive = campaign.status === 'approved'
+
   return (
     <div className="min-h-screen bg-paper pb-24 sm:pb-0">
       <SkipLink />
@@ -55,6 +79,11 @@ export function CampaignPublicPage() {
               {g.campaignPending}
             </p>
           )}
+          {campaign.status === 'approved' && (
+            <p className="mb-4 inline-flex rounded-md bg-teal/15 px-3 py-1.5 text-[13px] font-semibold text-teal">
+              {g.campaignApproved}
+            </p>
+          )}
           <h1 className="font-display text-[clamp(1.85rem,5vw,3rem)] font-semibold text-navy">
             {campaign.title}
           </h1>
@@ -62,34 +91,30 @@ export function CampaignPublicPage() {
             {campaign.story}
           </p>
 
+          {campaign.status === 'pending_approval' && (
+            <p className="mt-6 rounded-2xl bg-white p-5 text-navy/75">{g.campaignAwaitingApproval}</p>
+          )}
+
           <div className="mt-8">
             <CampaignProgress raised={campaign.raised_hkd} goal={campaign.goal_hkd} />
           </div>
 
-          <button
-            type="button"
-            onClick={() => setShowDonate(true)}
-            className="mt-8 hidden min-h-12 items-center justify-center rounded-md bg-red px-6 text-[15px] font-bold text-white sm:inline-flex"
-          >
-            {g.campaignDonate}
-          </button>
+          {isLive && (
+            <button
+              type="button"
+              onClick={() => setShowDonate(true)}
+              className="mt-8 hidden min-h-12 items-center justify-center rounded-md bg-red px-6 text-[15px] font-bold text-white sm:inline-flex"
+            >
+              {g.campaignDonate}
+            </button>
+          )}
 
-          {showDonate && (
+          {isLive && showDonate && (
             <div className="mt-10">
               <ImpactLadder
-                onDonate={({ amount, email, frequency, programme }) => {
-                  trackEvent('donate_click', {
-                    amount,
-                    frequency,
-                    programme,
-                    campaign: campaign.slug,
-                  })
-                  const params = new URLSearchParams({
-                    amount: String(amount),
-                    campaign: campaign.slug,
-                  })
-                  if (email) params.set('email', email)
-                  navigate(`/give/thanks?${params}`)
+                campaignSlug={campaign.slug}
+                onDonated={(donationId) => {
+                  navigate(`/give/thanks?donation=${donationId}&campaign=${campaign.slug}`)
                 }}
               />
             </div>
@@ -97,15 +122,17 @@ export function CampaignPublicPage() {
         </div>
       </main>
 
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-black/10 bg-white p-3 sm:hidden">
-        <button
-          type="button"
-          onClick={() => setShowDonate(true)}
-          className="inline-flex min-h-12 w-full items-center justify-center rounded-md bg-red text-[15px] font-bold text-white"
-        >
-          {g.stickyDonate}
-        </button>
-      </div>
+      {isLive && (
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-black/10 bg-white p-3 sm:hidden">
+          <button
+            type="button"
+            onClick={() => setShowDonate(true)}
+            className="inline-flex min-h-12 w-full items-center justify-center rounded-md bg-red text-[15px] font-bold text-white"
+          >
+            {g.stickyDonate}
+          </button>
+        </div>
+      )}
 
       <SiteFooter />
     </div>

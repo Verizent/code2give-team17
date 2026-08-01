@@ -8,12 +8,20 @@ import { cn } from '@/lib/utils'
 export function SkillChips({
   selected,
   onChange,
+  title,
+  hint,
+  hideClear,
 }: {
   selected: VolunteerSkill[]
   onChange: (skills: VolunteerSkill[]) => void
+  title?: string
+  hint?: string
+  hideClear?: boolean
 }) {
   const { t } = useSite()
   const v = t.volunteer
+  const heading = title ?? v.skillsTitle
+  const subhead = hint ?? v.skillsHint
 
   function toggle(skill: VolunteerSkill) {
     onChange(
@@ -29,13 +37,10 @@ export function SkillChips({
         id="volunteer-skills-title"
         className="font-display text-3xl font-semibold text-navy"
       >
-        {v.skillsTitle}
+        {heading}
       </h2>
-      <p className="mt-2 text-sm text-navy/60">{v.skillsHint}</p>
-      <p className="mt-2 text-xs font-bold tracking-wide text-teal uppercase">
-        {v.demoMatch}
-      </p>
-      <div className="mt-5 flex flex-wrap gap-2" aria-label={v.skillsTitle}>
+      <p className="mt-2 text-sm text-navy/60">{subhead}</p>
+      <div className="mt-5 flex flex-wrap gap-2" aria-label={heading}>
         {VOLUNTEER_SKILLS.map((skill) => {
           const active = selected.includes(skill)
           return (
@@ -56,7 +61,7 @@ export function SkillChips({
           )
         })}
       </div>
-      {selected.length > 0 && (
+      {!hideClear && selected.length > 0 && (
         <button
           type="button"
           onClick={() => onChange([])}

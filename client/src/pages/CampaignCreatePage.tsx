@@ -3,7 +3,6 @@ import { SiteHeader } from '@/components/site-header'
 import { SiteFooter } from '@/components/site-footer'
 import { SkipLink } from '@/components/skip-link'
 import { useSite } from '@/components/site-provider'
-import { DemoBanner } from '@/features/donations/components/demo-banner'
 import { CampaignForm } from '@/features/donations/components/campaign-form'
 
 export function CampaignCreatePage() {
@@ -24,10 +23,6 @@ export function CampaignCreatePage() {
         <h1 className="mt-6 font-display text-3xl font-semibold text-navy sm:text-4xl">
           {g.createCampaignCta}
         </h1>
-        <div className="mt-4">
-          <DemoBanner />
-        </div>
-        <p className="mt-3 text-[13px] font-medium text-navy/55">{g.fundraisePendingNote}</p>
         <div className="mt-8">
           <CampaignForm />
         </div>

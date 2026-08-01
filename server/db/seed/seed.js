@@ -15,6 +15,7 @@ const { getSupabase } = require("../../src/config/supabase");
 const { articles } = require("./articles.seed");
 const { communityPosts } = require("./community-posts.seed");
 const { impactPeriods } = require("./impact.seed");
+const { opportunities } = require("./opportunities.seed");
 
 async function upsert(table, rows, onConflict) {
   const { data, error } = await getSupabase()
@@ -61,13 +62,28 @@ async function seedCommunityPosts() {
 async function main() {
   console.log("Seeding Love 21 content (upsert only, nothing is deleted)\n");
 
-  const articleCount = await upsert("articles", articles, "slug");
-  console.log(`  articles          ${articleCount} upserted`);
+  try {
+    const articleCount = await upsert("articles", articles, "slug");
+    console.log(`  articles          ${articleCount} upserted`);
+  } catch (error) {
+    console.warn(`  articles          skipped — ${error.message}`);
+  }
 
-  const impactCount = await upsert("impact_periods", impactPeriods, "period_start,period_end");
-  console.log(`  impact_periods    ${impactCount} upserted`);
+  try {
+    const impactCount = await upsert("impact_periods", impactPeriods, "period_start,period_end");
+    console.log(`  impact_periods    ${impactCount} upserted`);
+  } catch (error) {
+    console.warn(`  impact_periods    skipped — ${error.message}`);
+  }
 
-  await seedCommunityPosts();
+  try {
+    await seedCommunityPosts();
+  } catch (error) {
+    console.warn(`  community_posts   skipped — ${error.message}`);
+  }
+
+  const opportunityCount = await upsert("volunteer_opportunities", opportunities, "id");
+  console.log(`  volunteer_opportunities ${opportunityCount} upserted`);
 
   console.log("\nDone.");
 }

@@ -36,8 +36,7 @@ export function CorporatePanel() {
       </div>
 
       <div className="rounded-2xl bg-amber p-6 sm:p-8">
-        <p className="text-xs font-bold tracking-wide text-teal uppercase">Demo-only</p>
-        <h3 className="mt-2 font-display text-2xl font-semibold text-navy">
+        <h3 className="font-display text-2xl font-semibold text-navy">
           {v.corporateFormTitle}
         </h3>
         {sent ? (

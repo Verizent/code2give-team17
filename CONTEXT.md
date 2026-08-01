@@ -956,7 +956,7 @@ Out of scope for the hackathon; required before any real use.
 - [ ] Live Stripe keys on Love 21's own account and legal entity
 - [ ] Valid Hong Kong s.88 tax-deductible receipting
 - [ ] PDPO collection statement and consent for all personal data
-- [ ] Campaign approval workflow before fundraisers go public
+- [x] Campaign approval workflow before fundraisers go public — statuses `pending_approval` → `approved` | `rejected`; public list approved-only; `/api/admin/campaigns*` gated by `requireAuth` + `requireRole('admin')`. Apply `20260801_1100_profiles_service_role_grant.sql` so `profiles.role` is readable (until then role falls back to `app_metadata.role`)
 - [ ] Meta app review, or tester role for Love 21's real Instagram account
 - [ ] DNS verification on `love21foundation.com` for email
 - [ ] Photo and name clearance for every story in §4
@@ -1395,7 +1395,7 @@ Everything below is a deliberate decision recorded elsewhere in this document. C
 | Instagram publishing | **Genuinely live** — real posts to a real account | The account is a throwaway we control, app in Development Mode; Love 21's real account needs review or a tester role | §17, §19 |
 | AI caption drafting | Server route, Zod validation, disabled-state degradation | Depends on a local Ollama that will not be running on a judge's machine | §22 |
 | Admin dashboard + insights | Queries, charts, range filter | Generated seed data, including six months of fabricated history | §23 |
-| Campaign creation | Create, page, share | **No approval gate** — anyone can fundraise in the charity's name | §18.2 |
+| Campaign creation | Create, page, share, approval + `requireRole('admin')` moderate | “Your campaigns” keyed to this-browser slugs (no `owner_profile_id` on live table); profiles SELECT grant may still need applying | §18.2 |
 | `POST /api/events` | Batching, beacon, hashing | Unauthenticated; view counts are inflatable | §18.10 |
 | Instagram consent gate | `consent_status` displays in the editor | Blocks nothing | §18.11 |
 | Stories and photography | Sourced from public material | **Name and photo consent unconfirmed** for every §4 story; minors first-initial only | §18.5, §19 |

@@ -4,10 +4,19 @@ import { OpportunityCard } from '@/features/volunteering/components/opportunity-
 
 export function OpportunityList({
   opportunities,
+  loadError,
+  filtered,
 }: {
   opportunities: VolunteerOpportunity[]
+  loadError?: boolean
+  /** True when skill chips are active (empty means no match, not a load failure). */
+  filtered?: boolean
 }) {
   const { t } = useSite()
+
+  let emptyMessage = t.volunteer.emptyList
+  if (loadError) emptyMessage = t.volunteer.loadError
+  else if (!filtered) emptyMessage = t.volunteer.emptyListNoSessions
 
   return (
     <section aria-labelledby="opportunity-list-title">
@@ -24,8 +33,11 @@ export function OpportunityList({
           ))}
         </div>
       ) : (
-        <p className="mt-8 rounded-2xl bg-amber p-6 text-navy/75">
-          {t.volunteer.emptyList}
+        <p
+          role={loadError ? 'alert' : undefined}
+          className="mt-8 rounded-2xl bg-amber p-6 text-navy/75"
+        >
+          {emptyMessage}
         </p>
       )}
     </section>
