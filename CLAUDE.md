@@ -91,6 +91,23 @@ reads it.
 Setup is done and both workspaces run. But **most of CONTEXT.md Part II is the target, not
 the codebase.**
 
+### Branches at a glance
+
+| Branch | State | What it carries |
+|---|---|---|
+| `feature/admin/dashboard` **(current)** | Pushed, not merged | Admin CRUD (articles, sessions, impact, instagram) + public `/api/instagram`. Auth is a **stub** — `middleware/require-auth.js` always grants `role: 'admin'`. |
+| `origin/backend-dev` | Integration target | Everything below **plus the real auth layer** — `middleware/auth.js` verifies Supabase JWTs, `profiles` table with role column, `GET /api/me`, per-route `adminGuard`. Local `backend-dev` is 31 commits behind origin. |
+| `feature/admin/auth` | Merged into `backend-dev` (PR #4) | The real auth work, provisioning trigger, admin-mount guard test. Branch marker only now. |
+| `feature/donations-backend` | Pushed, not merged | Campaigns, wishlist, donors, donations repos/services/routes + `_1050_donations.sql` + the auth plan file. |
+| `feature/news/community-posts` | ✅ merged | Community posts (public submit + admin moderation). |
+| `feature/volunteers-backend/volunteers-and-events-table` | ✅ merged | 7 volunteer tables (live in DB) + schema tests. |
+| `frontend-dev` | Behind origin by 35 | Still the Vite starter — no client work has landed. |
+
+**When merging `feature/admin/dashboard` → `backend-dev`, do not carry the stub forward.**
+Delete `middleware/require-auth.js`, keep backend-dev's `middleware/auth.js`, and rewire the
+admin route guards to whatever backend-dev exports (likely `adminGuard`). Read
+`src/routes/index.js` on `origin/backend-dev` first to see the shape.
+
 **Client — still the stock Vite starter.** `App.jsx` renders a counter, `main.jsx` mounts it
 directly and does not route anywhere, `pages/HomePage.jsx` is a 7-line `<div>HomePage</div>`
 stub nothing imports, and `Navbar.jsx`, `PageNotFound.jsx`, `news/Articles.jsx` are literally
@@ -109,15 +126,30 @@ and (since the volunteer merge) the volunteer SQL schema.** `GET /`, `GET /api`,
   `article.schema.js`, `community-post.schema.js`, `query.schema.js`.
 - `src/middleware/validate.js` — Zod middleware; parsed output lands on
   `request.validatedQuery` / `request.validatedParams` / `request.body`.
-- `src/data/articles.repo.js`, `src/data/impact.repo.js` — Supabase data access.
-- `src/services/content/articles.service.js`, `src/services/content/impact.service.js`.
-- `GET /api/articles`, `GET /api/articles/:slug`, `GET /api/impact` — all live and tested.
+- `src/data/` — `articles.repo.js`, `community-posts.repo.js`, `impact.repo.js`,
+  `instagram.repo.js`, `sessions.repo.js`, plus `supabase-error.js` (`assertOk`).
+- `src/services/content/` — `articles.service.js`, `community-posts.service.js` (honeypot +
+  moderation), `impact.service.js`.
+- `src/services/admin/` — `articles.service.js`, `sessions.service.js`, `impact.service.js`,
+  `instagram.service.js`. Admin services return **raw `_en` / `_zh` columns** — no
+  `resolveLocale`; the admin UI edits both languages.
+- `src/middleware/require-auth.js` — **DEMO-ONLY stub** that always sets
+  `req.user = { id: 'demo-admin', role: 'admin' }`. Real Supabase-JWT version lives on
+  `origin/backend-dev`; do not merge this file forward.
+- `src/middleware/require-role.js` — real 403 logic; correct on its own, but operates on the
+  stub `req.user` here.
+- **Public endpoints:** `GET /api/articles`, `GET /api/articles/:slug`, `GET /api/impact`,
+  `GET /api/community-posts`, `POST /api/community-posts`, `GET /api/instagram`.
+- **Admin endpoints** (guarded by `[requireAuth, requireRole('admin')]` — stubbed on this
+  branch): full CRUD under `/api/admin/{articles,community-posts,impact,instagram,sessions}`.
 - `server/db/seed/` — articles, impact, community-posts; `npm run seed` is safe to re-run
-  (upserts only, never truncates).
+  (upserts only, never truncates). **Sessions is not yet seeded.**
 - `server/src/schema/` — the volunteer track's SQL: `volunteers`, `volunteer_opportunities`,
   `volunteer_signups`, `volunteer_interests`, `badges`, `volunteer_badges`,
   `volunteer_email_verifications`. **Applied to the live project**, and covered by
   `server/test/schema/`.
+- **Tests:** 25 new admin service tests, 132/132 passing on this branch
+  (`.claude/tdd/admin-dashboard.tdd.md` breaks down the guarantees per file).
 
 ### Two SQL homes — know which one you are in
 
@@ -138,7 +170,9 @@ Check both files when touching it.
 
 **The content migrations are still NOT applied.** They are additive and touch nobody else's
 tables. Apply them in the SQL editor, and announce it first: an `alter` while someone is
-rehearsing breaks them mid-run.
+rehearsing breaks them mid-run. `_1050_donations.sql` (on `feature/donations-backend`) and
+`_1060_profiles.sql` (on the merged auth branch — check `mcp__supabase__list_tables`
+before assuming) follow the same rule: written, un-applied, apply-then-announce.
 
 Two things are **deliberately absent** from those files. `profiles` is contested — BE1 owns
 identity in §30 — and two `create table profiles` files is a SQL conflict git merges cleanly
@@ -147,8 +181,9 @@ plain `uuid` with the foreign key left as a commented-out `alter table` in the f
 `content_events` belongs to the later view-tracking step.
 
 **Still not built, despite being described in CONTEXT.md:** `apiClient` and the mock/real
-seam, router, providers, i18n and locale files, design tokens, layouts, auth middleware,
-rate limiting, pino, and any client-side test tooling.
+seam, router, providers, i18n and locale files, design tokens, layouts, rate limiting,
+pino, and any client-side test tooling. Real auth middleware **is** built — on
+`origin/backend-dev`, not on this branch (see "Branches at a glance" above).
 
 [CONTEXT.md §28](CONTEXT.md#28-repository-layout-and-setup-state) is the full inventory and
 the tiebreaker: **where another section describes something as built and §28 does not list
@@ -352,6 +387,31 @@ Never present a fake as real — not to the team, and least of all in demo frami
 Love 21 staff sit on the judging panel (§7, §17 demo-integrity rule). The §26 register lists
 what is already flagged.
 
+## Parallel Claude windows — use `git worktree`
+
+Multiple Claude Code windows work on this repo in parallel. **Never share a single checkout
+across them** — a `git checkout` in one window silently rewrites the tree the other is
+reading, and edits collide mid-tool-call. Each Claude window must run in its own worktree
+pinned to its own branch.
+
+```powershell
+git worktree list                                                # see the current layout
+git worktree add D:/repos/code2give-team17-<name> <branch>       # spin up a new one
+git worktree remove D:/repos/code2give-team17-<name>             # clean up when done
+```
+
+Constraints:
+
+- Two worktrees **cannot** share the same branch — git blocks it.
+- `.env` is gitignored — copy `server/.env` into each new worktree.
+- `node_modules` is gitignored — `npm install` per worktree.
+- `npm test` from **any** worktree writes to the shared live Supabase project. Coordinate
+  before running.
+- Never `cd` between worktrees mid-session; open a new Claude window in the other path.
+
+Confirm your working directory before starting work — `git worktree list` shows which branch
+each path is pinned to.
+
 ## Git workflow (§25)
 
 Nothing lands on `main` without a PR. Branch as `feature/<page_name>/<feature_name>`, where
@@ -365,6 +425,34 @@ reviewed from a diff.
 `CLAUDE.md`, `CONTEXT.md` and `.claude/rules/` are **tracked** as of `9b98d43` — edits to them
 show up in `git status` as normal working-tree changes and belong in a `docs:` commit.
 `.claude/settings.local.json` is the one ignored path (per-machine permission grants).
+
+## Next up before demo (2026-08-03)
+
+Ordered so nothing runs before its dependency:
+
+1. **Apply content migrations** — `_1020_articles`, `_1030_community_posts`,
+   `_1040_impact_periods` from `server/supabase/migrations/`. Server code already reads these
+   tables; they aren't in the live project yet. Announce first.
+2. **`cd server && npm run seed`** — populates articles, impact, community_posts. Safe to
+   re-run.
+3. **Apply `_1050_donations.sql`** and merge `feature/donations-backend` → `backend-dev`.
+4. **Confirm `_1060_profiles.sql`** is applied (`mcp__supabase__list_tables` — the auth
+   merge may already have covered it).
+5. **Merge `feature/admin/dashboard` → `backend-dev`** — resolve the auth divergence per
+   the note under "Branches at a glance": drop this branch's `require-auth.js` stub, keep
+   backend-dev's real `middleware/auth.js`, rewire admin route guards.
+6. **Seed sessions data** — the volunteer page and donor allocation both read `sessions`,
+   which is empty.
+
+## Related docs
+
+- `server/SERVER_README.md` — endpoint tables and the error-code map. **Stale as of commit
+  `9666c9c`**: still lists admin/articles/impact/instagram as "not yet built" — needs its own
+  `docs:` commit.
+- `.claude/tdd/admin-dashboard.tdd.md` — per-service test guarantees for the 25 admin tests
+  added on this branch. Read before touching an admin service.
+- `server/plans/auth-profiles-implementation.md` — the plan the merged auth work followed.
+  Useful as a reference for the shape backend-dev's middleware now has.
 
 ## ECC rule packs
 
