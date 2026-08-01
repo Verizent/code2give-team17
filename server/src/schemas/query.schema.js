@@ -54,9 +54,27 @@ const slugParamSchema = z.object({
   slug: z.string().min(1).max(120),
 });
 
+/** `POST /api/admin/community-posts/:id/moderate` — the `:id` path segment. */
+const idParamSchema = z.object({
+  id: z.string().uuid(),
+});
+
+/**
+ * `POST /api/admin/community-posts/:id/moderate` body.
+ *
+ * Strict so unknown keys 400 rather than being silently ignored — this is an admin
+ * action and a stray field is more likely a client bug than a benign query parameter.
+ */
+const moderateSchema = z.strictObject({
+  status: z.enum(["approved", "rejected"]),
+  moderation_note: z.string().optional(),
+});
+
 module.exports = {
   listQuerySchema,
   localeQuerySchema,
   articleListQuerySchema,
   slugParamSchema,
+  idParamSchema,
+  moderateSchema,
 };
