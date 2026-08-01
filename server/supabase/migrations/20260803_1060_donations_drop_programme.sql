@@ -1,0 +1,28 @@
+-- Drop donations.programme — the ONE destructive statement in the donations track.
+-- PLAN.md §3 (No designation) and §4 item 3.
+--
+-- 🔴 REQUIRES EXPLICIT SIGN-OFF BEFORE RUNNING.
+--
+-- Why it's cut: donors do not pick a programme (§3). Letting them cherry-pick pushes
+-- funding toward the photogenic programmes and starves the rest, and it edges into
+-- restricted-fund accounting a hackathon build should not be quietly creating. Every
+-- gift is unrestricted.
+--
+-- Why it's a *drop*, not a defaulted keep: leaving `not null default 'where_needed'`
+-- forever invites a future reader to wire it back up. The whole point of the decision
+-- is that the field should not exist.
+--
+-- Why it's safe TODAY:
+--   • `donations` currently holds 0 rows on the live project.
+--   • `services/donations.service.js` no longer reads `programme`.
+--   • `routes/donations.routes.js` bodies are `z.strictObject`, so a client that still
+--     sends the field gets a clean 400 rather than a silently-honoured value.
+--
+-- Why it will NOT be safe later:
+--   • After real donations exist, the column carries historical intent even if the form
+--     never populated it again. Preserve rather than drop at that point.
+--
+-- Split from 20260803_1055 (additive-only) so an operator can apply the additive
+-- migration without triggering this drop by accident, and vice versa.
+
+alter table public.donations drop column if exists programme;

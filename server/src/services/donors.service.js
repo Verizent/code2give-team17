@@ -5,6 +5,9 @@ const allocationsRepo = require("../data/allocations.repo");
 const donorPeriodsRepo = require("../data/donor-periods.repo");
 const sessionsRepo = require("../data/sessions.repo");
 const { normalizeEmail } = require("../lib/normalize");
+const { resolveLocale } = require("../lib/locale");
+const { editionLabel, MAX_EVENTS_SHOWN } = require("../lib/donation-periods");
+const { MAX_EVENTS_SHOWN: MAX_SHOWN_FALLBACK } = require("../lib/donation-credit");
 
 function newAccessToken() {
   return crypto.randomBytes(32).toString("hex");
@@ -49,26 +52,29 @@ async function findDonorByToken(token) {
 }
 
 /**
- * Composes the §15 tracking-page response: donor identity, lifetime strip,
- * the requested (or default) edition, and the allocations within it.
+ * Composes the §15 / PLAN.md §C1 tracking-page response.
  *
- * Lifetime fields are computed on read, never stored as counters — that way a
- * later data correction never has to sweep denormalised aggregates:
- *  • sessions_supported = COUNT(DISTINCT session_id) over completed allocations
- *  • on_the_way         = COUNT(DISTINCT session_id) over pending + planned
- *  • total_given        = SUM(amount_hkd) over succeeded donations
- *  • supporter_since    = MIN(created_at) over succeeded donations
+ * PLAN.md shape (this is what FE3 builds against):
+ *   donor.supporter_since       — moved out of lifetime
+ *   lifetime.sessions_supported — DISTINCT completed
+ *   lifetime.sessions_on_the_way— DISTINCT pending + planned
+ *   lifetime.total_given_hkd    — SUM succeeded amounts
+ *   lifetime.donation_count     — COUNT succeeded donations
+ *   period.{id, period_start, period_end, status, is_current,
+ *           events_credited, events_shown, events[]}
+ *   period.events[] carries session-level state
+ *                   ({kind, id, title, starts_at, location, status,
+ *                     expected_participants, attendance_count, photo_url})
+ *   periods[] — archive list, newest first, with human labels
  *
- * Edition selection:
- *  • If `periodId` is supplied, load that specific period (archived editions stay
- *    reachable via `?period=<id>`, §15).
- *  • Otherwise, default to the most recent one — the current open edition, or
- *    the most recent closed edition if none is open.
- *  • If the donor has no periods yet (opted-in first-timer whose allocations
- *    haven't been created — allocation runs in the webhook, but a race is possible),
- *    the response still populates the strip from the donations, and edition is null.
+ * There is NO `allocations` key. PLAN.md §Phase B deletes distributed allocation;
+ * the internal table is a compromise on this branch (Option C) but is invisible
+ * outside this service. An event's status is the session's own
+ * `scheduled | completed | cancelled` — never the allocation's `pending | planned`.
  *
- * @param {{ id: string, email: string, full_name: string|null, locale?: string }} donor
+ * Lifetime fields are computed on read (§15 invariant).
+ *
+ * @param {{ id: string, full_name: string|null, locale?: string }} donor
  * @param {{ periodId?: string }} [opts]
  */
 async function buildTrackView(donor, opts = {}) {
@@ -78,54 +84,7 @@ async function buildTrackView(donor, opts = {}) {
     donorPeriodsRepo.listByDonor(donor.id),
   ]);
 
-  const lifetime = computeLifetime(allocations, donations);
-  const edition = selectEdition(periods, opts.periodId);
-
-  let editionAllocations = [];
-  if (edition) {
-    const inEdition = allocations.filter((a) => a.donor_period_id === edition.id);
-    const sessionIds = [...new Set(inEdition.map((a) => a.session_id))];
-    const sessions = await sessionsRepo.listByIds(sessionIds);
-    const sessionsById = new Map(sessions.map((s) => [s.id, s]));
-    editionAllocations = inEdition
-      .map((a) => ({
-        id: a.id,
-        status: a.status,
-        cost_at_allocation: a.cost_at_allocation,
-        session: sessionsById.get(a.session_id) ?? { id: a.session_id },
-      }))
-      .filter((a) => a.session);
-  }
-
-  return {
-    donor: {
-      email: donor.email,
-      full_name: donor.full_name,
-      locale: donor.locale ?? "en",
-    },
-    lifetime,
-    edition: edition
-      ? {
-          id: edition.id,
-          period_start: edition.period_start,
-          period_end: edition.period_end,
-          status: edition.status,
-        }
-      : null,
-    allocations: editionAllocations,
-  };
-}
-
-function computeLifetime(allocations, donations) {
-  const completedSessions = new Set();
-  const onTheWaySessions = new Set();
-  for (const a of allocations) {
-    if (a.status === "completed") completedSessions.add(a.session_id);
-    if (a.status === "pending" || a.status === "planned") onTheWaySessions.add(a.session_id);
-  }
-
   const succeeded = donations.filter((d) => d.status === "succeeded");
-  const totalGiven = succeeded.reduce((sum, d) => sum + Number(d.amount_hkd || 0), 0);
   const supporterSince = succeeded.length
     ? succeeded.reduce(
         (min, d) => (min && min < d.created_at ? min : d.created_at),
@@ -133,15 +92,104 @@ function computeLifetime(allocations, donations) {
       )
     : null;
 
+  const period = selectPeriod(periods, opts.periodId);
+  const periodBlock = period
+    ? await buildPeriodBlock({ period, allocations, succeeded, donor })
+    : null;
+
   return {
-    sessions_supported: completedSessions.size,
-    on_the_way: onTheWaySessions.size,
-    total_given: totalGiven,
-    supporter_since: supporterSince,
+    donor: {
+      full_name: donor.full_name,
+      supporter_since: supporterSince,
+    },
+    lifetime: buildLifetime(allocations, succeeded),
+    period: periodBlock,
+    periods: periods.map(toArchiveEntry),
   };
 }
 
-function selectEdition(periods, requestedId) {
+function buildLifetime(allocations, succeeded) {
+  const completedSessions = new Set();
+  const onTheWaySessions = new Set();
+  for (const a of allocations) {
+    if (a.status === "completed") completedSessions.add(a.session_id);
+    if (a.status === "pending" || a.status === "planned") onTheWaySessions.add(a.session_id);
+  }
+
+  return {
+    sessions_supported: completedSessions.size,
+    sessions_on_the_way: onTheWaySessions.size,
+    total_given_hkd: succeeded.reduce((sum, d) => sum + Number(d.amount_hkd || 0), 0),
+    donation_count: succeeded.length,
+  };
+}
+
+async function buildPeriodBlock({ period, allocations, succeeded, donor }) {
+  const inPeriod = allocations.filter((a) => a.donor_period_id === period.id);
+  const sessionIds = [...new Set(inPeriod.map((a) => a.session_id))];
+  const sessions = sessionIds.length ? await sessionsRepo.listByIds(sessionIds) : [];
+  const sessionsById = new Map(sessions.map((s) => [s.id, s]));
+
+  // Display cap of 10 per PLAN.md — the first N by starts_at.
+  const cap = typeof MAX_EVENTS_SHOWN === "number" ? MAX_EVENTS_SHOWN : (MAX_SHOWN_FALLBACK ?? 10);
+  const events = inPeriod
+    .map((alloc) => sessionsById.get(alloc.session_id))
+    .filter(Boolean)
+    .sort((a, b) => new Date(a.starts_at) - new Date(b.starts_at))
+    .slice(0, cap)
+    .map((s) => toEvent(s, donor.locale ?? "en"));
+
+  // events_credited: sum from succeeded donations whose created_at falls in [start, end).
+  const start = new Date(period.period_start);
+  const end = new Date(period.period_end);
+  const eventsCredited = succeeded
+    .filter((d) => {
+      const c = new Date(d.created_at);
+      return c >= start && c < end;
+    })
+    .reduce((sum, d) => sum + Number(d.events_credited || 0), 0);
+
+  return {
+    id: period.id,
+    period_start: period.period_start,
+    period_end: period.period_end,
+    status: period.status,
+    is_current: period.status === "open",
+    events_credited: eventsCredited,
+    events_shown: events.length,
+    events,
+  };
+}
+
+function toEvent(session, locale) {
+  const resolved = resolveLocale(session, ["title", "location"], locale);
+  return {
+    kind: "session",
+    id: session.id,
+    title: resolved.title ?? null,
+    starts_at: session.starts_at,
+    location: resolved.location ?? null,
+    // Session's own status per PLAN.md §Phase B — never the allocation's status.
+    status: session.status ?? "scheduled",
+    // Column doesn't exist on sessions yet (PLAN.md flags as future work) — safe null.
+    expected_participants: session.expected_participants ?? null,
+    attendance_count: session.attendance_count ?? null,
+    photo_url: session.photo_url ?? null,
+  };
+}
+
+function toArchiveEntry(period) {
+  return {
+    id: period.id,
+    label: editionLabel({
+      windowStart: new Date(period.period_start),
+      windowEnd: new Date(period.period_end),
+    }),
+    status: period.status,
+  };
+}
+
+function selectPeriod(periods, requestedId) {
   if (requestedId) {
     return periods.find((p) => p.id === requestedId) ?? null;
   }

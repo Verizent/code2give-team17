@@ -79,3 +79,12 @@ create trigger donation_allocations_set_updated_at
 
 alter table public.donation_allocations enable row level security;
 -- Service-role only; the donor never reads allocations directly — the track endpoint composes.
+
+-- ── service_role DML grants ────────────────────────────────────────────────
+-- Handoff (HANDOFF.md): "service_role grants are missing on your tables. Every
+-- apply_migration-created table lands without DML grants, so server writes fail with
+-- 'permission denied for table'." Enabling RLS above blocks the anon role by default;
+-- without these explicit grants, service-role writes still 42501 because the underlying
+-- table privilege isn't there. Both together = the shape we actually want.
+grant select, insert, update, delete on public.sessions             to service_role;
+grant select, insert, update, delete on public.donation_allocations to service_role;

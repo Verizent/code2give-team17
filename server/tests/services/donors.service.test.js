@@ -67,8 +67,27 @@ test("upsertDonor access_token is stable — same donor returns same token", asy
 });
 
 /**
- * buildTrackView — the §15 tracking page composer.
- * Lifetime strip fields are computed on read, never stored as counters (§15).
+ * buildTrackView — the §15 tracking page composer, shaped for PLAN.md §C1.
+ *
+ * Shape reference (from PLAN.md — this is what FE3 builds against):
+ *   donor.supporter_since       — moved out of lifetime
+ *   lifetime.sessions_supported — DISTINCT completed
+ *   lifetime.sessions_on_the_way— DISTINCT pending + planned  (renamed from on_the_way)
+ *   lifetime.total_given_hkd    — SUM succeeded amounts        (renamed from total_given)
+ *   lifetime.donation_count     — COUNT succeeded donations    (NEW)
+ *   period.id/period_start/period_end/status
+ *   period.is_current           — boolean; true iff status='open'
+ *   period.events_credited      — sum of donations.events_credited landing in this window
+ *   period.events_shown         — length of events array
+ *   period.events[]             — {kind, id, title, starts_at, location, status,
+ *                                  expected_participants, attendance_count, photo_url}
+ *   periods[]                   — {id, label, status} — archive list, newest first
+ *
+ * Note: `allocations` key is GONE — PLAN.md §Phase B: "there is no `allocations` key and
+ * no per-event `status` of `pending`/`planned` — those belonged to the deleted allocation
+ * model. An event's state is the event's own `scheduled | completed | cancelled`."
+ * Internally the allocation table still exists on this branch (Option C compromise); the
+ * response never surfaces it.
  */
 
 const trackDonor = {
@@ -91,12 +110,23 @@ test("buildTrackView returns zero lifetime totals for a new donor", async (t) =>
   const view = await buildTrackView(trackDonor);
 
   assert.equal(view.lifetime.sessions_supported, 0);
-  assert.equal(view.lifetime.on_the_way, 0);
-  assert.equal(view.lifetime.total_given, 0);
-  assert.equal(view.lifetime.supporter_since, null);
+  assert.equal(view.lifetime.sessions_on_the_way, 0);
+  assert.equal(view.lifetime.total_given_hkd, 0);
+  assert.equal(view.lifetime.donation_count, 0);
+  assert.equal(view.donor.supporter_since, null, "moved from lifetime to donor per PLAN.md §C1");
 });
 
-test("buildTrackView sessions_supported counts DISTINCT completed session_ids", async (t) => {
+test("buildTrackView.donor carries full_name and supporter_since only (email optional)", async (t) => {
+  stubTrackDeps(t, {
+    donations: [{ amount_hkd: 300, status: "succeeded", created_at: "2026-06-01T00:00:00Z" }],
+  });
+  const view = await buildTrackView(trackDonor);
+
+  assert.equal(view.donor.full_name, "Alex");
+  assert.equal(view.donor.supporter_since, "2026-06-01T00:00:00Z");
+});
+
+test("buildTrackView.lifetime.sessions_supported counts DISTINCT completed session_ids", async (t) => {
   // Same session appears twice — two of the donor's gifts landed on it.
   // §15 requires DISTINCT or the count silently inflates.
   stubTrackDeps(t, {
@@ -112,24 +142,27 @@ test("buildTrackView sessions_supported counts DISTINCT completed session_ids", 
   const view = await buildTrackView(trackDonor);
 
   assert.equal(view.lifetime.sessions_supported, 2, "s1 counts once, not twice");
-  assert.equal(view.lifetime.on_the_way, 2, "s3 pending + s4 planned = 2 on the way");
+  assert.equal(view.lifetime.sessions_on_the_way, 2, "s3 pending + s4 planned = 2 on the way");
 });
 
-test("buildTrackView total_given uses succeeded amounts only, supporter_since is the earliest", async (t) => {
+test("buildTrackView.lifetime totals use succeeded donations only", async (t) => {
   stubTrackDeps(t, {
     donations: [
       { amount_hkd: 300, status: "succeeded", created_at: "2026-06-01T00:00:00Z" },
       { amount_hkd: 500, status: "succeeded", created_at: "2026-07-01T00:00:00Z" },
+      { amount_hkd: 999, status: "failed", created_at: "2026-05-01T00:00:00Z" },
+      { amount_hkd: 999, status: "refunded", created_at: "2026-05-15T00:00:00Z" },
     ],
   });
 
   const view = await buildTrackView(trackDonor);
 
-  assert.equal(view.lifetime.total_given, 800);
-  assert.equal(view.lifetime.supporter_since, "2026-06-01T00:00:00Z");
+  assert.equal(view.lifetime.total_given_hkd, 800, "failed/refunded never inflate");
+  assert.equal(view.lifetime.donation_count, 2, "COUNT excludes failed/refunded");
+  assert.equal(view.donor.supporter_since, "2026-06-01T00:00:00Z", "earliest succeeded");
 });
 
-test("buildTrackView returns the requested edition when period_id is supplied", async (t) => {
+test("buildTrackView.period exposes the requested period with PLAN.md §C1 fields", async (t) => {
   stubTrackDeps(t, {
     allocs: [
       { session_id: "s1", status: "planned", donor_period_id: "p1", cost_at_allocation: 100 },
@@ -141,23 +174,84 @@ test("buildTrackView returns the requested edition when period_id is supplied", 
       { id: "p2", period_start: "2026-08-15", period_end: "2026-08-31", status: "open" },
     ],
     sessions: [
-      { id: "s2", title_en: "Session 2", starts_at: "2026-08-20T10:00:00Z", status: "scheduled" },
-      { id: "s3", title_en: "Session 3", starts_at: "2026-08-22T10:00:00Z", status: "scheduled" },
+      { id: "s2", title_en: "Floor curling", title_zh: "地壺球", starts_at: "2026-08-20T10:00:00Z",
+        location_en: "San Po Kong", location_zh: "新蒲崗", status: "scheduled",
+        attendance_count: null, photo_url: null },
+      { id: "s3", title_en: "Nutrition workshop", title_zh: "營養工作坊",
+        starts_at: "2026-08-22T10:00:00Z", location_en: "Wanchai", location_zh: "灣仔",
+        status: "scheduled", attendance_count: null, photo_url: null },
     ],
   });
 
   const view = await buildTrackView(trackDonor, { periodId: "p2" });
 
-  assert.equal(view.edition.id, "p2");
-  assert.equal(view.edition.status, "open");
-  assert.equal(view.allocations.length, 2, "only p2's allocations");
-  assert.deepEqual(
-    view.allocations.map((a) => a.session.id).sort(),
-    ["s2", "s3"],
-  );
+  assert.equal(view.period.id, "p2");
+  assert.equal(view.period.status, "open");
+  assert.equal(view.period.is_current, true, "PLAN.md §C1 field — true when status='open'");
+  assert.equal(typeof view.period.events_credited, "number");
+  assert.equal(view.period.events_shown, 2);
+  assert.equal(view.period.events.length, 2);
+  assert.equal(view.allocations, undefined, "PLAN.md: 'there is no allocations key'");
 });
 
-test("buildTrackView defaults to the most recent period when no period_id is supplied", async (t) => {
+test("buildTrackView.period.events carry PLAN.md §C1 fields — kind, title, status from session", async (t) => {
+  stubTrackDeps(t, {
+    allocs: [
+      { session_id: "s1", status: "pending", donor_period_id: "p1", cost_at_allocation: 100 },
+    ],
+    periods: [
+      { id: "p1", period_start: "2026-08-15", period_end: "2026-08-31", status: "open" },
+    ],
+    sessions: [
+      { id: "s1", title_en: "Floor curling", title_zh: "地壺球",
+        starts_at: "2026-08-20T10:00:00Z",
+        location_en: "San Po Kong", location_zh: "新蒲崗",
+        status: "scheduled", attendance_count: null, photo_url: null },
+    ],
+  });
+
+  const view = await buildTrackView(trackDonor);
+  const event = view.period.events[0];
+
+  assert.equal(event.kind, "session", "PLAN.md §C1 — 'session' or 'opportunity'");
+  assert.equal(event.id, "s1");
+  assert.equal(event.title, "Floor curling", "title resolved via donor.locale='en'");
+  assert.equal(event.location, "San Po Kong");
+  assert.equal(event.starts_at, "2026-08-20T10:00:00Z");
+  assert.equal(event.status, "scheduled", "session's own status — NOT allocation status");
+  assert.equal(event.attendance_count, null, "null renders 'headcount pending', never 0");
+  assert.equal(event.photo_url, null);
+  // expected_participants: column doesn't exist yet — safe null (PLAN.md flags as future work)
+  assert.ok("expected_participants" in event, "field present with null default");
+  assert.equal(event.expected_participants, null);
+  // Under PLAN.md there is no per-event `status: pending|planned` — do not leak it
+  assert.equal(event.cost_at_allocation, undefined, "cost is internal, not exposed");
+});
+
+test("buildTrackView resolves title/location via donor.locale=zh-Hant", async (t) => {
+  stubTrackDeps(t, {
+    allocs: [
+      { session_id: "s1", status: "pending", donor_period_id: "p1", cost_at_allocation: 100 },
+    ],
+    periods: [
+      { id: "p1", period_start: "2026-08-15", period_end: "2026-08-31", status: "open" },
+    ],
+    sessions: [
+      { id: "s1", title_en: "Floor curling", title_zh: "地壺球",
+        starts_at: "2026-08-20T10:00:00Z",
+        location_en: "San Po Kong", location_zh: "新蒲崗",
+        status: "scheduled" },
+    ],
+  });
+
+  const view = await buildTrackView({ ...trackDonor, locale: "zh-Hant" });
+  const event = view.period.events[0];
+
+  assert.equal(event.title, "地壺球", "zh-Hant preferred");
+  assert.equal(event.location, "新蒲崗");
+});
+
+test("buildTrackView defaults to the currently-open period when no period_id supplied", async (t) => {
   stubTrackDeps(t, {
     allocs: [
       { session_id: "s1", status: "pending", donor_period_id: "p2", cost_at_allocation: 100 },
@@ -173,10 +267,28 @@ test("buildTrackView defaults to the most recent period when no period_id is sup
 
   const view = await buildTrackView(trackDonor);
 
-  assert.equal(view.edition.id, "p2");
+  assert.equal(view.period.id, "p2");
+  assert.equal(view.period.is_current, true);
 });
 
-test("buildTrackView tolerates a donor with no editions yet — edition is null", async (t) => {
+test("buildTrackView.periods archive list — all periods newest first with labels", async (t) => {
+  stubTrackDeps(t, {
+    periods: [
+      { id: "p2", period_start: "2026-08-15", period_end: "2026-08-31", status: "open" },
+      { id: "p1", period_start: "2026-07-15", period_end: "2026-07-31", status: "closed" },
+    ],
+  });
+
+  const view = await buildTrackView(trackDonor);
+
+  assert.equal(view.periods.length, 2);
+  assert.equal(view.periods[0].id, "p2", "newest first");
+  assert.equal(view.periods[0].status, "open");
+  assert.equal(typeof view.periods[0].label, "string");
+  assert.ok(view.periods[0].label.length > 0, "human label present, e.g. '15 Aug – 30 Aug'");
+});
+
+test("buildTrackView tolerates a donor with no periods yet — period is null but strip populates", async (t) => {
   stubTrackDeps(t, {
     donations: [
       { amount_hkd: 300, status: "succeeded", created_at: "2026-08-01T00:00:00Z" },
@@ -185,7 +297,8 @@ test("buildTrackView tolerates a donor with no editions yet — edition is null"
 
   const view = await buildTrackView(trackDonor);
 
-  assert.equal(view.edition, null);
-  assert.deepEqual(view.allocations, []);
-  assert.equal(view.lifetime.total_given, 300, "strip still populates from donations");
+  assert.equal(view.period, null);
+  assert.deepEqual(view.periods, []);
+  assert.equal(view.lifetime.total_given_hkd, 300, "strip still populates from donations");
+  assert.equal(view.lifetime.donation_count, 1);
 });
