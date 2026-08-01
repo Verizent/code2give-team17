@@ -1,5 +1,5 @@
 const articlesRepo = require("../../data/articles.repo");
-const { httpError } = require("../../lib/http-error");
+const { ApiError } = require("../../lib/api-error");
 const { parsePaging, buildMeta } = require("../../lib/pagination");
 const { resolveLocale } = require("../../lib/locale");
 
@@ -45,7 +45,7 @@ async function getArticleBySlug(slug, locale) {
   const row = await articlesRepo.findPublishedBySlug(slug);
 
   if (!row) {
-    throw httpError(404, `No published article with slug "${slug}"`);
+    throw ApiError.notFound(`No published article with slug "${slug}"`);
   }
 
   return resolveLocale(row, DETAIL_LOCALE_FIELDS, locale);

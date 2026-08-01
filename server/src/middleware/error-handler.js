@@ -1,41 +1,38 @@
-const { STATUS_CODES } = require("node:http");
+const { codeForStatus, labelForStatus } = require("../lib/api-error");
 
 /**
- * Formats every error reaching the API boundary as the CONTEXT.md §29 envelope:
- * `{ error, message }`, where `error` is the HTTP status label.
+ * Formats every error into the CONTEXT.md §29 envelope: `{ error, message, code }`.
  *
- * Clients branch on the **HTTP status**, never on the body — `message` is prose and
- * will be reworded. Throw an error carrying a `.status` property and let this format
- * it; building a response by hand in a route is how the envelope drifts.
+ * - `error` is the HTTP status label, derived from the status rather than hardcoded, so a 404
+ *   no longer reports itself as an Internal Server Error.
+ * - `message` is human-facing detail, omitted entirely when NODE_ENV=production so stack
+ *   details and driver strings never reach a response.
+ * - `code` is the only field a client may branch on, and the only one surviving the production
+ *   suppression above. That is the whole reason it exists.
  *
- * `message` is suppressed for 5xx in production so stack details and driver strings
- * never ship. It survives on 4xx, which are messages we wrote deliberately and which
- * a form has to be able to show.
- *
- * @param {Error & { status?: number }} error
+ * @type {import("express").ErrorRequestHandler}
  */
 function errorHandler(error, request, response, next) {
+  console.error(error);
+
   if (response.headersSent) {
     next(error);
     return;
   }
 
   const status = error.status || 500;
-  const isServerError = status >= 500;
 
-  // Only 5xx is logged. A 404 and a validation 400 are routine traffic, and once
-  // form validation and slug probing land, logging them would bury a teammate's own
-  // output under a wall of this track's noise.
-  if (isServerError) {
-    console.error(error);
+  /** @type {{ error: string, code: string, message?: string }} */
+  const body = {
+    error: labelForStatus(status),
+    code: error.code || codeForStatus(status),
+  };
+
+  if (process.env.NODE_ENV !== "production") {
+    body.message = error.message;
   }
 
-  const hideMessage = isServerError && process.env.NODE_ENV === "production";
-
-  response.status(status).json({
-    error: STATUS_CODES[status] || "Internal Server Error",
-    message: hideMessage ? undefined : error.message,
-  });
+  response.status(status).json(body);
 }
 
 module.exports = errorHandler;

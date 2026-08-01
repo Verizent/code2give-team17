@@ -1,5 +1,5 @@
 const impactRepo = require("../../data/impact.repo");
-const { httpError } = require("../../lib/http-error");
+const { ApiError } = require("../../lib/api-error");
 const { resolveLocale } = require("../../lib/locale");
 
 /** PostgREST can serialise `numeric` as a string to preserve precision. */
@@ -20,7 +20,7 @@ async function getCurrentImpact(locale) {
   const row = await impactRepo.findCurrent();
 
   if (!row) {
-    throw httpError(404, "No current impact period. Has the seed been run?");
+    throw ApiError.notFound("No current impact period. Has the seed been run?");
   }
 
   const { narrative } = resolveLocale(row, ["narrative"], locale);

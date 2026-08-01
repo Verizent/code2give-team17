@@ -1,4 +1,4 @@
-const { httpError } = require("../lib/http-error");
+const { ApiError } = require("../lib/api-error");
 
 /**
  * Flattens a ZodError into the one-line field list `message` carries on a 400.
@@ -37,7 +37,7 @@ function validate({ body, query, params } = {}) {
       next();
     } catch (error) {
       if (Array.isArray(error?.issues)) {
-        next(httpError(400, formatIssues(error)));
+        next(ApiError.badRequest(formatIssues(error)));
         return;
       }
       next(error);
