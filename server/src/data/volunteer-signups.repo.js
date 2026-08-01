@@ -168,6 +168,33 @@ async function markAttendance(signupId, patch) {
 }
 
 /**
+ * Generic per-signup patch — used by the PATCH /api/volunteer-signups/:id
+ * endpoint for §23 discovery + feedback fields. Kept separate from
+ * `markAttendance` so a caller cannot accidentally mutate `status` or
+ * `hours_logged` through the volunteer-facing endpoint (those columns are
+ * admin-write only).
+ *
+ * @param {string} signupId
+ * @param {Record<string, unknown>} patch
+ */
+async function patchSignupFields(signupId, patch) {
+  const db = getServiceClient();
+  const { data, error } = await db
+    .from("volunteer_signups")
+    .update(patch)
+    .eq("id", signupId)
+    .select(
+      `${SIGNUP_COLUMNS}, discovery_source, discovery_source_other,
+       signup_motivation, experience_rating, would_return, improvement_note,
+       feedback_submitted_at`,
+    )
+    .single();
+
+  throwIfDbError(error);
+  return data;
+}
+
+/**
  * Stamps `thank_you_email_sent_at` — guards against double-sending after a
  * second attendance mark. Never awaited on the transaction path.
  *
@@ -206,6 +233,7 @@ module.exports = {
   listAttendedForVolunteer,
   markAttendance,
   markThankYouSent,
+  patchSignupFields,
   cancelSignup,
   deleteSignup,
   listUpcomingSignups,
