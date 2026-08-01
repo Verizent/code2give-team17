@@ -36,7 +36,7 @@ async function listByDonor(donorId) {
     .from("donation_allocations")
     .select(
       `
-      id, session_id, donor_period_id, cost_at_allocation, status, created_at,
+      id, session_id, donor_period_id, cost_at_allocation, status, email_sent_at, created_at,
       donations!inner(donor_id, amount_hkd, created_at, status)
       `,
     )
@@ -54,11 +54,50 @@ async function listByDonor(donorId) {
 async function listByPeriod(periodId) {
   const { data, error } = await getSupabase()
     .from("donation_allocations")
-    .select("id, donation_id, session_id, cost_at_allocation, status, created_at")
+    .select("id, donation_id, session_id, cost_at_allocation, status, email_sent_at, created_at")
     .eq("donor_period_id", periodId);
 
   assertOk(error);
   return data ?? [];
+}
+
+/**
+ * Aggregate stats for the admin dashboard — donation totals, distinct donors,
+ * total sessions ever supported, total people ever reached.
+ * @returns {Promise<{donation_count:number, donor_count:number, total_given_hkd:number, sessions_supported:number, people_reached:number}>}
+ */
+async function adminStats() {
+  const supabase = getSupabase();
+  const [donationsResult, donorsResult, allocationsResult, sessionsResult] = await Promise.all([
+    supabase.from("donations").select("donor_id, amount_hkd, status").eq("status", "succeeded"),
+    supabase.from("donors").select("id"),
+    supabase.from("donation_allocations").select("session_id, status").eq("status", "completed"),
+    supabase.from("sessions").select("id, attendance_count").eq("status", "completed"),
+  ]);
+  assertOk(donationsResult.error);
+  assertOk(donorsResult.error);
+  assertOk(allocationsResult.error);
+  assertOk(sessionsResult.error);
+
+  const succeeded = donationsResult.data ?? [];
+  const donors = donorsResult.data ?? [];
+  const allocs = allocationsResult.data ?? [];
+  const sessions = sessionsResult.data ?? [];
+
+  const supportedIds = new Set(allocs.map((a) => a.session_id));
+  const attendanceById = new Map(sessions.map((s) => [s.id, Number(s.attendance_count) || 0]));
+  const peopleReached = [...supportedIds].reduce(
+    (sum, id) => sum + (attendanceById.get(id) ?? 0),
+    0,
+  );
+
+  return {
+    donation_count: succeeded.length,
+    donor_count: donors.length,
+    total_given_hkd: succeeded.reduce((s, d) => s + Number(d.amount_hkd || 0), 0),
+    sessions_supported: supportedIds.size,
+    people_reached: peopleReached,
+  };
 }
 
 /**
@@ -110,4 +149,5 @@ module.exports = {
   listPendingDonationsMissingAllocations,
   updateAllocation,
   bulkSetStatusForDonation,
+  adminStats,
 };

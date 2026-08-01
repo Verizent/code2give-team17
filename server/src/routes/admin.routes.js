@@ -9,7 +9,9 @@ const {
 } = require("../services/campaigns.service");
 const allocationsRepo = require("../data/allocations.repo");
 const donationsRepo = require("../data/donations.repo");
+const donorsRepo = require("../data/donors.repo");
 const sessionsRepo = require("../data/sessions.repo");
+const { closeReadyPeriods } = require("../services/donations/period-close.service");
 
 const router = express.Router();
 
@@ -114,5 +116,68 @@ router.post(
     }
   },
 );
+
+// ── Admin dashboard endpoints (donations track) ────────────────────────────
+
+const listDonationsQuery = z.object({
+  limit: z.coerce.number().int().min(1).max(200).optional(),
+  status: z.enum(["pending", "succeeded", "failed", "refunded"]).optional(),
+});
+
+/**
+ * GET /api/admin/donations
+ * List donations for the admin table — filter by status, cap by limit.
+ */
+router.get("/donations", validate({ query: listDonationsQuery }), async (request, response, next) => {
+  try {
+    const items = await donationsRepo.listRecent(request.validatedQuery);
+    response.json(envelope(items, { total: items.length }));
+  } catch (error) { next(error); }
+});
+
+/**
+ * GET /api/admin/donations/stats
+ * Aggregate for the dashboard top strip:
+ * donation_count, donor_count, total_given_hkd, sessions_supported, people_reached.
+ */
+router.get("/donations/stats", async (request, response, next) => {
+  try {
+    const stats = await allocationsRepo.adminStats();
+    response.json(envelope(stats));
+  } catch (error) { next(error); }
+});
+
+const listDonorsQuery = z.object({
+  limit: z.coerce.number().int().min(1).max(200).optional(),
+});
+
+/**
+ * GET /api/admin/donors
+ * Donor directory for the admin dashboard — email, name, locale, opt-in, first seen.
+ * Uses the same envelope shape as /admin/donations.
+ */
+router.get("/donors", validate({ query: listDonorsQuery }), async (request, response, next) => {
+  try {
+    const items = await donorsRepo.listRecent(request.validatedQuery);
+    response.json(envelope(items, { total: items.length }));
+  } catch (error) { next(error); }
+});
+
+/**
+ * POST /api/admin/cron/close-periods
+ *
+ * Manual trigger for the batching + notification job. Runs the same logic a cron
+ * would fire on the 15th / EOM: closes ready donor_periods, emails their completed
+ * sessions, stamps email_sent_at (starts the 14-day mark-for-removal clock).
+ *
+ * Idempotent — re-running today is a no-op. Returns processed/closed/emailed counts
+ * so the admin sees what happened.
+ */
+router.post("/cron/close-periods", async (request, response, next) => {
+  try {
+    const summary = await closeReadyPeriods();
+    response.json(envelope(summary));
+  } catch (error) { next(error); }
+});
 
 module.exports = router;

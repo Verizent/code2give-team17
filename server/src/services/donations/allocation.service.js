@@ -1,7 +1,15 @@
-const { editionForDonation, selectionStart } = require("../../lib/donation-periods");
+const { editionForDonation } = require("../../lib/donation-periods");
 const sessionsRepo = require("../../data/sessions.repo");
 const allocationsRepo = require("../../data/allocations.repo");
 const donorPeriodsRepo = require("../../data/donor-periods.repo");
+
+/** Rolling selection window per updated donor-track spec: sessions within 7–30 days
+ *  ahead of the donation. Replaces the fixed-calendar edition-window selection —
+ *  batching still uses the fixed calendar (see period lookup below), but session
+ *  eligibility is a rolling range. */
+const DAY_MS = 24 * 60 * 60 * 1000;
+const ELIGIBILITY_MIN_DAYS = 7;
+const ELIGIBILITY_MAX_DAYS = 30;
 
 /**
  * Attaches a succeeded donation to real, upcoming sessions (CONTEXT.md §15).
@@ -42,9 +50,10 @@ async function allocateForDonation(donation) {
     return skipped();
   }
 
-  const edition = editionForDonation(donation.created_at);
-  const windowStart = selectionStart(donation.created_at, edition);
-  const windowEnd = edition.windowEnd;
+  // Rolling window for session eligibility: [donation + 7d, donation + 30d].
+  const donatedAt = new Date(donation.created_at);
+  const windowStart = new Date(donatedAt.getTime() + ELIGIBILITY_MIN_DAYS * DAY_MS);
+  const windowEnd = new Date(donatedAt.getTime() + ELIGIBILITY_MAX_DAYS * DAY_MS);
 
   const eligible = (
     await sessionsRepo.listEligibleForAllocation({
@@ -54,6 +63,9 @@ async function allocateForDonation(donation) {
     })
   ).slice(0, credited);
 
+  // Period lookup stays on the fixed calendar — batching cadence (15th, EOM) is
+  // calendar-based even though session eligibility is rolling.
+  const edition = editionForDonation(donation.created_at);
   const period = await donorPeriodsRepo.findOrOpenForDonorWindow({
     donorId: donation.donor_id,
     windowStart: edition.windowStart,
@@ -83,4 +95,4 @@ function skipped() {
   return { allocations: [], period_id: null, insufficient: false, remaining: 0, skipped: true };
 }
 
-module.exports = { allocateForDonation };
+module.exports = { allocateForDonation, ELIGIBILITY_MIN_DAYS, ELIGIBILITY_MAX_DAYS };

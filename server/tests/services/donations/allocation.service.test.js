@@ -145,18 +145,18 @@ test("allocateForDonation opens a donor_period covering the donation's edition w
   assert.equal(windowEnd.toISOString().slice(0, 10), "2026-08-31");
 });
 
-test("allocateForDonation queries sessions with the selection floor applied", async (t) => {
-  // A donation on 5 Aug must not attach to a session on 6 Aug — CONTEXT.md §15
-  // says the event has to happen after the donor has read the email, and the
-  // selection floor is 2 days.
+test("allocateForDonation queries sessions with the rolling [+7d, +30d] window", async (t) => {
+  // Updated donor-track spec: session eligibility is a rolling window a week to a month
+  // ahead of the donation. Batching cadence (15th/EOM) is still fixed-calendar (see the
+  // period-open test below) — the two are decoupled deliberately.
   const deps = mockDeps(t, { sessions: [] });
-  await allocateForDonation(donation());
+  await allocateForDonation(donation()); // donation.created_at = 2026-08-05T10:00:00Z
 
   const [{ windowStart, windowEnd, limit }] = deps.list.mock.calls[0].arguments;
-  // Selection start = max(edition window start = 15 Aug, donation + 2 days = 7 Aug) = 15 Aug.
-  // For this test we assert the repo sees the *later* of the two, which is 15 Aug.
-  assert.equal(windowStart.toISOString().slice(0, 10), "2026-08-15");
-  assert.equal(windowEnd.toISOString().slice(0, 10), "2026-08-31");
+  // 2026-08-05 + 7 days  = 2026-08-12
+  // 2026-08-05 + 30 days = 2026-09-04
+  assert.equal(windowStart.toISOString().slice(0, 10), "2026-08-12");
+  assert.equal(windowEnd.toISOString().slice(0, 10), "2026-09-04");
   assert.equal(limit, 3);
 });
 

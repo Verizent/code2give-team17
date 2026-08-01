@@ -143,8 +143,19 @@ function buildLifetime(allocations, succeeded, completedSessionRows = []) {
   };
 }
 
+/** Mark-for-removal window: an allocation whose completion email fired more than
+ *  this long ago is removed from the current-period display (spec: "removed by
+ *  next 15th/28th"). Lifetime totals still count it — it was supported.  */
+const REMOVAL_WINDOW_MS = 14 * 24 * 60 * 60 * 1000;
+
 async function buildPeriodBlock({ period, allocations, succeeded, donor }) {
-  const inPeriod = allocations.filter((a) => a.donor_period_id === period.id);
+  const removalCutoff = new Date(Date.now() - REMOVAL_WINDOW_MS);
+  const inPeriod = allocations
+    .filter((a) => a.donor_period_id === period.id)
+    // Display filter: keep items whose email is unsent OR sent within the last 14 days.
+    .filter(
+      (a) => !a.email_sent_at || new Date(a.email_sent_at) >= removalCutoff,
+    );
   const sessionIds = [...new Set(inPeriod.map((a) => a.session_id))];
   const sessions = sessionIds.length ? await sessionsRepo.listByIds(sessionIds) : [];
   const sessionsById = new Map(sessions.map((s) => [s.id, s]));

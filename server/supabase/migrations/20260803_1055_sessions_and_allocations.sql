@@ -80,6 +80,17 @@ create trigger donation_allocations_set_updated_at
 alter table public.donation_allocations enable row level security;
 -- Service-role only; the donor never reads allocations directly — the track endpoint composes.
 
+-- ── email_sent_at (batching + mark-for-removal) ────────────────────────────
+-- Populated when the completed-session email fires at period close. Display filter on
+-- the track endpoint excludes rows whose email_sent_at is older than 14 days —
+-- the "mark for removal → remove by next batch" mechanic from the donor-track spec.
+alter table public.donation_allocations
+  add column if not exists email_sent_at timestamptz;
+
+create index if not exists donation_allocations_email_sent_at_idx
+  on public.donation_allocations (email_sent_at)
+  where email_sent_at is not null;
+
 -- ── service_role DML grants ────────────────────────────────────────────────
 -- Handoff (HANDOFF.md): "service_role grants are missing on your tables. Every
 -- apply_migration-created table lands without DML grants, so server writes fail with

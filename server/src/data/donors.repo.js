@@ -54,4 +54,33 @@ async function updateDonor(id, updates) {
   if (error) throw error;
 }
 
-module.exports = { findByEmail, findByToken, createDonor, updateDonor };
+/**
+ * @param {string} id
+ * @returns {Promise<object|null>}
+ */
+async function findById(id) {
+  const { data, error } = await getSupabase()
+    .from("donors")
+    .select("id, email, access_token, full_name, locale, tracking_opt_in")
+    .eq("id", id)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Admin list — donors ordered by created_at desc.
+ * @param {{ limit?: number }} [opts]
+ * @returns {Promise<object[]>}
+ */
+async function listRecent({ limit = 50 } = {}) {
+  const { data, error } = await getSupabase()
+    .from("donors")
+    .select("id, email, full_name, locale, tracking_opt_in, created_at")
+    .order("created_at", { ascending: false })
+    .limit(Math.min(limit, 200));
+  if (error) throw error;
+  return data ?? [];
+}
+
+module.exports = { findByEmail, findByToken, findById, createDonor, updateDonor, listRecent };

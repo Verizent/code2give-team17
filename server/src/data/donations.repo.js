@@ -123,6 +123,24 @@ async function updateFeedback(id, fields) {
   return data;
 }
 
+/**
+ * Admin dashboard: recent donations, newest first.
+ * @param {{ limit?: number, status?: string }} [opts]
+ * @returns {Promise<object[]>}
+ */
+async function listRecent({ limit = 50, status } = {}) {
+  let query = getSupabase()
+    .from("donations")
+    .select("id, donor_id, amount_hkd, frequency, status, events_credited, cost_per_event_at_donation, is_anonymous, message, referral_source, stripe_session_id, stripe_payment_intent, created_at")
+    .order("created_at", { ascending: false })
+    .limit(Math.min(limit, 200));
+  if (status) query = query.eq("status", status);
+
+  const { data, error } = await query;
+  assertOk(error);
+  return data ?? [];
+}
+
 module.exports = {
   insertDonation,
   insertPendingDonation,
@@ -131,4 +149,5 @@ module.exports = {
   updateDonation,
   updateFeedback,
   listByDonor,
+  listRecent,
 };
