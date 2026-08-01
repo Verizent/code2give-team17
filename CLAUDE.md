@@ -112,8 +112,17 @@ and (since the volunteer merge) the volunteer SQL schema.** `GET /`, `GET /api`,
 - `src/data/articles.repo.js`, `src/data/impact.repo.js` — Supabase data access.
 - `src/services/content/articles.service.js`, `src/services/content/impact.service.js`.
 - `GET /api/articles`, `GET /api/articles/:slug`, `GET /api/impact` — all live and tested.
+- **Auth (server-side only — no client auth exists).** `src/lib/email.js` (`normaliseEmail`,
+  shared with the donor track), `src/data/profiles.repo.js`, `src/data/volunteer-links.repo.js`,
+  `src/services/auth/{verify-token,authenticate,volunteer-link.service}.js`,
+  `src/middleware/{require-auth,require-role}.js`, `src/routes/admin/index.js`.
+  **There are no auth endpoints** — signup/login happen browser→Supabase, and the `profiles`
+  row is provisioned just-in-time on the first authenticated request. Every `/api/admin/*`
+  route is gated by `requireRole('admin')` applied once in `routes/admin/index.js`.
 - `server/db/seed/` — articles, impact, community-posts; `npm run seed` is safe to re-run
   (upserts only, never truncates).
+- `server/src/schema/05_identity/` — `profiles` (`id` = `auth.users.id`, `role` is
+  `volunteer | admin`). **Written, not yet applied to the live project.**
 - `server/src/schema/` — the volunteer track's SQL: `volunteers`, `volunteer_opportunities`,
   `volunteer_signups`, `volunteer_interests`, `badges`, `volunteer_badges`,
   `volunteer_email_verifications`. **Applied to the live project**, and covered by
