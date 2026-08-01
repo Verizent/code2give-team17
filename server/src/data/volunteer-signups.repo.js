@@ -143,7 +143,9 @@ async function listAttendedForVolunteer(volunteerId) {
 
 /**
  * Admin attendance-mark write path — sets `status`, `hours_logged`, `attended_at`
- * (server-side stamp). Returns the updated row for the caller.
+ * (server-side stamp). Returns the updated row joined with the volunteer and the
+ * opportunity so the caller (attendance.service) can send the thank-you email
+ * without a second round-trip.
  *
  * @param {string} signupId
  * @param {{ status: string, hours_logged: number, attended_at: string }} patch
@@ -154,11 +156,32 @@ async function markAttendance(signupId, patch) {
     .from("volunteer_signups")
     .update(patch)
     .eq("id", signupId)
-    .select(SIGNUP_COLUMNS)
+    .select(
+      `${SIGNUP_COLUMNS}, thank_you_email_sent_at,
+       volunteers(id, email, full_name, locale),
+       volunteer_opportunities(id, title_en, title_zh, programme, starts_at)`,
+    )
     .single();
 
   throwIfDbError(error);
   return data;
+}
+
+/**
+ * Stamps `thank_you_email_sent_at` — guards against double-sending after a
+ * second attendance mark. Never awaited on the transaction path.
+ *
+ * @param {string} signupId
+ * @param {string} iso
+ */
+async function markThankYouSent(signupId, iso) {
+  const db = getServiceClient();
+  const { error } = await db
+    .from("volunteer_signups")
+    .update({ thank_you_email_sent_at: iso })
+    .eq("id", signupId);
+
+  throwIfDbError(error);
 }
 
 /**
@@ -182,6 +205,7 @@ module.exports = {
   listSignupsForVolunteer,
   listAttendedForVolunteer,
   markAttendance,
+  markThankYouSent,
   cancelSignup,
   deleteSignup,
   listUpcomingSignups,
