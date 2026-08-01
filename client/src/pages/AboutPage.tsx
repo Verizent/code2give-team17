@@ -33,7 +33,7 @@ const BOARD = [
   { name: 'Lobo Cheung', image: '/brand/lobo cheung.jpeg' },
   { name: 'Dan Maley', image: '/brand/dan maley.jpg' },
   { name: 'Edith Chen', image: '/brand/Edith-Chen.jpeg' },
-  { name: 'James Barrett', image: '/brand/James-Barrett.jpeg' },
+  { name: 'James Barrett', image: '/brand/James-Barrett.jpeg' , position: 'object-top'},
   { name: 'Raymond Tam', image: '/brand/raymond tam.jpeg' },
   { name: 'Dr. Ruby Ng', image: '/brand/empty.png' },
 ]
@@ -107,7 +107,10 @@ export function AboutPage() {
                 <img 
                   src={member.image} 
                   alt={member.name} 
-                  className="h-full w-full object-cover transition-transform duration-500 hover:scale-105"
+                  className={cn(
+                    "h-full w-full object-cover transition-transform duration-500 hover:scale-105",
+                    member.position || "object-center"
+                  )}
                 />
               </div>
               <div className="p-4">
