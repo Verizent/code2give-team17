@@ -285,13 +285,10 @@ export const corporatePartnerNames = corporatePartnersWall.map((p) => p.name)
  * brand photography (not screenshots of the press pages) for visual quality.
  */
 /**
- * External media coverage.
+ * External media coverage, used by the ArticlesCta teaser on the Community page.
  *
- * `externalOnly` marks the items we cannot republish: those two pages are a headline
- * and a thumbnail pointing at an RTHK episode and a newspaper column — there is no
- * body text to bring across, so linking out is the honest option. Everything else in
- * this list now has a full article in our own `articles` table, and the Articles page
- * links to those internally rather than bouncing the visitor off the site.
+ * NOT used by the Articles page: every item there is one of Love 21's own articles
+ * from the `articles` table, opening at /news/:slug rather than off-site.
  */
 export const mediaItems = [
   {
@@ -318,7 +315,6 @@ export const mediaItems = [
   },
   {
     id: 'around-the-ward-2022',
-    externalOnly: true,
     title: {
       en: 'Around the Ward: protecting children with special needs through the pandemic',
       'zh-Hant': '【繞場一週】守護特殊兒童對抗疫境',
@@ -330,7 +326,6 @@ export const mediaItems = [
   },
   {
     id: 'love-simply-interview-2021',
-    externalOnly: true,
     title: {
       en: 'Health feature interview: Love, simply',
       'zh-Hant': '精靈一點 健康人物專訪 — 愛．很簡單',
