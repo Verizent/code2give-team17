@@ -4,40 +4,11 @@ import { SiteFooter } from '@/components/site-footer'
 import { SiteHeader } from '@/components/site-header'
 import { SkipLink } from '@/components/skip-link'
 import { useSite } from '@/components/site-provider'
-import { apiData, isRealApiMode } from '@/lib/apiClient'
 import { fetchOpportunity } from '@/features/volunteering/api'
 import { getBriefing } from '@/features/volunteering/briefings'
+import { resolveSignup } from '@/features/volunteering/resolve-signup'
 import type { VolunteerOpportunity } from '@/features/volunteering/fixtures'
-import {
-  getSignup,
-  type VolunteerSignup,
-} from '@/features/volunteering/signup-store'
-
-async function resolveSignup(signupId: string): Promise<VolunteerSignup | null> {
-  const local = getSignup(signupId)
-  if (local) return local
-
-  if (!isRealApiMode()) return null
-
-  try {
-    const { data } = await apiData<{ items: Array<{ id: string; opportunity_id: string }> }>(
-      '/api/volunteer-signups',
-    )
-    const row = (data?.items ?? []).find((item) => item.id === signupId)
-    if (!row) return null
-    return {
-      id: row.id,
-      opportunity_id: row.opportunity_id,
-      name: '',
-      email: '',
-      age_group: 'age19_29',
-      status: 'confirmed',
-      created_at: new Date().toISOString(),
-    }
-  } catch {
-    return null
-  }
-}
+import type { VolunteerSignup } from '@/features/volunteering/signup-store'
 
 export function VolunteerBriefingPage() {
   const { signupId } = useParams()

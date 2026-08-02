@@ -156,7 +156,15 @@ export function VolunteerDetailPage() {
 
             {showForm ? (
               <div className="mt-6">
-                {opportunity.source === 'handson' ? (
+                {/*
+                  Interest, not signup, whenever there is no seat to claim: a handson
+                  listing (registration happens on their site) or a full one. A full
+                  internal session used to offer nothing at all — the button simply
+                  disabled — which is the exact moment a waitlist is most useful. The
+                  server already accepts interest on a full opportunity; only the UI
+                  refused to offer it.
+                */}
+                {opportunity.source === 'handson' || full ? (
                   <InterestForm
                     opportunityId={opportunity.id}
                     onCancel={() => setShowForm(false)}
@@ -182,15 +190,12 @@ export function VolunteerDetailPage() {
             ) : (
               <button
                 type="button"
-                disabled={opportunity.source !== 'handson' && full}
                 onClick={() => setShowForm(true)}
-                className="mt-6 inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-red px-5 font-bold text-white disabled:cursor-not-allowed disabled:opacity-40"
+                className="mt-6 inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-red px-5 font-bold text-white"
               >
-                {opportunity.source !== 'handson' && full
-                  ? v.fullBadge
-                  : opportunity.source === 'handson'
-                    ? v.registerInterest
-                    : v.joinSession}
+                {opportunity.source === 'handson' || full
+                  ? v.registerInterest
+                  : v.joinSession}
               </button>
             )}
 
