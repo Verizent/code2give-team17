@@ -150,8 +150,43 @@ async function update(slug, data) {
   return row ?? null;
 }
 
+/**
+ * The admin surface addresses articles by id, not slug.
+ *
+ * `slug` is editable, so a PATCH that changes it would destroy the identifier the request
+ * was addressed by — a retry after a timeout could not tell "already renamed" from "never
+ * existed". `findBySlug` stays for the PUBLIC route, where the slug IS the stable URL.
+ *
+ * @param {string} id
+ */
+async function findById(id) {
+  const { data: row, error } = await getSupabase()
+    .from("articles")
+    .select(DETAIL_COLUMNS)
+    .eq("id", id)
+    .maybeSingle();
+  assertOk(error);
+  return row ?? null;
+}
+
+/**
+ * @param {string} id
+ * @param {object} data
+ */
+async function updateById(id, data) {
+  const { data: row, error } = await getSupabase()
+    .from("articles")
+    .update(data)
+    .eq("id", id)
+    .select(DETAIL_COLUMNS)
+    .maybeSingle();
+  assertOk(error);
+  return row ?? null;
+}
+
 module.exports = {
   listPublished, findPublishedBySlug,
   listAll, findBySlug, slugExists, create, update,
+  findById, updateById,
   LIST_COLUMNS, DETAIL_COLUMNS,
 };

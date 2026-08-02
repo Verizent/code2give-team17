@@ -34,21 +34,21 @@ test("listAdminArticles returns items and meta without locale resolution", async
 });
 
 test("getAdminArticle returns full row including body for any status", async (t) => {
-  mock.method(articlesRepo, "findBySlug", async () => fullRow);
+  mock.method(articlesRepo, "findById", async () => fullRow);
   t.after(() => mock.restoreAll());
 
-  const article = await adminArticlesService.getAdminArticle("the-phoenix-year");
+  const article = await adminArticlesService.getAdminArticle("article-id-1");
 
   assert.equal(article.slug, "the-phoenix-year");
   assert.ok(article.body_en, "body_en must be present in admin detail");
 });
 
-test("getAdminArticle throws 404 for unknown slug", async (t) => {
-  mock.method(articlesRepo, "findBySlug", async () => null);
+test("getAdminArticle throws 404 for an unknown id", async (t) => {
+  mock.method(articlesRepo, "findById", async () => null);
   t.after(() => mock.restoreAll());
 
   await assert.rejects(
-    () => adminArticlesService.getAdminArticle("nope"),
+    () => adminArticlesService.getAdminArticle("missing-id"),
     (err) => { assert.equal(err.status, 404); return true; },
   );
 });
@@ -74,10 +74,10 @@ test("createAdminArticle derives slug and reading_time from body", async (t) => 
 
 test("updateAdminArticle never re-derives slug from title change", async (t) => {
   const updateFn = mock.fn(async () => ({ ...fullRow, title_en: "New title" }));
-  mock.method(articlesRepo, "update", updateFn);
+  mock.method(articlesRepo, "updateById", updateFn);
   t.after(() => mock.restoreAll());
 
-  await adminArticlesService.updateAdminArticle("the-phoenix-year", { title_en: "New title" });
+  await adminArticlesService.updateAdminArticle("article-id-1", { title_en: "New title" });
 
   const passedData = updateFn.mock.calls[0].arguments[1];
   assert.equal(passedData.slug, undefined, "slug must not be re-derived on update");
@@ -85,10 +85,10 @@ test("updateAdminArticle never re-derives slug from title change", async (t) => 
 
 test("deleteAdminArticle soft-deletes by setting status to archived", async (t) => {
   const updateFn = mock.fn(async () => ({ ...fullRow, status: "archived" }));
-  mock.method(articlesRepo, "update", updateFn);
+  mock.method(articlesRepo, "updateById", updateFn);
   t.after(() => mock.restoreAll());
 
-  await adminArticlesService.deleteAdminArticle("the-phoenix-year");
+  await adminArticlesService.deleteAdminArticle("article-id-1");
 
   const passedData = updateFn.mock.calls[0].arguments[1];
   assert.equal(passedData.status, "archived");
