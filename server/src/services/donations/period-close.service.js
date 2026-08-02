@@ -119,4 +119,9 @@ async function closeReadyPeriods(opts = {}) {
   return { processed: due.length, closed, emailed, skipped_empty: skippedEmpty };
 }
 
+// Closing a period deliberately does NOT end the donor's tracking link. The token is their
+// only route back to their giving history — §15 has no lookup-by-email, and the link is
+// delivered once, by email — so expiring it takes that history away permanently. A finished
+// period means there is nothing *new* to report, not that the record should disappear.
+
 module.exports = { closeReadyPeriods, TERMINAL_STATUSES };

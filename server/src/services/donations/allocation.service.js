@@ -92,6 +92,10 @@ async function allocateForDonation(donation) {
   const remaining = Math.max(0, credited - allocations.length);
   return {
     allocations,
+    // The session rows behind those allocations, already in hand from the query above. The
+    // thank-you email names the sessions a gift funded, and re-fetching them by id a moment
+    // later would be a second round trip for data this function has and was discarding.
+    sessions: eligible,
     period_id: period.id,
     insufficient: remaining > 0,
     remaining,
