@@ -6,7 +6,7 @@ const donorPeriodsRepo = require("../data/donor-periods.repo");
 const sessionsRepo = require("../data/sessions.repo");
 const { normalizeEmail } = require("../lib/normalize");
 const { resolveLocale } = require("../lib/locale");
-const { editionLabel, MAX_EVENTS_SHOWN } = require("../lib/donation-periods");
+const { editionForDonation, editionLabel, MAX_EVENTS_SHOWN } = require("../lib/donation-periods");
 const { MAX_EVENTS_SHOWN: MAX_SHOWN_FALLBACK } = require("../lib/donation-credit");
 
 function newAccessToken() {
@@ -148,6 +148,17 @@ function buildLifetime(allocations, succeeded, completedSessionRows = []) {
  *  next 15th/28th"). Lifetime totals still count it — it was supported.  */
 const REMOVAL_WINDOW_MS = 14 * 24 * 60 * 60 * 1000;
 
+/**
+ * `donor_periods.period_start` / `period_end` are date-only columns, so edition windows must
+ * be compared in the same form — `donor-periods.repo.js` stores them with this exact slice.
+ *
+ * @param {Date} date
+ * @returns {string} `YYYY-MM-DD`
+ */
+function toDateOnly(date) {
+  return date.toISOString().slice(0, 10);
+}
+
 async function buildPeriodBlock({ period, allocations, succeeded, donor }) {
   const removalCutoff = new Date(Date.now() - REMOVAL_WINDOW_MS);
   const inPeriod = allocations
@@ -169,13 +180,24 @@ async function buildPeriodBlock({ period, allocations, succeeded, donor }) {
     .slice(0, cap)
     .map((s) => toEvent(s, donor.locale ?? "en"));
 
-  // events_credited: sum from succeeded donations whose created_at falls in [start, end).
-  const start = new Date(period.period_start);
-  const end = new Date(period.period_end);
+  // events_credited: what the gifts belonging to this edition actually bought.
+  //
+  // A donation belongs to the period its *edition* maps to — not the period whose window
+  // contains its `created_at`. Under the fixed calendar those are deliberately different: a
+  // gift made on the 2nd is credited to the edition covering the 15th–EOM, so it is never
+  // inside its own period's window. The previous `created_at >= start && < end` test was
+  // therefore false for every gift in the 1st–15th bucket and this figure was always 0,
+  // while `events_shown` sat beside it reporting 5.
+  //
+  // `editionForDonation` is the same mapping allocation.service.js uses to pick the period,
+  // so the two cannot drift apart.
   const eventsCredited = succeeded
     .filter((d) => {
-      const c = new Date(d.created_at);
-      return c >= start && c < end;
+      const edition = editionForDonation(d.created_at);
+      return (
+        toDateOnly(edition.windowStart) === period.period_start &&
+        toDateOnly(edition.windowEnd) === period.period_end
+      );
     })
     .reduce((sum, d) => sum + Number(d.events_credited || 0), 0);
 

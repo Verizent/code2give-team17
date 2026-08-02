@@ -218,6 +218,112 @@ test("buildTrackView.period exposes the requested period with PLAN.md §C1 field
   assert.equal(view.allocations, undefined, "PLAN.md: 'there is no allocations key'");
 });
 
+test("period.events_credited counts gifts whose EDITION is this period, not gifts made inside it", async (t) => {
+  // Regression test. Under the fixed calendar a gift on the 2nd is credited to the edition
+  // covering 15–31 Aug, so its created_at is deliberately OUTSIDE its own period window.
+  // The old filter asked "was this donation created between period_start and period_end?",
+  // which is false for every gift in the 1st–15th bucket — so this field always read 0
+  // while events_shown beside it read 5.
+  stubTrackDeps(t, {
+    donations: [
+      { id: "d1", status: "succeeded", amount_hkd: 2500, events_credited: 5,
+        created_at: "2026-08-02T05:36:26Z" },
+    ],
+    periods: [
+      { id: "p1", period_start: "2026-08-15", period_end: "2026-08-31", status: "open" },
+    ],
+    allocs: [
+      { session_id: "s1", donation_id: "d1", status: "pending", donor_period_id: "p1",
+        cost_at_allocation: 500 },
+    ],
+    sessions: [
+      { id: "s1", title_en: "Floor curling", starts_at: "2026-08-09T10:00:00Z",
+        location_en: "San Po Kong", status: "scheduled", capacity: 12,
+        attendance_count: null, photo_url: null },
+    ],
+  });
+
+  const view = await buildTrackView(trackDonor);
+
+  assert.equal(
+    view.period.events_credited,
+    5,
+    "gift made 2 Aug belongs to the 15–31 Aug edition and credited 5",
+  );
+});
+
+test("period.events_credited excludes gifts belonging to a different edition", async (t) => {
+  // The single-donation case above cannot distinguish "filtered correctly" from "not
+  // filtered at all" — both yield 5. This one can: a second gift made on 20 Aug maps to the
+  // NEXT edition (31 Aug – 15 Sep), so the 15–31 Aug period must still report 5, not 8.
+  stubTrackDeps(t, {
+    donations: [
+      { id: "d1", status: "succeeded", amount_hkd: 2500, events_credited: 5,
+        created_at: "2026-08-02T05:36:26Z" }, // → edition 15–31 Aug
+      { id: "d2", status: "succeeded", amount_hkd: 1500, events_credited: 3,
+        created_at: "2026-08-20T09:00:00Z" }, // → edition 31 Aug – 15 Sep
+    ],
+    periods: [
+      { id: "p1", period_start: "2026-08-15", period_end: "2026-08-31", status: "closed" },
+      { id: "p2", period_start: "2026-08-31", period_end: "2026-09-15", status: "open" },
+    ],
+    allocs: [],
+    sessions: [],
+  });
+
+  const first = await buildTrackView(trackDonor, { periodId: "p1" });
+  assert.equal(first.period.events_credited, 5, "15–31 Aug edition: only the 2 Aug gift");
+
+  const second = await buildTrackView(trackDonor, { periodId: "p2" });
+  assert.equal(second.period.events_credited, 3, "31 Aug–15 Sep edition: only the 20 Aug gift");
+});
+
+test("period.events_credited sums multiple gifts landing in the same edition", async (t) => {
+  // Two gifts in the same 1st–15th bucket both map to the 15–31 Aug edition, so the donor
+  // is told 5 + 3 = 8 — independent of how many sessions were actually allocated.
+  stubTrackDeps(t, {
+    donations: [
+      { id: "d1", status: "succeeded", amount_hkd: 2500, events_credited: 5,
+        created_at: "2026-08-02T05:00:00Z" },
+      { id: "d2", status: "succeeded", amount_hkd: 1500, events_credited: 3,
+        created_at: "2026-08-11T09:00:00Z" },
+    ],
+    periods: [
+      { id: "p1", period_start: "2026-08-15", period_end: "2026-08-31", status: "open" },
+    ],
+    allocs: [],
+    sessions: [],
+  });
+
+  const view = await buildTrackView(trackDonor);
+
+  assert.equal(view.period.events_credited, 8, "5 + 3, both in the 15–31 Aug edition");
+  assert.equal(view.period.events_shown, 0, "credited is what was bought, not what was allocated");
+});
+
+test("period.events_credited ignores failed and refunded gifts", async (t) => {
+  // CONTEXT.md §15: failed and refunded charges must never inflate a donor-facing figure.
+  stubTrackDeps(t, {
+    donations: [
+      { id: "d1", status: "succeeded", amount_hkd: 2500, events_credited: 5,
+        created_at: "2026-08-02T05:00:00Z" },
+      { id: "d2", status: "failed", amount_hkd: 5000, events_credited: 10,
+        created_at: "2026-08-03T05:00:00Z" },
+      { id: "d3", status: "refunded", amount_hkd: 5000, events_credited: 10,
+        created_at: "2026-08-04T05:00:00Z" },
+    ],
+    periods: [
+      { id: "p1", period_start: "2026-08-15", period_end: "2026-08-31", status: "open" },
+    ],
+    allocs: [],
+    sessions: [],
+  });
+
+  const view = await buildTrackView(trackDonor);
+
+  assert.equal(view.period.events_credited, 5, "only the succeeded gift counts");
+});
+
 test("buildTrackView.period.events carry PLAN.md §C1 fields — kind, title, status from session", async (t) => {
   stubTrackDeps(t, {
     allocs: [
