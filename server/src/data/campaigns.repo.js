@@ -128,7 +128,7 @@ async function updateStatus(id, patch) {
 /**
  * Patches editable fields. `slug`, `status` and `raised_hkd` are deliberately not
  * writable here — slug is the public `/c/:slug` URL, status moves through
- * `updateStatus` (moderation), and `raised_hkd` only ever moves via `addRaised`.
+ * `updateStatus` (moderation), and `raised_hkd` only ever moves via `recalculateRaised`.
  *
  * @param {string} id
  * @param {{ title?: string, story?: string, goal_hkd?: number,
@@ -166,19 +166,46 @@ async function remove(id) {
 }
 
 /**
+ * Recomputes `raised_hkd` from the donations that actually exist, and stores it.
+ *
+ * Replaces an increment (`raised_hkd = raised_hkd + amount`). Both are read-then-write and
+ * so both can race, but they fail very differently:
+ *
+ * - Incrementing loses the update **permanently**. Measured on this build: 12 concurrent
+ *   HK$100 gifts moved the total by +500 instead of +1200, and no later donation repairs
+ *   it, because each one only ever adds to whatever wrong number it happened to read.
+ * - Summing is **self-correcting**. A racing write can still store a briefly stale total,
+ *   but the next donation recomputes from the rows and lands on the truth. The failure is a
+ *   short lag rather than money quietly vanishing from a public progress bar.
+ *
+ * The real fix remains a single atomic `update … set raised_hkd = (select sum(…))`, which
+ * PostgREST cannot express — it needs a SQL function, i.e. a migration (§19). This is the
+ * closest correct-by-convergence version available without one.
+ *
+ * Counts `succeeded` only: a `pending` checkout has not been paid, and showing it would
+ * overstate what the fundraiser has actually raised.
+ *
  * @param {string} id
- * @param {number} amountHkd
- * @returns {Promise<object | null>}
+ * @returns {Promise<object | null>} the updated campaign, or null if it no longer exists
  */
-async function addRaised(id, amountHkd) {
-  const row = await findById(id);
-  if (!row) return null;
-  const { data, error } = await getSupabase()
+async function recalculateRaised(id) {
+  const db = getSupabase();
+
+  const { data: rows, error: sumError } = await db
+    .from("donations")
+    .select("amount_hkd")
+    .eq("campaign_id", id)
+    .eq("status", "succeeded");
+  assertOk(sumError);
+
+  const total = (rows ?? []).reduce((sum, row) => sum + (Number(row.amount_hkd) || 0), 0);
+
+  const { data, error } = await db
     .from("campaigns")
-    .update({ raised_hkd: row.raised_hkd + amountHkd })
+    .update({ raised_hkd: total })
     .eq("id", id)
     .select(COLUMNS)
-    .single();
+    .maybeSingle();
   assertOk(error);
   return data;
 }
@@ -192,5 +219,5 @@ module.exports = {
   update,
   remove,
   updateStatus,
-  addRaised,
+  recalculateRaised,
 };

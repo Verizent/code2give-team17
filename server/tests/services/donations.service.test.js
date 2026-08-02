@@ -2,6 +2,7 @@ const { test, mock } = require("node:test");
 const assert = require("node:assert/strict");
 
 const donorsService = require("../../src/services/donors.service");
+const campaignsRepo = require("../../src/data/campaigns.repo");
 const donationsRepo = require("../../src/data/donations.repo");
 const donorsRepo = require("../../src/data/donors.repo");
 const {
@@ -26,9 +27,16 @@ const stubDonation = {
 
 function mockDeps(t) {
   mock.method(donorsService, "upsertDonor", async () => stubDonor);
-  mock.method(donationsRepo, "insertDonation", async () => stubDonation);
+  const insertDonation = mock.method(donationsRepo, "insertDonation", async (row) => ({
+    ...stubDonation,
+    ...row,
+  }));
+  const recalculateRaised = mock.method(campaignsRepo, "recalculateRaised", async () => ({ id: "c1" }));
   t.after(() => mock.restoreAll());
+  return { recalculateRaised, insertDonation };
 }
+
+const CAMPAIGN_ID = "cccccccc-0000-0000-0000-cccccccccccc";
 
 test("createDonation rejects a missing or empty email with 400", async (t) => {
   mockDeps(t);
@@ -257,4 +265,55 @@ test("getCheckoutStatus tolerates a succeeded donation whose donor_id is not att
 
   assert.equal("tracking_token" in result, false);
   assert.equal(findById.mock.callCount(), 0);
+});
+
+test("a direct donation to a fundraiser credits its raised total", async (t) => {
+  // The Stripe path credits via the webhook. This path has no webhook at all — it writes a
+  // succeeded donation directly — so if it does not credit here, nothing ever does, and the
+  // fundraiser reads zero while its donations are plainly in the table.
+  //
+  // The stub deliberately DROPS campaign_id from the returned row, mirroring what the repo's
+  // explicit select list used to do. An earlier version of this test echoed the input back,
+  // which made the stub more generous than the real query and let the bug through green.
+  // A service that reads the earmark off the round-tripped row fails here, as it should.
+  const deps = mockDeps(t);
+  deps.insertDonation.mock.mockImplementation(async (row) => {
+    const { campaign_id: _dropped, ...withoutEarmark } = row;
+    return { ...stubDonation, ...withoutEarmark };
+  });
+
+  await createDonation({
+    email: "donor@example.com",
+    amount_hkd: 500,
+    campaign_id: CAMPAIGN_ID,
+  });
+
+  assert.equal(deps.recalculateRaised.mock.callCount(), 1);
+  assert.deepEqual(deps.recalculateRaised.mock.calls[0].arguments, [CAMPAIGN_ID]);
+});
+
+test("an unearmarked direct donation never touches a fundraiser", async (t) => {
+  const deps = mockDeps(t);
+
+  await createDonation({ email: "donor@example.com", amount_hkd: 500 });
+
+  assert.equal(deps.recalculateRaised.mock.callCount(), 0);
+});
+
+test("a failing fundraiser credit does not lose the donation", async (t) => {
+  // The donation is already written and the money is already taken. Throwing here would
+  // report failure for a gift that was in fact recorded, which is the worse of the two wrongs.
+  const deps = mockDeps(t);
+  deps.recalculateRaised.mock.mockImplementation(async () => {
+    throw new Error("campaigns table is on fire");
+  });
+
+  const result = await createDonation({
+    email: "donor@example.com",
+    amount_hkd: 500,
+    campaign_id: CAMPAIGN_ID,
+  });
+
+  assert.equal(result.status, "succeeded");
+  assert.ok(result.id, "the donation is still returned to the caller");
 });
