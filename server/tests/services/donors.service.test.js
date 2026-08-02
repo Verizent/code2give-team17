@@ -535,3 +535,100 @@ test("buildTrackView tolerates a donor with no periods yet — period is null bu
   assert.equal(view.lifetime.total_given_hkd, 300, "strip still populates from donations");
   assert.equal(view.lifetime.donation_count, 1);
 });
+
+// ---------------------------------------------------------------------------
+// Referral sources — "how did you hear about Love 21", asked once per donor
+// ---------------------------------------------------------------------------
+
+test("upsertDonor records referral sources for a first-time donor", async (t) => {
+  mock.method(donorsRepo, "findByEmail", async () => null);
+  const createDonor = mock.method(donorsRepo, "createDonor", async (row) => ({
+    ...stubDonor,
+    ...row,
+  }));
+  t.after(() => mock.restoreAll());
+
+  await upsertDonor({
+    email: "alice@example.com",
+    referralSources: ["friend_family", "other"],
+    referralSourceOther: "Met the team at a school fair",
+  });
+
+  const row = createDonor.mock.calls[0].arguments[0];
+  assert.deepEqual(row.referral_sources, ["friend_family", "other"]);
+  assert.equal(row.referral_source_other, "Met the team at a school fair");
+});
+
+test("upsertDonor never overwrites an answer the donor already gave", async (t) => {
+  // The question is once per donor, not once per gift. Without this a second donation would
+  // rewrite the original answer — and because the payer email comes back from Stripe rather
+  // than from us, so could anyone who pays on that address. Same reasoning as tracking_opt_in.
+  const answered = { ...stubDonor, referral_sources: ["social"] };
+  mock.method(donorsRepo, "findByEmail", async () => answered);
+  const updateDonor = mock.method(donorsRepo, "updateDonor", async () => answered);
+  t.after(() => mock.restoreAll());
+
+  await upsertDonor({
+    email: "alice@example.com",
+    referralSources: ["company", "press"],
+    referralSourceOther: "should be ignored",
+  });
+
+  const rewrote = updateDonor.mock.calls.some(
+    (call) => call.arguments[1]?.referral_sources !== undefined,
+  );
+  assert.equal(rewrote, false, "an existing answer must never be rewritten");
+});
+
+test("upsertDonor fills in an answer for a donor who never gave one", async (t) => {
+  // A supporter who donated before the question existed (or skipped it) is still asked, and
+  // their first answer is recorded. Empty is "never answered", not "answered with nothing".
+  const unanswered = { ...stubDonor, referral_sources: [] };
+  mock.method(donorsRepo, "findByEmail", async () => unanswered);
+  const updateDonor = mock.method(donorsRepo, "updateDonor", async () => unanswered);
+  t.after(() => mock.restoreAll());
+
+  await upsertDonor({ email: "alice@example.com", referralSources: ["event"] });
+
+  const patch = updateDonor.mock.calls[0].arguments[1];
+  assert.deepEqual(patch.referral_sources, ["event"]);
+});
+
+test("upsertDonor drops referral values the CHECK constraint would reject", async (t) => {
+  // These make a round trip through Stripe session metadata, so what comes back is untrusted.
+  // A rejected insert here would fail the webhook and un-succeed a donation that was paid.
+  mock.method(donorsRepo, "findByEmail", async () => null);
+  const createDonor = mock.method(donorsRepo, "createDonor", async (row) => ({
+    ...stubDonor,
+    ...row,
+  }));
+  t.after(() => mock.restoreAll());
+
+  await upsertDonor({
+    email: "alice@example.com",
+    referralSources: ["social", "tiktok", "social", "", "press"],
+  });
+
+  assert.deepEqual(
+    createDonor.mock.calls[0].arguments[0].referral_sources,
+    ["social", "press"],
+    "unknown values and duplicates are dropped, known ones kept",
+  );
+});
+
+test("upsertDonor keeps free text only when other is among the sources", async (t) => {
+  mock.method(donorsRepo, "findByEmail", async () => null);
+  const createDonor = mock.method(donorsRepo, "createDonor", async (row) => ({
+    ...stubDonor,
+    ...row,
+  }));
+  t.after(() => mock.restoreAll());
+
+  await upsertDonor({
+    email: "alice@example.com",
+    referralSources: ["search"],
+    referralSourceOther: "orphaned text",
+  });
+
+  assert.equal(createDonor.mock.calls[0].arguments[0].referral_source_other, null);
+});

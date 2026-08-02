@@ -107,10 +107,17 @@ async function createCheckoutSession(input, { clientOrigin }) {
     // successful return. Change these only alongside the routes themselves.
     success_url: `${clientOrigin}/give/thanks?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${clientOrigin}/give?cancelled=1`,
+    // Stripe caps a metadata value at 500 characters. The sources are a short comma-joined
+    // list of known tags so they cannot approach that; the free text is clamped to 200 by
+    // the schema. Carrying them here rather than storing them on the donation is deliberate:
+    // the answer belongs to the donor, and the donor row does not exist until the webhook
+    // reads back the email Stripe collected.
     metadata: {
       amount_hkd: String(amountHkd),
       tracking_opt_in: String(trackingOptIn),
       campaign_id: input.campaign_id ?? "",
+      referral_sources: (input.referral_sources ?? []).join(","),
+      referral_source_other: input.referral_source_other ?? "",
     },
   });
 
