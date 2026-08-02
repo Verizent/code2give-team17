@@ -1,7 +1,7 @@
 // DEMO-ONLY: Seeded volunteer opportunities stand in for staff-authored listings.
 // Real version needs staff entering listings through the admin path (§5, §17).
 // The `handson` source row is a stub; a real HandsOn sync populates
-// spots_filled + last_synced_at from the partner API.
+// spots_filled_handson + last_synced_at from the partner API.
 
 // Stable UUIDs so `upsert on id` is safely re-runnable — the table has no other
 // unique constraint that fits (see 10_volunteer_opportunities.sql:73-74).
@@ -33,7 +33,7 @@ const opportunities = [
     skills: ["patience"],
     status: "open",
     source: "internal",
-    spots_filled: 0,
+    spots_filled_handson: 0,
   },
   {
     id: "22222222-2222-4222-8222-222222222222",
@@ -52,7 +52,7 @@ const opportunities = [
     skills: [],
     status: "open",
     source: "internal",
-    spots_filled: 0,
+    spots_filled_handson: 0,
   },
   {
     id: "33333333-3333-4333-8333-333333333333",
@@ -72,7 +72,7 @@ const opportunities = [
     skills: ["cooking", "cantonese"],
     status: "open",
     source: "internal",
-    spots_filled: 0,
+    spots_filled_handson: 0,
   },
   {
     id: "44444444-4444-4444-8444-444444444444",
@@ -88,7 +88,7 @@ const opportunities = [
     starts_at: in28Days(),
     ends_at: plusHours(in28Days(), 3),
     capacity: 10,
-    spots_filled: 2,
+    spots_filled_handson: 2,
     min_age: 16,
     skills: [],
     status: "open",

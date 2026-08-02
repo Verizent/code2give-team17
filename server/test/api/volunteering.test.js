@@ -1,5 +1,5 @@
 const http = require("node:http");
-const { describe, it, before } = require("node:test");
+const { describe, it, before, after } = require("node:test");
 const assert = require("node:assert/strict");
 const path = require("node:path");
 
@@ -67,8 +67,39 @@ function apiRequest(method, path, body, headers = {}) {
   });
 }
 
+/**
+ * Walks the real verification flow and returns a usable token. Relies on `demo_code`,
+ * which the service only echoes under EMAIL_MODE=console — the suite forces that below,
+ * which also keeps these tests from posting mail at @example.test addresses.
+ */
+async function proveEmail(email) {
+  const start = await apiRequest("POST", "/api/email-verifications", { email });
+  assert.equal(start.status, 201);
+  assert.ok(start.body.data.demo_code, "console mode echoes the code for tests");
+
+  const confirm = await apiRequest(
+    "PUT",
+    `/api/email-verifications/${start.body.data.id}/confirmation`,
+    { code: start.body.data.demo_code },
+  );
+  assert.equal(confirm.status, 200);
+  return confirm.body.data.verification_token;
+}
+
 describe("volunteering API", { skip }, () => {
   let openOpportunityId;
+  let originalEmailMode;
+
+  before(async () => {
+    // server/.env carries EMAIL_MODE=smtp. Left alone, every verification in this file
+    // would attempt a real send to a fake @example.test address and 502.
+    originalEmailMode = process.env.EMAIL_MODE;
+    process.env.EMAIL_MODE = "console";
+  });
+
+  after(() => {
+    process.env.EMAIL_MODE = originalEmailMode;
+  });
 
   before(async () => {
     const { status, body } = await apiRequest("GET", "/api/opportunities?limit=50");
@@ -160,15 +191,134 @@ describe("volunteering API", { skip }, () => {
     }
 
     const email = `guest-signup-${Date.now()}@example.test`;
+    const verification_token = await proveEmail(email);
+
     const signup = await apiRequest("POST", "/api/volunteer/signups", {
       opportunity_id: target.id,
       full_name: "Guest Signup Test",
       email,
+      verification_token,
     });
 
     assert.equal(signup.status, 201);
     assert.ok(signup.body.data?.signup?.id);
     assert.ok(signup.body.data?.volunteer?.id);
     assert.ok(signup.body.data?.opportunity?.spots_filled >= 1);
+  });
+
+  it("refuses a guest signup with no proof of the address", async () => {
+    const { body: listBody } = await apiRequest("GET", "/api/opportunities?limit=50");
+    const target = listBody.data.find((item) => item.seats_left > 0);
+    if (!target) {
+      return;
+    }
+
+    const signup = await apiRequest("POST", "/api/volunteer/signups", {
+      opportunity_id: target.id,
+      full_name: "Unverified Test",
+      email: `unverified-${Date.now()}@example.test`,
+    });
+
+    assert.equal(signup.status, 400);
+    assert.equal(signup.body.code, "VALIDATION_FAILED");
+    // (schema-level until a token is present; the service check covers a wrong-address token)
+  });
+
+  /**
+   * Mirrors GET /api/donations/referral-status for donors. The signup form asks how someone
+   * found Love 21 only once; this is how it knows whether to show the question at all.
+   */
+  it("reports discovery as unanswered for an address we have never seen", async () => {
+    const { status, body } = await apiRequest(
+      "GET",
+      `/api/volunteer/discovery-status?email=${encodeURIComponent(`never-seen-${Date.now()}@example.test`)}`,
+    );
+
+    assert.equal(status, 200);
+    assert.equal(body.data.answered, false);
+    assert.deepEqual(Object.keys(body.data), ["answered"], "the response says nothing else");
+  });
+
+  it("reports discovery as answered once the volunteer has told us", async () => {
+    const { body: listBody } = await apiRequest("GET", "/api/opportunities?limit=50");
+    const target = listBody.data.find((item) => item.seats_left > 0);
+    if (!target) {
+      return;
+    }
+
+    const email = `discovery-status-${Date.now()}@example.test`;
+    const verification_token = await proveEmail(email);
+
+    const before = await apiRequest(
+      "GET",
+      `/api/volunteer/discovery-status?email=${encodeURIComponent(email)}`,
+    );
+    assert.equal(before.body.data.answered, false);
+
+    await apiRequest("POST", "/api/volunteer/signups", {
+      opportunity_id: target.id,
+      full_name: "Discovery Status Test",
+      email,
+      verification_token,
+      discovery_sources: ["instagram"],
+    });
+
+    const after = await apiRequest(
+      "GET",
+      `/api/volunteer/discovery-status?email=${encodeURIComponent(email)}`,
+    );
+    assert.equal(after.body.data.answered, true);
+  });
+
+  /**
+   * A volunteer who signed up without answering must still be asked next time — otherwise
+   * the question disappears for everyone who ever declined it.
+   */
+  it("keeps discovery unanswered for a volunteer who skipped the question", async () => {
+    const { body: listBody } = await apiRequest("GET", "/api/opportunities?limit=50");
+    const target = listBody.data.find((item) => item.seats_left > 0);
+    if (!target) {
+      return;
+    }
+
+    const email = `discovery-skipped-${Date.now()}@example.test`;
+    const verification_token = await proveEmail(email);
+
+    await apiRequest("POST", "/api/volunteer/signups", {
+      opportunity_id: target.id,
+      full_name: "Skipped Discovery Test",
+      email,
+      verification_token,
+    });
+
+    const { body } = await apiRequest(
+      "GET",
+      `/api/volunteer/discovery-status?email=${encodeURIComponent(email)}`,
+    );
+    assert.equal(body.data.answered, false);
+  });
+
+  it("400s a malformed address rather than guessing", async () => {
+    const { status } = await apiRequest("GET", "/api/volunteer/discovery-status?email=nope");
+    assert.equal(status, 400);
+  });
+
+  it("refuses a token that proved a different address", async () => {
+    const { body: listBody } = await apiRequest("GET", "/api/opportunities?limit=50");
+    const target = listBody.data.find((item) => item.seats_left > 0);
+    if (!target) {
+      return;
+    }
+
+    const verification_token = await proveEmail(`owner-${Date.now()}@example.test`);
+
+    const signup = await apiRequest("POST", "/api/volunteer/signups", {
+      opportunity_id: target.id,
+      full_name: "Someone Else",
+      email: `victim-${Date.now()}@example.test`,
+      verification_token,
+    });
+
+    assert.equal(signup.status, 400);
   });
 });

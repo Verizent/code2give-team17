@@ -87,73 +87,14 @@ async function cancel(signupId) {
   return data;
 }
 
-/**
- * Atomically bump spots_filled when under capacity. Returns false if full.
- *
- * @param {string} opportunityId
- * @returns {Promise<{ ok: boolean, opportunity?: object }>}
+/*
+ * claimSpot / releaseSpot lived here and were never called by anything. They mutated
+ * volunteer_opportunities.spots_filled as a running counter and wrote status='full' —
+ * a second, conflicting model of capacity alongside the one that is actually used, where
+ * local signups are counted as rows and fullness is derived. Removed rather than renamed
+ * onto spots_filled_handson: reviving them would reintroduce the drift that made a
+ * capacity-6 session with zero signups report itself full.
  */
-async function claimSpot(opportunityId) {
-  const { data: opportunity, error: readError } = await getSupabase()
-    .from("volunteer_opportunities")
-    .select("id, capacity, spots_filled, status")
-    .eq("id", opportunityId)
-    .in("status", ["open", "full"])
-    .maybeSingle();
-  assertOk(readError);
-
-  if (!opportunity) {
-    return { ok: false };
-  }
-  if (opportunity.spots_filled >= opportunity.capacity || opportunity.status === "full") {
-    return { ok: false, opportunity };
-  }
-
-  const nextFilled = opportunity.spots_filled + 1;
-  const nextStatus = nextFilled >= opportunity.capacity ? "full" : opportunity.status;
-
-  const { data: updated, error: updateError } = await getSupabase()
-    .from("volunteer_opportunities")
-    .update({ spots_filled: nextFilled, status: nextStatus })
-    .eq("id", opportunityId)
-    .eq("spots_filled", opportunity.spots_filled)
-    .select("id, capacity, spots_filled, status")
-    .maybeSingle();
-  assertOk(updateError);
-
-  if (!updated) {
-    return { ok: false, opportunity };
-  }
-  return { ok: true, opportunity: updated };
-}
-
-/**
- * Release one spot after cancel (never below 0).
- *
- * @param {string} opportunityId
- */
-async function releaseSpot(opportunityId) {
-  const { data: opportunity, error: readError } = await getSupabase()
-    .from("volunteer_opportunities")
-    .select("id, capacity, spots_filled, status")
-    .eq("id", opportunityId)
-    .maybeSingle();
-  assertOk(readError);
-  if (!opportunity || opportunity.spots_filled <= 0) return;
-
-  const nextFilled = opportunity.spots_filled - 1;
-  const nextStatus =
-    opportunity.status === "full" && nextFilled < opportunity.capacity
-      ? "open"
-      : opportunity.status;
-
-  const { error } = await getSupabase()
-    .from("volunteer_opportunities")
-    .update({ spots_filled: nextFilled, status: nextStatus })
-    .eq("id", opportunityId)
-    .eq("spots_filled", opportunity.spots_filled);
-  assertOk(error);
-}
 
 /**
  * @param {string[]} opportunityIds
@@ -274,8 +215,6 @@ module.exports = {
   listByVolunteerId,
   findById,
   cancel,
-  claimSpot,
-  releaseSpot,
   listByOpportunityIds,
   markAttended,
   listAttendedByVolunteerId,

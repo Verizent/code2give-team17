@@ -13,7 +13,7 @@ const LIST_COLUMNS = [
   "starts_at",
   "ends_at",
   "capacity",
-  "spots_filled",
+  "spots_filled_handson",
   "min_age",
   "skills",
   "status",
@@ -65,7 +65,7 @@ async function listOpen({ from, to, programme, source }) {
   let query = db
     .from("volunteer_opportunities")
     .select(LIST_COLUMNS, { count: "exact" })
-    .in("status", ["open", "full"])
+    .in("status", ["open"])
     .order("starts_at", { ascending: true })
     .range(from, to);
 
@@ -104,7 +104,7 @@ async function findOpenById(id) {
     .from("volunteer_opportunities")
     .select(LIST_COLUMNS)
     .eq("id", id)
-    .in("status", ["open", "full"])
+    .in("status", ["open"])
     .maybeSingle();
 
   throwIfDbError(error);

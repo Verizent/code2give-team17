@@ -16,7 +16,7 @@ const rawRow = {
   starts_at: "2026-09-06T02:00:00.000Z",
   ends_at: "2026-09-06T05:00:00.000Z",
   capacity: 8,
-  spots_filled: 0,
+  spots_filled_handson: 0,
   min_age: 16,
   skills: ["mandarin"],
   status: "open",

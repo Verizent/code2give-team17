@@ -1,17 +1,21 @@
 const express = require("express");
 const { validate } = require("../middleware/validate");
+const rateLimit = require("../middleware/rate-limit");
 const { requireAuth, optionalAuth } = require("../middleware/require-auth");
 const volunteerContext = require("../middleware/volunteer-context");
 const signupsService = require("../services/volunteering/signups.service");
 const interestsService = require("../services/volunteering/interests.service");
 const badgesRepo = require("../data/badges.repo");
+const volunteersRepo = require("../data/volunteers.repo");
 const signupsRepo = require("../data/volunteer-signups.repo");
 const { actorFromAuth } = require("../lib/actor");
 const { envelope } = require("../lib/envelope");
+const { normalizeEmail } = require("../lib/normalize-email");
 const {
   guestSignupBodySchema,
   createProgrammeInterestBodySchema,
   signupIdParamsSchema,
+  discoveryStatusQuerySchema,
 } = require("../schemas/volunteering.schema");
 
 const router = express.Router();
@@ -41,6 +45,40 @@ router.get(
           signups,
         }),
       );
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+/**
+ * GET /api/volunteer/discovery-status?email=…
+ *
+ * Answers one question for the signup form: has this address already told us how it found
+ * Love 21? If so the form hides that block, because it is asked once per volunteer.
+ *
+ * Mirrors GET /api/donations/referral-status, and for the same reasons. The response is a
+ * bare `{ answered: boolean }`. It has to be unauthenticated — the signup form has no
+ * session — which makes it a way to test whether an address is a known volunteer. Returning
+ * only the boolean keeps that to a yes/no rather than exposing a name, history or the
+ * access token, and the answer is identical for an address that has never volunteered and
+ * one that volunteered without ever answering.
+ *
+ * That last point matters more here than for donors: §15's reasoning is that a differing
+ * response turns the form into an oracle for whether a named person is involved with a
+ * Down syndrome and autism charity.
+ */
+router.get(
+  "/discovery-status",
+  // Generous because the form calls this from a debounced onChange while an address is
+  // typed, so one honest volunteer makes a handful. 30 per 15 minutes still leaves
+  // enumeration useless — probing a meaningful list would take days.
+  rateLimit({ key: "discovery-status", limit: 30, windowMs: 15 * 60_000 }),
+  validate({ query: discoveryStatusQuerySchema }),
+  async (request, response, next) => {
+    try {
+      const email = normalizeEmail(request.validatedQuery?.email ?? request.query.email);
+      response.json(envelope({ answered: await volunteersRepo.hasDiscoverySources(email) }));
     } catch (error) {
       next(error);
     }

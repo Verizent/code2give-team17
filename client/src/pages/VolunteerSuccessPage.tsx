@@ -1,8 +1,10 @@
-import { Link, useSearchParams } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Link, Navigate, useSearchParams } from 'react-router-dom'
 import { SiteHeader } from '@/components/site-header'
 import { SiteFooter } from '@/components/site-footer'
 import { SkipLink } from '@/components/skip-link'
 import { useSite } from '@/components/site-provider'
+import { resolveSignup } from '@/features/volunteering/resolve-signup'
 
 export function VolunteerSuccessPage() {
   const { t } = useSite()
@@ -10,6 +12,52 @@ export function VolunteerSuccessPage() {
   const [params] = useSearchParams()
   const session = params.get('session') || 'this session'
   const signupId = params.get('signup')
+  const isInterest = params.get('interest') === '1'
+
+  // undefined = still checking, null = not ours.
+  const [verified, setVerified] = useState<boolean | undefined>(undefined)
+
+  /**
+   * Everything on this page came from the query string, so /volunteer/success?session=
+   * Anything&signup=whatever rendered a confirmed spot for a signup that never existed.
+   * Resolve the id before claiming anything: the browser's own store, or the volunteer's
+   * own signups from the API. A stranger's id resolves to neither.
+   *
+   * The interest flow has no id to check — it confirms a lead, not a spot — so it is let
+   * through on the `interest` flag alone.
+   */
+  useEffect(() => {
+    if (isInterest) {
+      setVerified(true)
+      return
+    }
+    if (!signupId) {
+      setVerified(false)
+      return
+    }
+    let cancelled = false
+    void resolveSignup(signupId).then((row) => {
+      if (!cancelled) setVerified(Boolean(row))
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [signupId, isInterest])
+
+  if (verified === false) {
+    return <Navigate to="/volunteer" replace />
+  }
+
+  if (verified === undefined) {
+    return (
+      <div className="min-h-screen bg-paper">
+        <SkipLink />
+        <SiteHeader />
+        <main id="main" className="mx-auto max-w-2xl px-4 py-24 sm:px-6" aria-busy="true" />
+        <SiteFooter />
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-paper">

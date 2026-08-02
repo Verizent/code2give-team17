@@ -20,6 +20,8 @@ export type OpportunityApiRow = {
   ends_at: string | null
   capacity: number
   spots_filled: number
+  spots_filled_handson: number
+  local_signups_count: number
   interested_count: number
   min_age: number
   skills: string[]
@@ -155,6 +157,10 @@ export function mapOpportunityRow(row: OpportunityApiRow): VolunteerOpportunity 
     source: row.source,
     capacity: row.capacity,
     spots_filled: row.spots_filled,
+    // Kept separate as well as summed: a handson listing takes bookings on both sites, and
+    // "6 of 10 booked" cannot say which side holds them.
+    spots_filled_handson: row.spots_filled_handson ?? 0,
+    local_signups_count: row.local_signups_count ?? 0,
     interested_count: row.interested_count ?? 0,
     skills,
     recruiting,

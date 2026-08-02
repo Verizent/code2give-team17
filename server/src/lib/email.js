@@ -1,3 +1,5 @@
+const nodemailer = require("nodemailer");
+
 /**
  * Email utilities. Two unrelated concerns share this module because both branches
  * independently created `lib/email.js` — the volunteer/auth track for address
@@ -119,15 +121,22 @@ async function verifyTransport() {
 /**
  * Email sender wrapper (PLAN.md §Phase D).
  *
- * DEMO-ONLY behaviour: anything other than `EMAIL_MODE=send` renders to stdout, so
- * both `log` (donations default) and `console` (the volunteer track's `.env.example`
- * value) land in log-mode. `EMAIL_MODE=send` would call Resend, but its sandbox only
- * delivers to verified addresses until love21foundation.com DNS is verified (§17), so
- * defaulting to log-mode keeps the demo path working without hidden failures — and
- * `send` throws rather than silently no-ops, so nobody believes a real send happened.
+ * Modes:
+ *   `smtp` — real delivery through the SMTP_* credentials in server/.env. Throws if
+ *            they are incomplete or the server rejects the message.
+ *   `send` — the unbuilt Resend path. Still throws rather than aliasing to smtp, so a
+ *            config asking for it gets corrected instead of quietly redirected.
+ *   anything else, including unset — renders to stdout. `log` (donations default) and
+ *            `console` (the volunteer track's `.env.example` value) both land here.
+ *
+ * `smtp` used to fall into that last bucket, because the switch only special-cased
+ * `send`. server/.env carries EMAIL_MODE=smtp and a full set of SMTP_* credentials, so
+ * every email the app sent was quietly printed to a terminal and reported
+ * `delivered: true` — including the attendance thank-you, the one email a volunteer is
+ * actually promised. Nothing failed, so nothing surfaced.
  *
  * @param {{ to: string, subject: string, text: string, html?: string }} message
- * @returns {Promise<{ mode: 'log'|'send', delivered: boolean, id?: string }>}
+ * @returns {Promise<{ mode: 'log'|'smtp', delivered: boolean, id?: string }>}
  */
 async function sendEmail(message) {
   const mode = MODE();
