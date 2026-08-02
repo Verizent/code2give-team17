@@ -414,7 +414,7 @@ export const STRINGS = {
       kicker: 'Support',
       title: 'Give with meaning',
       subhead: 'Money, things, or a campaign friends can join — your gift keeps programmes free for members.',
-      tabMoney: 'Money',
+      tabMoney: 'Donate',
       tabWishlist: 'Wishlist',
       tabFundraise: 'Fundraise',
       amountLabel: 'Your gift (HKD)',
