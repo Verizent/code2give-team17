@@ -378,6 +378,48 @@ test("buildTrackView.period.events carry PLAN.md §C1 fields — kind, title, st
   assert.equal(event.cost_at_allocation, undefined, "cost is internal, not exposed");
 });
 
+test("buildTrackView lists a session once even when several gifts landed on it", async (t) => {
+  // Reproduces a real report: HK$500 (1 credit) then HK$1,450 (3 credits) in one window
+  // produced 4 allocations across 3 distinct sessions, and "Family support circle" appeared
+  // twice on the page. Two gifts collide whenever the second one's eligibility window
+  // overlaps the first — the allocator picks soonest-first and does not exclude what an
+  // earlier gift already funded, which is by design.
+  //
+  // `events` was built by mapping over ALLOCATIONS while the deduplicated `sessionIds` was
+  // used only to fetch. A donor seeing the same class listed twice reads it as us
+  // double-counting their money. The identical bug in the edition email was fixed earlier in
+  // period-close.service.js; this is the same defect on the page.
+  const period = {
+    id: "p1",
+    period_start: "2026-08-15",
+    period_end: "2026-08-31",
+    status: "open",
+  };
+  stubTrackDeps(t, {
+    periods: [period],
+    allocs: [
+      { id: "a1", session_id: "s_family", donor_period_id: "p1", status: "pending" },
+      { id: "a2", session_id: "s_family", donor_period_id: "p1", status: "pending" },
+      { id: "a3", session_id: "s_moment10", donor_period_id: "p1", status: "pending" },
+      { id: "a4", session_id: "s_moment11", donor_period_id: "p1", status: "pending" },
+    ],
+    sessions: [
+      { id: "s_family", title_en: "Family support circle", starts_at: "2026-08-10T02:00:00Z" },
+      { id: "s_moment10", title_en: "Community moment", starts_at: "2026-08-10T06:00:00Z" },
+      { id: "s_moment11", title_en: "Community moment", starts_at: "2026-08-11T02:00:00Z" },
+    ],
+  });
+
+  const view = await buildTrackView(trackDonor);
+
+  assert.equal(view.period.events.length, 3, "4 allocations, 3 distinct sessions");
+  assert.equal(view.period.events_shown, 3, "events_shown must agree with the list");
+
+  const ids = view.period.events.map((e) => e.id);
+  assert.deepEqual(new Set(ids).size, ids.length, "no session appears twice");
+  assert.deepEqual(ids, ["s_family", "s_moment10", "s_moment11"], "still ordered by starts_at");
+});
+
 test("buildTrackView resolves title/location via donor.locale=zh-Hant", async (t) => {
   stubTrackDeps(t, {
     allocs: [

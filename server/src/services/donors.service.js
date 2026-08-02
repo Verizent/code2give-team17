@@ -89,6 +89,11 @@ async function buildTrackView(donor, opts = {}) {
     donorPeriodsRepo.listByDonor(donor.id),
   ]);
 
+  // This view never expires. The token is the donor's only route back — §15 has no
+  // lookup-by-email and the link is delivered once, by email — so an expiring page would take
+  // their giving history away for good. A period with nothing outstanding means no *new* news,
+  // not that the record should stop existing.
+
   const succeeded = donations.filter((d) => d.status === "succeeded");
   const supporterSince = succeeded.length
     ? succeeded.reduce(
@@ -178,8 +183,19 @@ async function buildPeriodBlock({ period, allocations, succeeded, donor }) {
 
   // Display cap of 10 per PLAN.md — the first N by starts_at.
   const cap = typeof MAX_EVENTS_SHOWN === "number" ? MAX_EVENTS_SHOWN : (MAX_SHOWN_FALLBACK ?? 10);
-  const events = inPeriod
-    .map((alloc) => sessionsById.get(alloc.session_id))
+
+  // One row per SESSION, not per allocation. Two allocations land on the same session
+  // whenever a donor gives twice inside one eligibility window — the allocator picks
+  // soonest-first and does not exclude what an earlier gift already funded — and mapping over
+  // allocations then rendered that session twice. A donor seeing "Family support circle"
+  // listed twice reads it as us double-counting their money.
+  //
+  // `sessionIds` is already distinct and already carries the removal-window filter, since it
+  // is derived from `inPeriod`. It was being used for the fetch and then ignored for the
+  // render. The identical bug in the edition email was fixed in period-close.service.js; this
+  // is the same defect on the page.
+  const events = sessionIds
+    .map((id) => sessionsById.get(id))
     .filter(Boolean)
     .sort((a, b) => new Date(a.starts_at) - new Date(b.starts_at))
     .slice(0, cap)
