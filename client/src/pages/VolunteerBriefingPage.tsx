@@ -4,21 +4,66 @@ import { SiteFooter } from '@/components/site-footer'
 import { SiteHeader } from '@/components/site-header'
 import { SkipLink } from '@/components/skip-link'
 import { useSite } from '@/components/site-provider'
+import { apiData, isRealApiMode } from '@/lib/apiClient'
 import { fetchOpportunity } from '@/features/volunteering/api'
 import { getBriefing } from '@/features/volunteering/briefings'
 import type { VolunteerOpportunity } from '@/features/volunteering/fixtures'
-import { getSignup } from '@/features/volunteering/signup-store'
+import {
+  getSignup,
+  type VolunteerSignup,
+} from '@/features/volunteering/signup-store'
+
+async function resolveSignup(signupId: string): Promise<VolunteerSignup | null> {
+  const local = getSignup(signupId)
+  if (local) return local
+
+  if (!isRealApiMode()) return null
+
+  try {
+    const { data } = await apiData<{ items: Array<{ id: string; opportunity_id: string }> }>(
+      '/api/volunteer-signups',
+    )
+    const row = (data?.items ?? []).find((item) => item.id === signupId)
+    if (!row) return null
+    return {
+      id: row.id,
+      opportunity_id: row.opportunity_id,
+      name: '',
+      email: '',
+      age_group: 'age19_29',
+      status: 'confirmed',
+      created_at: new Date().toISOString(),
+    }
+  } catch {
+    return null
+  }
+}
 
 export function VolunteerBriefingPage() {
   const { signupId } = useParams()
   const { locale, t } = useSite()
   const v = t.volunteer
-  const signup = signupId ? getSignup(signupId) : undefined
+  const [signup, setSignup] = useState<VolunteerSignup | null | undefined>(undefined)
   const [opportunity, setOpportunity] = useState<VolunteerOpportunity | null | undefined>(
     undefined,
   )
 
   useEffect(() => {
+    if (!signupId) {
+      setSignup(null)
+      return
+    }
+    let cancelled = false
+    void resolveSignup(signupId).then((row) => {
+      if (!cancelled) setSignup(row)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [signupId])
+
+  useEffect(() => {
+    if (signup === undefined) return
     if (!signup) {
       setOpportunity(null)
       return
@@ -32,11 +77,7 @@ export function VolunteerBriefingPage() {
     }
   }, [signup])
 
-  if (!signup) {
-    return <Navigate to="/volunteer" replace />
-  }
-
-  if (opportunity === undefined) {
+  if (signup === undefined || opportunity === undefined) {
     return (
       <div className="min-h-screen bg-paper">
         <SiteHeader />
@@ -45,9 +86,32 @@ export function VolunteerBriefingPage() {
     )
   }
 
-  const briefing = opportunity ? getBriefing(opportunity.id) : undefined
-  if (!opportunity || !briefing) {
+  if (!signup) {
     return <Navigate to="/volunteer" replace />
+  }
+
+  const briefing = opportunity ? getBriefing(opportunity.id, opportunity) : undefined
+  if (!opportunity || !briefing) {
+    return (
+      <div className="min-h-screen bg-paper">
+        <SkipLink />
+        <SiteHeader />
+        <main id="main" className="mx-auto max-w-[720px] px-4 py-16 sm:px-6">
+          <h1 className="font-display text-2xl font-semibold text-navy">{v.briefingTitle}</h1>
+          <p className="mt-3 text-navy/70">
+            {locale === 'en'
+              ? 'We could not load this class briefing. The session may have been removed.'
+              : locale === 'zh-Hans'
+                ? '无法载入此课堂简介。该课堂可能已移除。'
+                : '無法載入此課堂簡介。該課堂可能已移除。'}
+          </p>
+          <Link to="/volunteer" className="mt-6 inline-flex font-semibold text-teal underline-offset-4 hover:underline">
+            {v.backToHub} →
+          </Link>
+        </main>
+        <SiteFooter />
+      </div>
+    )
   }
 
   return (

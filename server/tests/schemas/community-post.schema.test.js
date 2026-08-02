@@ -54,3 +54,21 @@ test("ACCEPTS a populated honeypot rather than rejecting it", () => {
 test("accepts an empty honeypot, which is what a real submitter sends", () => {
   assert.equal(accepts({ ...valid, website: "" }), true);
 });
+
+// The wall filters by activity type, so a submission that cannot carry one can never
+// appear under any tab — it is stuck in "All" no matter what it is about.
+test("accepts an activity type from the wall's filter set", () => {
+  assert.equal(accepts({ ...valid, activity_type: "sport" }), true);
+  assert.equal(accepts({ ...valid, activity_type: "csr" }), true);
+});
+
+test("rejects an activity type the wall has no tab for", () => {
+  // A value with no tab would render a card that no filter can ever reach.
+  assert.equal(accepts({ ...valid, activity_type: "gardening" }), false);
+  assert.equal(accepts({ ...valid, activity_type: "" }), false);
+});
+
+test("activity type stays optional", () => {
+  // Rows predating the column, and the older client, must keep working.
+  assert.equal(accepts(valid), true);
+});

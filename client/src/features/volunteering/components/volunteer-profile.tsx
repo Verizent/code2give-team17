@@ -1,23 +1,52 @@
-import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useEffect, useRef, useState } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useSite } from '@/components/site-provider'
+import { SessionFeedbackForm } from '@/features/volunteering/components/session-feedback-form'
 import { SkillChips } from '@/features/volunteering/components/skill-chips'
 import type { VolunteerSkill } from '@/features/volunteering/fixtures'
 import type { VolunteerProfile } from '@/features/volunteering/profile'
 import { saveProfileSkills } from '@/features/volunteering/profile-prefs'
 import { cn } from '@/lib/utils'
 
+function statusLabel(
+  status: string,
+  m: {
+    sessionConfirmed: string
+    sessionAttended: string
+    sessionNoShow: string
+    sessionApplied: string
+  },
+) {
+  if (status === 'attended') return m.sessionAttended
+  if (status === 'no_show') return m.sessionNoShow
+  if (status === 'applied') return m.sessionApplied
+  return m.sessionConfirmed
+}
+
 export function VolunteerProfilePanel({
   profile,
   onSkillsSaved,
+  onSessionFeedback,
 }: {
   profile: VolunteerProfile
   onSkillsSaved?: (skills: VolunteerSkill[]) => void
+  onSessionFeedback?: (
+    signupId: string,
+    patch: {
+      feedback_submitted_at: string | null
+      experience_rating: number | null
+      would_return: boolean | null
+      improvement_note: string | null
+    },
+  ) => void
 }) {
   const { locale, t } = useSite()
   const m = t.me
+  const [params] = useSearchParams()
+  const focusSignupId = params.get('feedback')
   const [draftSkills, setDraftSkills] = useState<VolunteerSkill[]>(profile.skills)
   const [savedFlash, setSavedFlash] = useState(false)
+  const focusRef = useRef<HTMLLIElement | null>(null)
   const earned = profile.badges.filter((b) => b.earned)
   const locked = profile.badges.filter((b) => !b.earned)
   const dirty =
@@ -27,6 +56,11 @@ export function VolunteerProfilePanel({
   useEffect(() => {
     setDraftSkills(profile.skills)
   }, [profile.skills])
+
+  useEffect(() => {
+    if (!focusSignupId || !focusRef.current) return
+    focusRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }, [focusSignupId, profile.sessions])
 
   function handleSave() {
     if (!profile.email) return
@@ -114,26 +148,45 @@ export function VolunteerProfilePanel({
         <section>
           <h3 className="font-display text-2xl font-semibold text-navy">{m.sessionsTitle}</h3>
           <ul className="mt-6 divide-y divide-navy/10 border-y border-navy/10">
-            {profile.sessions.map((session) => (
-              <li
-                key={session.signup.id}
-                className="flex flex-col gap-3 py-5 sm:flex-row sm:items-center sm:justify-between"
-              >
-                <div>
-                  <p className="font-semibold text-navy">{session.title[locale]}</p>
-                  <p className="mt-1 text-sm text-navy/60">{session.when[locale]}</p>
-                  <p className="mt-1 text-xs font-semibold tracking-wide text-teal uppercase">
-                    {m.sessionConfirmed} · {session.hours}h
-                  </p>
-                </div>
-                <Link
-                  to={`/volunteer/briefing/${session.signup.id}`}
-                  className="inline-flex min-h-11 shrink-0 items-center font-semibold text-navy underline-offset-4 hover:underline"
+            {profile.sessions.map((session) => {
+              const isFocus = focusSignupId === session.signup.id
+              const attended = session.signup.status === 'attended'
+              return (
+                <li
+                  key={session.signup.id}
+                  ref={isFocus ? focusRef : undefined}
+                  className="py-5"
                 >
-                  {m.openBriefing} →
-                </Link>
-              </li>
-            ))}
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="font-semibold text-navy">{session.title[locale]}</p>
+                      <p className="mt-1 text-sm text-navy/60">{session.when[locale]}</p>
+                      <p className="mt-1 text-xs font-semibold tracking-wide text-teal uppercase">
+                        {statusLabel(session.signup.status, m)} · {session.hours}h
+                      </p>
+                    </div>
+                    {session.signup.status !== 'attended' ? (
+                      <Link
+                        to={`/volunteer/briefing/${session.signup.id}`}
+                        className="inline-flex min-h-11 shrink-0 items-center font-semibold text-navy underline-offset-4 hover:underline"
+                      >
+                        {m.openBriefing} →
+                      </Link>
+                    ) : null}
+                  </div>
+
+                  {attended ? (
+                    <SessionFeedbackForm
+                      signup={session.signup}
+                      highlighted={isFocus}
+                      onSubmitted={(result) =>
+                        onSessionFeedback?.(session.signup.id, result)
+                      }
+                    />
+                  ) : null}
+                </li>
+              )
+            })}
           </ul>
         </section>
       )}

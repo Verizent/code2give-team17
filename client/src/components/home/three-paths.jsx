@@ -45,6 +45,29 @@ export function ThreePaths() {
       className="scroll-mt-28 bg-red py-16 sm:py-24"
     >
       <div className="mx-auto max-w-[1120px] px-5 sm:px-8">
+        {/* Sits above the three "how to help" cards on purpose. Everything below asks
+            the visitor to give something; a family arriving here needs to be asked what
+            they need before scrolling past three requests to find it. Goes to /support,
+            the same destination as the footer's Get support link, which holds the real
+            family intake form and the member portal. */}
+        <div className="mb-10 flex flex-col gap-4 rounded-xl bg-white/12 p-6 ring-1 ring-white/25 sm:mb-12 sm:flex-row sm:items-center sm:justify-between sm:p-8">
+          <div>
+            <p className="font-display text-[1.35rem] leading-tight font-semibold text-white sm:text-[1.5rem]">
+              {t.paths.seekingTitle}
+            </p>
+            <p className="mt-2 max-w-xl text-[15px] leading-relaxed text-white/85">
+              {t.paths.seekingBody}
+            </p>
+          </div>
+          <Link
+            to="/support"
+            className="inline-flex min-h-[48px] shrink-0 items-center justify-center gap-2 rounded-xl bg-white px-6 text-base font-semibold text-red transition-colors hover:bg-white/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+          >
+            {t.paths.seekingCta}
+            <ArrowRight className="h-4 w-4" aria-hidden="true" />
+          </Link>
+        </div>
+
         <h2
           id="paths-title"
           className="font-display text-[clamp(2rem,4.5vw,2.75rem)] font-extrabold tracking-[-0.02em] text-white"

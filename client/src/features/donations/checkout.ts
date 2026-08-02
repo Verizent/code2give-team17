@@ -21,10 +21,54 @@ export type CheckoutResult =
   | { mode: 'stripe'; url: string; donation: StoredDonation }
   | { mode: 'local'; donation: StoredDonation }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+/**
+ * `POST /api/donations/checkout` validates with a Zod **strictObject**, so an unknown key is a
+ * 400 rather than a silently dropped field. It accepts exactly four: `amount_hkd`,
+ * `frequency`, `campaign_id`, `tracking_opt_in`.
+ *
+ * This exists to stop the rest of what the form collects from reaching the wire. Those fields
+ * are not ours to send:
+ *
+ *  - **email / name** — Stripe Checkout collects them natively and the webhook reads them back
+ *    off the session (CONTEXT.md §15). Our form has no payer email field at all; the receipt
+ *    fields are for the Section 88 receipt, which is a separate concern.
+ *  - **programme / designation** — donors do not choose one. `donations.programme` was dropped
+ *    from the schema on 1 Aug; every gift is unrestricted.
+ *  - **success_path / cancel_path** — the server owns the return URLs.
+ */
+function toCheckoutBody(input: CheckoutInput) {
+  const body: Record<string, unknown> = {
+    amount_hkd: input.amount_hkd,
+    // Passes through unmapped: the endpoint accepts all three the form offers. This used to
+    // rewrite `weekly` to `monthly`, which billed a weekly pledge monthly without saying so.
+    frequency: input.frequency,
+    tracking_opt_in: input.journey_opt_in,
+  }
+  // `campaign_slug` is a human-readable slug; the column is a uuid. Sending a slug is a 400,
+  // so an unresolvable campaign is dropped rather than failing the whole gift.
+  if (input.campaign_slug && UUID_RE.test(input.campaign_slug)) {
+    body.campaign_id = input.campaign_slug
+  }
+  return body
+}
+
 /**
  * Frontend checkout seam.
- * Tries real Stripe Checkout via API when available; otherwise persists locally
- * and records the gift on the server when possible.
+ *
+ * Two modes, and the choice is made *before* the request, never as a reaction to one failing:
+ *
+ *  - **Stripe** whenever the API is real and a publishable key is configured. Errors from here
+ *    propagate to the caller.
+ *  - **local** only when Stripe was never an option — mock mode, or no key.
+ *
+ * There is deliberately no fallback from the first to the second. It used to catch `ApiError`
+ * and save a localStorage "gift" instead, which meant a 400 from the checkout endpoint
+ * rendered as a successful donation: the donor saw a thank-you page, no money moved, and
+ * nothing was logged. The frontend had been sending a body the endpoint rejects for some time
+ * and nobody noticed, because the fallback made a broken payment path look identical to a
+ * working one. A payment that cannot complete must fail visibly.
  */
 export async function startDonationCheckout(
   input: CheckoutInput,
@@ -36,53 +80,49 @@ export async function startDonationCheckout(
     !String(publishable).includes('replace_me')
 
   if (canAttemptStripe) {
-    try {
-      const res = await apiData<{ url: string }>('/api/donations/checkout', {
-        method: 'POST',
-        body: JSON.stringify({
-          amount_hkd: input.amount_hkd,
-          frequency: input.frequency === 'once' ? 'one_time' : input.frequency,
-          designation: input.programme,
-          email: input.email.trim().toLowerCase(),
-          full_name: input.receipt_name.trim(),
-          tracking_opt_in: input.journey_opt_in,
-          campaign_id: input.campaign_slug,
-          success_path: '/give/thanks',
-          cancel_path: '/give',
-        }),
-      })
-      if (res?.data?.url) {
-        const donation = saveDonation({ ...input, stripe_redirected: true })
-        return { mode: 'stripe', url: res.data.url, donation }
-      }
-    } catch (err) {
-      // No checkout route yet, or Stripe unavailable — fall through to local.
-      if (!(err instanceof ApiError)) throw err
+    const res = await apiData<{ checkout_url: string; session_id: string }>(
+      '/api/donations/checkout',
+      { method: 'POST', body: JSON.stringify(toCheckoutBody(input)) },
+    )
+    // The endpoint returns `checkout_url`, not `url`. Reading the wrong key made a successful
+    // 201 indistinguishable from a failure and silently dropped us into the local path.
+    if (!res?.data?.checkout_url) {
+      throw new ApiError('Checkout did not return a payment link', 502)
     }
+    const donation = saveDonation({ ...input, stripe_redirected: true })
+    return { mode: 'stripe', url: res.data.checkout_url, donation }
   }
 
-  const donation = saveDonation(input)
+  // Mock mode or no publishable key: record the gift locally so the UI still demos.
+  // `POST /api/donations/record` used to be called here; that route has never existed
+  // (the DEMO-ONLY route is `POST /api/donations`), so every call 404'd into an empty catch.
+  return { mode: 'local', donation: saveDonation(input) }
+}
 
-  if (isRealApiMode()) {
-    try {
-      await apiData('/api/donations/record', {
-        method: 'POST',
-        body: JSON.stringify({
-          amount_hkd: input.amount_hkd,
-          frequency: input.frequency,
-          programme: input.programme,
-          email: input.email.trim().toLowerCase(),
-          full_name: input.receipt_name.trim(),
-          tracking_opt_in: input.journey_opt_in,
-          campaign_id: input.campaign_slug ?? null,
-        }),
-      })
-    } catch {
-      // Local gift already saved — server sync is best-effort.
-    }
-  }
+/** Shape of `GET /api/donations/session/:session_id` (server: donations.service.js). */
+export type CheckoutStatus = {
+  status: 'pending' | 'succeeded' | 'failed' | 'refunded'
+  amount_hkd: number
+  frequency: string
+  events_credited: number | null
+  /** Present only once the donation succeeded AND the donor opted into tracking. */
+  tracking_token?: string
+}
 
-  return { mode: 'local', donation }
+/**
+ * Thanks-page poll. Stripe returns the donor here the instant the card clears, but the
+ * donation row is still `pending` until the `checkout.session.completed` webhook lands on our
+ * side — a separate network hop we do not control the timing of. So the page arrives before
+ * the data does, and has to wait for it.
+ *
+ * Keyed on the unguessable Stripe session id, which is why this needs no auth. `tracking_token`
+ * is gated server-side on the donation having succeeded with tracking opted in.
+ */
+export async function fetchCheckoutStatus(sessionId: string): Promise<CheckoutStatus> {
+  const res = await apiData<CheckoutStatus>(
+    `/api/donations/session/${encodeURIComponent(sessionId)}`,
+  )
+  return res.data
 }
 
 /** Ask backend to send a gift-use update; soft-fail for local path. */

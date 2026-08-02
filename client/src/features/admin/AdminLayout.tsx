@@ -25,6 +25,7 @@ export function AdminLayout() {
     { to: '/admin/articles', end: false, label: a.navArticles, hint: a.navArticlesHint },
     { to: '/admin/campaigns', end: false, label: a.navCampaigns, hint: a.navCampaignsHint },
     { to: '/admin/moderation', end: false, label: a.navModeration, hint: a.navModerationHint },
+    { to: '/admin/instagram', end: false, label: a.navInstagram, hint: a.navInstagramHint },
   ]
 
   useEffect(() => {

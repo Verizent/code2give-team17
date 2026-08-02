@@ -3,12 +3,18 @@ const assert = require("node:assert/strict");
 const mediaRepo = require("../../../src/data/media.repo");
 const { uploadCoverImage } = require("../../../src/services/admin/uploads.service");
 
-const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47]);
+const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00]);
+const JPEG = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10]);
+const WEBP = Buffer.concat([
+  Buffer.from("RIFF", "ascii"),
+  Buffer.from([0x00, 0x00, 0x00, 0x00]),
+  Buffer.from("WEBP", "ascii"),
+]);
 
 function stubUpload(t, url = "https://example.test/media/cover.png") {
   const calls = [];
-  mock.method(mediaRepo, "uploadPublicObject", async (path, body, contentType) => {
-    calls.push({ path, size: body.length, contentType });
+  mock.method(mediaRepo, "uploadPublicObject", async (key, buffer, contentType) => {
+    calls.push({ key, size: buffer.length, contentType });
     return url;
   });
   t.after(() => mock.restoreAll());
@@ -18,53 +24,80 @@ function stubUpload(t, url = "https://example.test/media/cover.png") {
 test("uploadCoverImage stores the file and returns its public URL", async (t) => {
   const calls = stubUpload(t);
 
-  const result = await uploadCoverImage(PNG, "image/png");
+  const result = await uploadCoverImage(PNG);
 
   assert.equal(result.url, "https://example.test/media/cover.png");
   assert.equal(calls.length, 1);
   assert.equal(calls[0].contentType, "image/png");
 });
 
-test("the stored path carries the right extension and is not the caller's filename", async (t) => {
+test("the content type comes from the bytes, not from a caller-supplied header", async (t) => {
   const calls = stubUpload(t);
 
-  await uploadCoverImage(PNG, "image/webp");
+  // A caller claiming image/png cannot make an HTML payload into a PNG: the bucket is
+  // public, so a stored .html would be served from our own origin as stored XSS.
+  const html = Buffer.from("<html><script>alert(1)</script></html>", "utf8");
+  await assert.rejects(() => uploadCoverImage(html, "image/png"), { status: 400 });
 
-  // Derived from the mime type, never from a client-supplied name: a caller-controlled
-  // path is how you get directory traversal or an overwritten object.
-  assert.match(calls[0].path, /\.webp$/);
-  assert.ok(!calls[0].path.includes(".."));
+  // ...and an honest JPEG is typed from its own magic bytes, whatever the header said.
+  await uploadCoverImage(JPEG, "image/png");
+  assert.equal(calls.at(-1).contentType, "image/jpeg");
+  assert.match(calls.at(-1).key, /\.jpg$/);
+});
+
+test("each accepted format is recognised from its signature", async (t) => {
+  const calls = stubUpload(t);
+
+  await uploadCoverImage(PNG);
+  await uploadCoverImage(JPEG);
+  await uploadCoverImage(WEBP);
+
+  assert.deepEqual(
+    calls.map((call) => call.contentType),
+    ["image/png", "image/jpeg", "image/webp"],
+  );
+});
+
+test("the stored key carries the right extension and is not a caller filename", async (t) => {
+  const calls = stubUpload(t);
+
+  await uploadCoverImage(WEBP);
+
+  // Derived server-side: a caller-controlled key is how you get traversal or an
+  // overwritten object on a bucket shared with community photos.
+  assert.match(calls[0].key, /^covers\//);
+  assert.match(calls[0].key, /\.webp$/);
+  assert.ok(!calls[0].key.includes(".."));
 });
 
 test("two uploads of identical bytes do not collide", async (t) => {
   const calls = stubUpload(t);
 
-  await uploadCoverImage(PNG, "image/png");
-  await uploadCoverImage(PNG, "image/png");
+  await uploadCoverImage(PNG);
+  await uploadCoverImage(PNG);
 
-  assert.notEqual(calls[0].path, calls[1].path);
+  assert.notEqual(calls[0].key, calls[1].key);
 });
 
-test("a disallowed content type is rejected before anything is stored", async (t) => {
+test("an SVG is rejected before anything is stored", async (t) => {
   const calls = stubUpload(t);
 
-  await assert.rejects(() => uploadCoverImage(PNG, "image/svg+xml"), { status: 400 });
-  await assert.rejects(() => uploadCoverImage(PNG, "text/html"), { status: 400 });
+  const svg = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"><script/></svg>', "utf8");
+  await assert.rejects(() => uploadCoverImage(svg), { status: 400 });
 
-  // SVG and HTML can carry script. The bucket rejects them too, but failing here means
-  // the bytes never leave the process.
   assert.equal(calls.length, 0);
 });
 
 test("an empty body is rejected rather than stored as a zero-byte image", async (t) => {
   stubUpload(t);
-  await assert.rejects(() => uploadCoverImage(Buffer.alloc(0), "image/png"), { status: 400 });
+  await assert.rejects(() => uploadCoverImage(Buffer.alloc(0)), { status: 400 });
 });
 
 test("a file over the bucket limit is rejected before upload", async (t) => {
   const calls = stubUpload(t);
-  const tooBig = Buffer.alloc(5 * 1024 * 1024 + 1);
+  // Valid PNG magic, so it is the size that rejects it and not the signature check.
+  const tooBig = Buffer.concat([PNG, Buffer.alloc(5 * 1024 * 1024)]);
 
-  await assert.rejects(() => uploadCoverImage(tooBig, "image/png"), { status: 413 });
+  await assert.rejects(() => uploadCoverImage(tooBig), { status: 413 });
   assert.equal(calls.length, 0);
 });

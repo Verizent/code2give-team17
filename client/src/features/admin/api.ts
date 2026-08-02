@@ -216,40 +216,38 @@ export async function unpublishAdminArticle(id: string): Promise<AdminArticle> {
   return data
 }
 
-export type InstagramEmbed = {
+export type AdminInstagramEmbed = {
   id: string
   url: string
   caption_en: string | null
   caption_zh: string | null
-  display_order: number | null
+  thumbnail_url: string | null
+  display_order: number
   is_active: boolean
 }
 
-export async function fetchAdminInstagram(): Promise<InstagramEmbed[]> {
-  const { data } = await apiData<InstagramEmbed[]>('/api/admin/instagram')
-  return data ?? []
+export async function fetchInstagramEmbeds(): Promise<AdminInstagramEmbed[]> {
+  const res = await apiClient<Envelope<AdminInstagramEmbed[]>>('/api/admin/instagram?limit=50')
+  return res.data ?? []
 }
 
-export async function createInstagramEmbed(payload: {
-  url: string
-  caption_en?: string
-  caption_zh?: string
-  display_order?: number
-}): Promise<InstagramEmbed> {
-  const { data } = await apiData<InstagramEmbed>('/api/admin/instagram', {
+export async function createInstagramEmbed(
+  body: Partial<AdminInstagramEmbed>,
+): Promise<AdminInstagramEmbed> {
+  const { data } = await apiData<AdminInstagramEmbed>('/api/admin/instagram', {
     method: 'POST',
-    body: JSON.stringify(payload),
+    body: JSON.stringify(body),
   })
   return data
 }
 
 export async function updateInstagramEmbed(
   id: string,
-  payload: Partial<Omit<InstagramEmbed, 'id'>>,
-): Promise<InstagramEmbed> {
-  const { data } = await apiData<InstagramEmbed>(
+  body: Partial<AdminInstagramEmbed>,
+): Promise<AdminInstagramEmbed> {
+  const { data } = await apiData<AdminInstagramEmbed>(
     `/api/admin/instagram/${encodeURIComponent(id)}`,
-    { method: 'PATCH', body: JSON.stringify(payload) },
+    { method: 'PATCH', body: JSON.stringify(body) },
   )
   return data
 }

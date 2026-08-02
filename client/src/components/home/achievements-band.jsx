@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import { ArrowRight, Flame, GraduationCap, Medal, Quote, Trophy } from 'lucide-react'
 import { useSite } from '@/components/site-provider'
-import { achievements, corporatePartnerNames, corporatePartners } from '@/lib/mock'
+import { achievements, corporatePartners, corporatePartnersWall } from '@/lib/mock'
 
 const ICONS = {
   medal: Medal,
@@ -86,13 +86,17 @@ export function AchievementsBand() {
             </p>
             <p className="mt-1 max-w-lg text-sm text-navy/60">{t.corporateImpact.wallSubhead}</p>
             <div className="relative mt-5">
-              <ul className="achievements-marquee flex w-max gap-2.5 pr-2.5">
-                {[...corporatePartnerNames, ...corporatePartnerNames].map((name, index) => (
-                  <li
-                    key={`${name}-${index}`}
-                    className="flex min-h-[56px] shrink-0 items-center justify-center rounded-full border border-navy/10 bg-white px-5 text-center text-sm leading-tight font-bold text-navy/70"
-                  >
-                    {name}
+              <ul className="achievements-marquee flex w-max items-center gap-8 pr-8">
+                {[...corporatePartnersWall, ...corporatePartnersWall].map((partner, index) => (
+                  <li key={`${partner.id}-${index}`} className="flex h-14 w-[140px] shrink-0 items-center justify-center">
+                    <img
+                      src={partner.logo}
+                      alt={partner.name}
+                      title={partner.name}
+                      className="max-h-12 max-w-full object-contain"
+                      loading="lazy"
+                      decoding="async"
+                    />
                   </li>
                 ))}
               </ul>

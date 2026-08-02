@@ -218,4 +218,51 @@ export async function submitInterest(input: {
   }
 }
 
+/** §23 post-attendance feedback — only valid when signup.status === 'attended'. */
+export type SignupFeedbackInput = {
+  experience_rating?: number
+  would_return?: boolean
+  improvement_note?: string | null
+}
+
+export async function submitSignupFeedback(
+  signupId: string,
+  body: SignupFeedbackInput,
+): Promise<
+  | {
+      ok: true
+      feedback_submitted_at: string | null
+      experience_rating: number | null
+      would_return: boolean | null
+      improvement_note: string | null
+    }
+  | { ok: false; reason: 'error' }
+> {
+  if (!isRealApiMode()) {
+    return { ok: false, reason: 'error' }
+  }
+
+  try {
+    const { data } = await apiData<{
+      feedback_submitted_at?: string | null
+      experience_rating?: number | null
+      would_return?: boolean | null
+      improvement_note?: string | null
+    }>(`/api/volunteer-signups/${signupId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+    })
+    return {
+      ok: true,
+      feedback_submitted_at: data.feedback_submitted_at ?? new Date().toISOString(),
+      experience_rating: data.experience_rating ?? body.experience_rating ?? null,
+      would_return: data.would_return ?? body.would_return ?? null,
+      improvement_note:
+        data.improvement_note ?? body.improvement_note ?? null,
+    }
+  } catch {
+    return { ok: false, reason: 'error' }
+  }
+}
+
 export type { VolunteerOpportunity, VolunteerSkill }

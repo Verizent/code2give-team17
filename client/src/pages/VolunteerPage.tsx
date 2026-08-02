@@ -112,7 +112,25 @@ export function VolunteerPage() {
         <div className="mx-auto max-w-[1120px] px-4 py-16 sm:px-8 sm:py-24">
           <ModeSplitter value={mode} onChange={setMode} />
 
-          <div className="mt-16 border-t border-navy/8 pt-16 sm:mt-24 sm:pt-24">
+          {mode === 'individual' ? (
+            <aside className="mt-8 rounded-md border border-navy/10 bg-amber px-5 py-5 sm:mt-10 sm:px-6 sm:py-6">
+              <p className="kicker text-navy/60">
+                {v.teachingKicker}
+              </p>
+              <p className="mt-2 max-w-3xl text-[15px] leading-relaxed text-navy sm:text-base">
+                {v.teachingNote}{' '}
+                <a
+                  href={`mailto:${v.teachingEmail}`}
+                  className="font-bold text-navy underline decoration-navy/30 underline-offset-4 hover:decoration-navy"
+                >
+                  {v.teachingEmail}
+                </a>
+                .
+              </p>
+            </aside>
+          ) : null}
+
+          <div className="mt-8 border-t border-navy/8 pt-8 sm:mt-10 sm:pt-10">
             {mode === 'individual' ? (
               <div className="space-y-16 sm:space-y-24">
                 <div className="space-y-6">

@@ -62,6 +62,31 @@ async function listByPeriod(periodId) {
 }
 
 /**
+ * Every allocation pointing at one session, with the donor reachable through the donation.
+ *
+ * The embedded `donations(donor_id)` join is what makes "a session finished — who paid for
+ * it?" one query instead of N. `donation_allocations` has no `donor_id` of its own; the donor
+ * is only reachable through `donation_id`.
+ *
+ * @param {string} sessionId
+ * @returns {Promise<object[]>}
+ */
+async function listBySession(sessionId) {
+  const { data, error } = await getSupabase()
+    .from("donation_allocations")
+    .select(
+      "id, donation_id, session_id, donor_period_id, status, email_sent_at, donations(donor_id)",
+    )
+    .eq("session_id", sessionId);
+
+  assertOk(error);
+  return (data ?? []).map((row) => ({
+    ...row,
+    donor_id: row.donations?.donor_id ?? null,
+  }));
+}
+
+/**
  * Aggregate stats for the admin dashboard — donation totals, distinct donors,
  * total sessions ever supported, total people ever reached.
  * @returns {Promise<{donation_count:number, donor_count:number, total_given_hkd:number, sessions_supported:number, people_reached:number}>}
@@ -146,6 +171,7 @@ module.exports = {
   insertMany,
   listByDonor,
   listByPeriod,
+  listBySession,
   listPendingDonationsMissingAllocations,
   updateAllocation,
   bulkSetStatusForDonation,

@@ -54,6 +54,10 @@ test("console mode returns a rendered payload with volunteer, hours, and recomme
   assert.ok(result.text.includes("Weekend Class Assistant"), "opportunity title in body");
   assert.ok(result.text.includes("3"), "hours logged appear in body");
   assert.ok(
+    result.text.includes("/me?tab=volunteer&feedback=sig-1"),
+    "feedback deep link includes signup id",
+  );
+  assert.ok(
     result.text.includes("Fitness Programme Assistant"),
     "first recommendation appears",
   );

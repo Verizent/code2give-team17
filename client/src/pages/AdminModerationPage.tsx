@@ -5,7 +5,6 @@ import {
   type CommunityPost,
 } from '@/features/admin/api'
 import { useSite } from '@/components/site-provider'
-import { InstagramEmbeds } from '@/features/admin/components/instagram-embeds'
 import { ApiError } from '@/lib/apiClient'
 
 export function AdminModerationPage() {
@@ -74,6 +73,14 @@ export function AdminModerationPage() {
                 {post.author_name} · {post.relationship}
               </p>
               <p className="mt-2 whitespace-pre-wrap text-navy/85">{post.story}</p>
+              {/* Approving a photo you cannot see is not moderation. */}
+              {post.photo_url && (
+                <img
+                  src={post.photo_url}
+                  alt={`Photo submitted by ${post.author_name}`}
+                  className="mt-3 max-h-72 rounded-lg border border-navy/10 object-contain"
+                />
+              )}
               <div className="mt-4 flex gap-2">
                 <button
                   type="button"
@@ -96,23 +103,6 @@ export function AdminModerationPage() {
           ))}
         </ul>
       )}
-      <InstagramEmbeds
-        copy={{
-          title: a.igTitle,
-          intro: a.igIntro,
-          urlLabel: a.igUrlLabel,
-          captionLabel: a.igCaptionLabel,
-          orderLabel: a.igOrderLabel,
-          add: a.igAdd,
-          empty: a.igEmpty,
-          active: a.igActive,
-          hidden: a.igHidden,
-          remove: a.igRemove,
-          confirmRemove: a.igConfirmRemove,
-          cancel: a.igCancel,
-          error: a.igError,
-        }}
-      />
     </div>
   )
 }

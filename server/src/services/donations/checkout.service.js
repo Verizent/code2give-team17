@@ -19,6 +19,20 @@ const MIN_AMOUNT_HKD = 4;
 const PAYMENT_METHODS = ["card"];
 
 /**
+ * Our `frequency` → Stripe's `recurring.interval`. Absent from this map means a one-off
+ * payment, not an unsupported value — the schema is what rejects unknown frequencies.
+ *
+ * Stripe accepts `day | week | month | year`; only the two the donate form offers are wired.
+ */
+const RECURRING_INTERVALS = { weekly: "week", monthly: "month" };
+
+/** Card-statement product name per frequency. Keep in step with RECURRING_INTERVALS. */
+const PRODUCT_NAMES = {
+  weekly: "Weekly gift to Love 21",
+  monthly: "Monthly gift to Love 21",
+};
+
+/**
  * Integer dollars → cents.
  *
  * **The only place this multiplication happens.** CONTEXT.md §29 makes `amount_hkd` integer
@@ -45,7 +59,8 @@ async function createCheckoutSession(input, { clientOrigin }) {
   }
 
   const frequency = input.frequency ?? "once";
-  const isRecurring = frequency === "monthly";
+  const interval = RECURRING_INTERVALS[frequency];
+  const isRecurring = Boolean(interval);
   const trackingOptIn = input.tracking_opt_in ?? true;
 
   const stripe = stripeLib.getStripe();
@@ -59,9 +74,9 @@ async function createCheckoutSession(input, { clientOrigin }) {
         price_data: {
           currency: "hkd",
           unit_amount: toCents(amountHkd),
-          ...(isRecurring ? { recurring: { interval: "month" } } : {}),
+          ...(isRecurring ? { recurring: { interval } } : {}),
           product_data: {
-            name: isRecurring ? "Monthly gift to Love 21" : "Gift to Love 21",
+            name: PRODUCT_NAMES[frequency] ?? "Gift to Love 21",
             // Never "your gift pays for N sessions" — the §15 copy rule forbids exclusive
             // attribution, and this string appears on the donor's card statement page.
             description: "Your gift helps make Love 21 sessions possible.",
@@ -72,8 +87,13 @@ async function createCheckoutSession(input, { clientOrigin }) {
     // Stripe collects the email natively; the webhook reads it back off the session. This is
     // why our own form has no email field at all.
     customer_creation: isRecurring ? undefined : "always",
-    success_url: `${clientOrigin}/donate/thanks?session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${clientOrigin}/donate?cancelled=1`,
+    // These must match routes the client actually serves (client/src/App.jsx). They
+    // previously pointed at `/donate`, which the router does not define — it falls through
+    // to the `*` catch-all and redirects to `/`, so a donor who paid landed on the homepage
+    // with no confirmation. Nothing failed loudly, because Stripe considers any 200 a
+    // successful return. Change these only alongside the routes themselves.
+    success_url: `${clientOrigin}/give/thanks?session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${clientOrigin}/give?cancelled=1`,
     metadata: {
       amount_hkd: String(amountHkd),
       tracking_opt_in: String(trackingOptIn),

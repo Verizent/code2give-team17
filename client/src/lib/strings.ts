@@ -279,7 +279,7 @@ export const STRINGS: Record<Locale, Strings> = {
       volunteer: 'Volunteer',
       give: 'Give',
       donate: 'Donate',
-      login: 'Log in',
+      login: 'Log In',
       easyRead: 'Easy Read',
       language: 'Language',
       skipToContent: 'Skip to content',
@@ -294,9 +294,9 @@ export const STRINGS: Record<Locale, Strings> = {
     },
     stats: {
       title: 'Impact you can count',
-      updated: 'Last updated 30s ago · Annual Report 2024/25',
+      updated: 'Annual Report 2024/25',
       items: [
-        { value: 6859, suffix: '', label: 'sessions offered (2024/25)' },
+        { value: 6859, suffix: '', label: 'sessions offered' },
         { value: 490, suffix: '', label: 'families supported' },
         { value: 84, suffix: '', label: 'activity types' },
         { value: 1000, suffix: '+', label: 'volunteer hours / month' },
@@ -619,9 +619,9 @@ volunteer: {
     },
     stats: {
       title: '看得見的影響',
-      updated: '30 秒前更新 · 2024/25 年度報告',
+      updated: '2024/25 年度報告',
       items: [
-        { value: 6859, suffix: '', label: '課程總節數（2024/25）' },
+        { value: 6859, suffix: '', label: '課程總節數' },
         { value: 490, suffix: '', label: '支援家庭' },
         { value: 84, suffix: '', label: '活動種類' },
         { value: 1000, suffix: '+', label: '義工時數 / 月' },
@@ -935,9 +935,9 @@ volunteer: {
     },
     stats: {
       title: '看得见的影响',
-      updated: '30 秒前更新 · 2024/25 年度报告',
+      updated: '2024/25 年度报告',
       items: [
-        { value: 6859, suffix: '', label: '课程总节数（2024/25）' },
+        { value: 6859, suffix: '', label: '课程总节数' },
         { value: 490, suffix: '', label: '支援家庭' },
         { value: 84, suffix: '', label: '活动种类' },
         { value: 1000, suffix: '+', label: '义工时数 / 月' },

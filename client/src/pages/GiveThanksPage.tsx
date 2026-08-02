@@ -6,9 +6,8 @@ import { SkipLink } from '@/components/skip-link'
 import { useSite } from '@/components/site-provider'
 import { trackEvent } from '@/lib/analytics'
 import { addDemoDonation } from '@/features/donations/api'
-import { requestGiftJourneyNotify } from '@/features/donations/checkout'
+import { fetchCheckoutStatus, type CheckoutStatus } from '@/features/donations/checkout'
 import {
-  advanceDonationStage,
   getDonation,
   updateDonationNotify,
   type JourneyStage,
@@ -18,15 +17,78 @@ import { cn } from '@/lib/utils'
 
 const STAGES: JourneyStage[] = ['received', 'matched', 'session_update']
 
+/** How often to re-ask, and how long before we stop and tell the donor to refresh. */
+const POLL_INTERVAL_MS = 1000
+const POLL_CEILING_MS = 20000
+
+/** Statuses that will never change again, so polling should stop. */
+const TERMINAL = new Set(['succeeded', 'failed', 'refunded'])
+
+/**
+ * Polls `GET /api/donations/session/:id` until the webhook flips the donation to a terminal
+ * status, or the ceiling is reached.
+ *
+ * Stripe returns the donor here the moment the card clears, but the row stays `pending` until
+ * `checkout.session.completed` reaches our webhook — a separate hop whose timing we do not
+ * control. The page therefore arrives before the data does and has to wait for it.
+ *
+ * `timedOut` is deliberately distinct from `failed`. Running out of patience says nothing about
+ * whether the payment worked — Stripe already has the money by the time the donor lands here.
+ * Telling someone their gift failed because our webhook was slow would be a lie, so the two
+ * states get different copy.
+ */
+function useCheckoutStatus(sessionId: string) {
+  const [status, setStatus] = useState<CheckoutStatus | null>(null)
+  const [timedOut, setTimedOut] = useState(false)
+
+  useEffect(() => {
+    if (!sessionId) return
+    let cancelled = false
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const deadline = Date.now() + POLL_CEILING_MS
+
+    async function poll() {
+      try {
+        const next = await fetchCheckoutStatus(sessionId)
+        if (cancelled) return
+        setStatus(next)
+        if (TERMINAL.has(next.status)) return
+      } catch {
+        // A poll can 404 briefly if it races the donation insert. Keep going — the ceiling
+        // below is what ends this, not the first error.
+        if (cancelled) return
+      }
+      if (Date.now() >= deadline) {
+        setTimedOut(true)
+        return
+      }
+      timer = setTimeout(() => void poll(), POLL_INTERVAL_MS)
+    }
+
+    void poll()
+    return () => {
+      cancelled = true
+      clearTimeout(timer)
+    }
+  }, [sessionId])
+
+  return { status, timedOut }
+}
+
 export function GiveThanksPage() {
   const { t } = useSite()
   const g = t.give
   const [params] = useSearchParams()
+  // Stripe sends the donor back with `?session_id=` (checkout.service.js success_url).
+  // `?donation=` is the local/mock path, where the gift only ever existed in localStorage.
+  const sessionId = params.get('session_id') || ''
   const donationId = params.get('donation') || ''
   const legacyAmount = params.get('amount')
   const campaign = params.get('campaign')
 
-  const [donation, setDonation] = useState<StoredDonation | undefined>(() =>
+  const { status, timedOut } = useCheckoutStatus(sessionId)
+
+  const [donation] = useState<StoredDonation | undefined>(() =>
     donationId ? getDonation(donationId) : undefined,
   )
   const [email, setEmail] = useState(donation?.email || params.get('email') || '')
@@ -39,31 +101,19 @@ export function GiveThanksPage() {
     }
   }, [campaign, legacyAmount])
 
+  // Records the opt-in locally. This used to POST /api/donors/notify, which has never been a
+  // route — every call 404'd and the "we'll email you" toast was shown regardless. There is no
+  // per-gift email on the backend at all: the only sendEmail lives in period-close.service.js,
+  // which runs on the 15th/EOM batch. So the copy now promises the batch, not an instant note.
   useEffect(() => {
     if (!donation || !notify || !email.trim()) {
       setToast(null)
       return
     }
-    let cancelled = false
-    void (async () => {
-      trackEvent('notify_opt_in', { email, donationId: donation.id })
-      updateDonationNotify(donation.id, true, email)
-      const result = await requestGiftJourneyNotify({
-        email: email.trim().toLowerCase(),
-        donation_id: donation.id,
-        stage: donation.stage,
-      })
-      if (cancelled) return
-      setToast(
-        result === 'sent'
-          ? g.thanksNotifyToast.replace('{email}', email)
-          : g.journeyEmailNote.replace('{email}', email),
-      )
-    })()
-    return () => {
-      cancelled = true
-    }
-  }, [donation, notify, email, g.thanksNotifyToast, g.journeyEmailNote])
+    trackEvent('notify_opt_in', { email, donationId: donation.id })
+    updateDonationNotify(donation.id, true, email)
+    setToast(g.journeyEmailNote.replace('{email}', email))
+  }, [donation, notify, email, g.journeyEmailNote])
 
   function stageLabel(stage: JourneyStage) {
     if (stage === 'received') return g.journeyReceived
@@ -71,13 +121,13 @@ export function GiveThanksPage() {
     return g.journeySession
   }
 
-  function advance() {
-    if (!donation) return
-    const next = advanceDonationStage(donation.id)
-    if (next) setDonation({ ...next })
-  }
-
-  const amount = donation?.amount_hkd ?? (legacyAmount ? Number(legacyAmount) : undefined)
+  const amount =
+    status?.amount_hkd ?? donation?.amount_hkd ?? (legacyAmount ? Number(legacyAmount) : undefined)
+  const credited = status?.events_credited ?? 0
+  const creditedCopy =
+    credited === 1
+      ? g.thanksCreditedOne
+      : g.thanksCreditedMany.replace('{count}', String(credited))
   const showJourney = Boolean(donation?.journey_opt_in && notify)
   const stageIndex = donation ? STAGES.indexOf(donation.stage) : 0
 
@@ -97,6 +147,33 @@ export function GiveThanksPage() {
           <p className="mt-3 text-lg font-semibold text-navy/70">
             HK${amount.toLocaleString()}
           </p>
+        ) : null}
+
+        {sessionId ? (
+          <section
+            aria-live="polite"
+            className="mt-6 rounded-xl border border-navy/10 bg-white p-5"
+          >
+            {status?.status === 'succeeded' ? (
+              <>
+                <p className="font-display text-xl font-semibold text-navy">{creditedCopy}</p>
+                {status.tracking_token ? (
+                  <Link
+                    to={`/give/track/${status.tracking_token}`}
+                    className="mt-4 inline-flex min-h-11 items-center rounded-md bg-navy px-5 text-sm font-semibold text-white"
+                  >
+                    {g.thanksTrackCta}
+                  </Link>
+                ) : null}
+              </>
+            ) : status?.status === 'failed' || status?.status === 'refunded' ? (
+              <p className="text-[15px] font-medium text-red">{g.thanksConfirmFailed}</p>
+            ) : timedOut ? (
+              <p className="text-[15px] leading-relaxed text-navy/70">{g.thanksConfirmSlow}</p>
+            ) : (
+              <p className="text-[15px] text-navy/70">{g.thanksConfirming}</p>
+            )}
+          </section>
         ) : null}
 
         <label className="mt-10 flex cursor-pointer gap-3 rounded-xl border border-black/8 bg-white p-4">
@@ -160,15 +237,10 @@ export function GiveThanksPage() {
                 )
               })}
             </ol>
-            {donation.stage !== 'session_update' && (
-              <button
-                type="button"
-                onClick={advance}
-                className="mt-5 inline-flex min-h-11 items-center rounded-md border border-navy px-4 text-sm font-semibold text-navy"
-              >
-                {g.journeyAdvance}
-              </button>
-            )}
+            {/* The "advance stage" button lived here. It moved the tracker forward in
+                localStorage on click, which looked like progress but reflected nothing —
+                no session was matched, no email sent. Real progress arrives through the
+                tracking page, driven by donation_allocations. */}
           </section>
         )}
 

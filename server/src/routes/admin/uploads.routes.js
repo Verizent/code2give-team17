@@ -27,10 +27,9 @@ router.post(
         throw ApiError.badRequest("Send raw image bytes with an image Content-Type");
       }
 
-      const result = await uploadsService.uploadCoverImage(
-        request.body,
-        request.get("content-type"),
-      );
+      // The header is not passed on: the service sniffs the bytes, because a caller can
+      // claim any Content-Type and the bucket is public.
+      const result = await uploadsService.uploadCoverImage(request.body);
 
       response.status(201).json(envelope(result));
     } catch (error) {

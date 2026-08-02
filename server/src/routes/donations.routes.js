@@ -26,7 +26,10 @@ const createDonationSchema = z.strictObject({
 // programme, because donors do not choose a designation (PLAN.md §3).
 const checkoutSchema = z.strictObject({
   amount_hkd:      z.number().int().min(4),
-  frequency:       z.enum(["once", "monthly"]).optional(),
+  // Matches the `donations_frequency_check` constraint and the three buttons the donate form
+  // shows. This previously omitted "weekly", so a donor who picked Weekly either got a 400 or
+  // was quietly billed monthly, depending on which side did the mapping.
+  frequency:       z.enum(["once", "weekly", "monthly"]).optional(),
   campaign_id:     z.string().uuid().optional(),
   tracking_opt_in: z.boolean().optional(),
 });

@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { HomePage } from '@/pages/HomePage'
 import { CommunityPage } from '@/pages/CommunityPage'
+import { ArticlesPage } from '@/pages/ArticlesPage'
 import { MyImpactPage } from '@/pages/MyImpactPage'
 import { LoginPage } from '@/pages/LoginPage'
 import { AdminLayout } from '@/features/admin/AdminLayout'
@@ -17,13 +18,17 @@ import { GiveWishlistPage } from '@/pages/GiveWishlistPage'
 import { CampaignCreatePage } from '@/pages/CampaignCreatePage'
 import { CampaignPublicPage } from '@/pages/CampaignPublicPage'
 import { GiveThanksPage } from '@/pages/GiveThanksPage'
+import { DonorTrackPage } from '@/pages/DonorTrackPage'
 import { SupportPage } from '@/pages/SupportPage'
+import { ArticlePage } from '@/pages/ArticlePage'
+import { AdminInstagramPage } from '@/pages/AdminInstagramPage'
 
 export default function App() {
   return (
     <Routes>
       <Route path="/" element={<HomePage />} />
       <Route path="/community" element={<CommunityPage />} />
+      <Route path="/articles" element={<ArticlesPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/volunteer" element={<VolunteerPage />} />
       <Route path="/volunteer/success" element={<VolunteerSuccessPage />} />
@@ -33,6 +38,10 @@ export default function App() {
       <Route path="/give/wishlist" element={<GiveWishlistPage />} />
       <Route path="/give/campaigns/new" element={<CampaignCreatePage />} />
       <Route path="/give/thanks" element={<GiveThanksPage />} />
+      {/* Bearer token in the path (§15). Must sit above the `*` catch-all, or a valid
+          tracking link silently redirects home — the same trap that made Stripe's old
+          /donate/thanks success_url look like it worked. */}
+      <Route path="/give/track/:token" element={<DonorTrackPage />} />
       <Route path="/c/:slug" element={<CampaignPublicPage />} />
       <Route path="/me" element={<MyImpactPage />} />
       <Route path="/admin" element={<AdminLayout />}>
@@ -40,17 +49,22 @@ export default function App() {
         <Route path="articles" element={<AdminArticlesPage />} />
         <Route path="campaigns" element={<AdminCampaignsPage />} />
         <Route path="moderation" element={<AdminModerationPage />} />
-        {/* Story desk and Class roll were removed; send their old links to the hub. */}
+        <Route path="instagram" element={<AdminInstagramPage />} />
+        {/* Story desk and Class roll were removed; their old links, and the ones that
+            used to redirect into Story desk, now land on the hub. */}
         <Route path="analytics" element={<Navigate to="/admin" replace />} />
         <Route path="stories" element={<Navigate to="/admin" replace />} />
         <Route path="attendance" element={<Navigate to="/admin" replace />} />
         <Route path="proofs" element={<Navigate to="/admin" replace />} />
         <Route path="social" element={<Navigate to="/admin" replace />} />
-        <Route path="instagram" element={<Navigate to="/admin" replace />} />
       </Route>
       <Route path="/support" element={<SupportPage />} />
       <Route path="/about" element={<Navigate to="/" replace />} />
-      <Route path="/news" element={<Navigate to="/#stories" replace />} />
+      {/* Two different things that share a word: /articles is external press
+          coverage, /news/:slug is one of Love 21's own published articles from the
+          content API. Bare /news goes to the Home strip that lists the latter. */}
+      <Route path="/news/:slug" element={<ArticlePage />} />
+      <Route path="/news" element={<Navigate to="/#news" replace />} />
       <Route path="/portal" element={<Navigate to="/" replace />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

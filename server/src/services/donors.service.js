@@ -6,7 +6,11 @@ const donorPeriodsRepo = require("../data/donor-periods.repo");
 const sessionsRepo = require("../data/sessions.repo");
 const { normalizeEmail } = require("../lib/normalize");
 const { resolveLocale } = require("../lib/locale");
-const { editionForDonation, editionLabel, MAX_EVENTS_SHOWN } = require("../lib/donation-periods");
+const {
+  editionForDonation,
+  MONTH_ABBREVIATIONS,
+  MAX_EVENTS_SHOWN,
+} = require("../lib/donation-periods");
 const { MAX_EVENTS_SHOWN: MAX_SHOWN_FALLBACK } = require("../lib/donation-credit");
 
 function newAccessToken() {
@@ -88,6 +92,11 @@ async function buildTrackView(donor, opts = {}) {
     donationsRepo.listByDonor(donor.id),
     donorPeriodsRepo.listByDonor(donor.id),
   ]);
+
+  // This view never expires. The token is the donor's only route back — §15 has no
+  // lookup-by-email and the link is delivered once, by email — so an expiring page would take
+  // their giving history away for good. A period with nothing outstanding means no *new* news,
+  // not that the record should stop existing.
 
   const succeeded = donations.filter((d) => d.status === "succeeded");
   const supporterSince = succeeded.length
@@ -178,8 +187,19 @@ async function buildPeriodBlock({ period, allocations, succeeded, donor }) {
 
   // Display cap of 10 per PLAN.md — the first N by starts_at.
   const cap = typeof MAX_EVENTS_SHOWN === "number" ? MAX_EVENTS_SHOWN : (MAX_SHOWN_FALLBACK ?? 10);
-  const events = inPeriod
-    .map((alloc) => sessionsById.get(alloc.session_id))
+
+  // One row per SESSION, not per allocation. Two allocations land on the same session
+  // whenever a donor gives twice inside one eligibility window — the allocator picks
+  // soonest-first and does not exclude what an earlier gift already funded — and mapping over
+  // allocations then rendered that session twice. A donor seeing "Family support circle"
+  // listed twice reads it as us double-counting their money.
+  //
+  // `sessionIds` is already distinct and already carries the removal-window filter, since it
+  // is derived from `inPeriod`. It was being used for the fetch and then ignored for the
+  // render. The identical bug in the edition email was fixed in period-close.service.js; this
+  // is the same defect on the page.
+  const events = sessionIds
+    .map((id) => sessionsById.get(id))
     .filter(Boolean)
     .sort((a, b) => new Date(a.starts_at) - new Date(b.starts_at))
     .slice(0, cap)
@@ -209,7 +229,17 @@ async function buildPeriodBlock({ period, allocations, succeeded, donor }) {
   return {
     id: period.id,
     period_start: period.period_start,
+    // **Exclusive**, and therefore also the day the edition email goes out — the window is
+    // half-open `[period_start, period_end)`. Both fields are internal batching detail; the
+    // donor-facing value is `sends_on`.
     period_end: period.period_end,
+    /** When the donor hears what happened. Same instant as `period_end`, named for its use. */
+    sends_on: period.period_end,
+    // e.g. "31 Aug". Identifies the period by when we write, not by the window it spans —
+    // see labelForPeriod. Carried here so a caller never has to find its own period in the
+    // archive to title the block, a lookup that returns nothing for an archived period the
+    // list does not contain.
+    label: labelForPeriod(period),
     status: period.status,
     is_current: period.status === "open",
     events_credited: eventsCredited,
@@ -239,13 +269,33 @@ function toEvent(session, locale) {
   };
 }
 
+/**
+ * A period is identified to the donor by **when we write to them**, not by the window it
+ * spans.
+ *
+ * The window ("15 Aug – 30 Aug") is an internal batching rule: which gifts get grouped into
+ * which email. It was being rendered directly above the session list, where it reads as a
+ * claim about those sessions — and it is not one. Sessions are chosen by a different rule
+ * entirely (`[donation +7d, +30d]` in allocation.service.js), so a gift on 2 Aug shows
+ * sessions on the 10th and 11th beneath a heading saying 15–30 Aug. Two unrelated windows,
+ * one stacked on the other.
+ *
+ * `period_end` is that send date — the window is half-open, so its exclusive end IS the day
+ * the email goes out. "31 Aug" answers the question a donor actually has: when will I hear
+ * what happened?
+ *
+ * @param {{ period_end: string }} period
+ * @returns {string} e.g. `"31 Aug"`
+ */
+function labelForPeriod(period) {
+  const sends = new Date(`${period.period_end}T00:00:00Z`);
+  return `${sends.getUTCDate()} ${MONTH_ABBREVIATIONS[sends.getUTCMonth()]}`;
+}
+
 function toArchiveEntry(period) {
   return {
     id: period.id,
-    label: editionLabel({
-      windowStart: new Date(period.period_start),
-      windowEnd: new Date(period.period_end),
-    }),
+    label: labelForPeriod(period),
     status: period.status,
   };
 }
