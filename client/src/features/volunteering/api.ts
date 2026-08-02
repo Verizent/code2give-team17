@@ -136,11 +136,17 @@ export async function submitSignup(input: {
       return { ok: true, signupId: data.signup.id }
     } catch (err) {
       if (err instanceof ApiError && err.status === 409) {
-        const body = err.message
-        if (
-          body.includes('ALREADY_SIGNED_UP') ||
-          body.includes('Already signed up')
-        ) {
+        // "Full" and "already signed up" are both 409 with code CONFLICT — the server
+        // does not distinguish them by code, so the message is the only signal.
+        // Matched case-insensitively: the server sends "You have already signed up for
+        // this opportunity", which matched neither literal this used to test for, so a
+        // returning volunteer was told the session was full on a session with seats.
+        //
+        // This only works while `message` is present. NODE_ENV=production suppresses it
+        // (server §29), collapsing both cases back to 'full'. The durable fix is a
+        // distinct error code from the server; that is a §29 contract change.
+        const body = err.message?.toLowerCase() ?? ''
+        if (body.includes('already_signed_up') || body.includes('already signed up')) {
           return { ok: false, reason: 'duplicate' }
         }
         return { ok: false, reason: 'full' }
