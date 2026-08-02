@@ -26,17 +26,21 @@ export function FadeRise({ children, className, delayMs = 0 }) {
     return () => io.disconnect()
   }, [])
 
+  // Outer owns layout size and never carries a transform. Transforms on the
+  // layout box make engines (Safari especially) under-count height / fail to
+  // clip so media paints over following sections. Inner owns motion; overflow
+  // clips the pre-visible translate so paint cannot escape the reserved box.
   return (
-    <div
-      ref={ref}
-      className={cn(
-        'transition-[opacity,transform] duration-500 ease-out',
-        visible ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0',
-        className,
-      )}
-      style={{ transitionDelay: visible ? `${delayMs}ms` : '0ms' }}
-    >
-      {children}
+    <div ref={ref} className={cn('overflow-hidden', className)}>
+      <div
+        className={cn(
+          'transition-[opacity,transform] duration-500 ease-out',
+          visible ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0',
+        )}
+        style={{ transitionDelay: visible ? `${delayMs}ms` : '0ms' }}
+      >
+        {children}
+      </div>
     </div>
   )
 }

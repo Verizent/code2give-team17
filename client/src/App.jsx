@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { HomePage } from '@/pages/HomePage'
 import { CommunityPage } from '@/pages/CommunityPage'
+import { ArticlesPage } from '@/pages/ArticlesPage'
 import { MyImpactPage } from '@/pages/MyImpactPage'
 import { LoginPage } from '@/pages/LoginPage'
 import { AdminLayout } from '@/features/admin/AdminLayout'
@@ -26,6 +27,7 @@ export default function App() {
     <Routes>
       <Route path="/" element={<HomePage />} />
       <Route path="/community" element={<CommunityPage />} />
+      <Route path="/articles" element={<ArticlesPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/volunteer" element={<VolunteerPage />} />
       <Route path="/volunteer/success" element={<VolunteerSuccessPage />} />
@@ -50,7 +52,7 @@ export default function App() {
       </Route>
       <Route path="/support" element={<SupportPage />} />
       <Route path="/about" element={<Navigate to="/" replace />} />
-      <Route path="/news" element={<Navigate to="/#stories" replace />} />
+      <Route path="/news" element={<Navigate to="/articles" replace />} />
       <Route path="/portal" element={<Navigate to="/" replace />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

@@ -100,7 +100,7 @@ export function KnowledgeCard({ item }) {
   const { locale, t } = useSite()
 
   return (
-    <article className="break-inside-avoid overflow-hidden rounded-2xl border border-navy/15 bg-sage shadow-sm">
+    <article className="overflow-hidden rounded-2xl border border-navy/15 bg-sage shadow-sm">
       <div className="p-5 sm:p-6">
         <p className="kicker text-teal">Know</p>
         <h3 className="mt-2 font-display text-xl leading-snug font-bold text-navy text-balance sm:text-2xl">
