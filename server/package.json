@@ -11,7 +11,8 @@
     "test": "node --test --test-concurrency=1",
     "test:coverage": "node --test --experimental-test-coverage",
     "test:schema": "node --test --test-concurrency=1 \"test/schema/**/*.test.js\"",
-    "email:check": "node scripts/email-check.js"
+    "email:check": "node scripts/email-check.js",
+    "seed:past-donation": "node scripts/seed-past-donation.js"
   },
   "keywords": [],
   "author": "",
