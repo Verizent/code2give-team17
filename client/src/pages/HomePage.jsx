@@ -10,6 +10,7 @@ import {
   CommunityGallery,
   CommunityMilestones,
   HomeSectionNav,
+  LatestStories,
   LeadershipBand,
   PartnerCsrBand,
   ProgrammesBand,
@@ -32,6 +33,7 @@ export function HomePage() {
         <AchievementsBand />
         <PartnerCsrBand />
         <StoryTimeline />
+        <LatestStories />
         <ProgrammesBand />
         <LeadershipBand />
         <CommunityGallery />

@@ -141,6 +141,92 @@ export const impactFixture = {
 }
 
 /**
+ * Safety net for the Home stories strip when `GET /api/articles` is unreachable.
+ *
+ * Shaped like the API row rather than like the other fixtures in this file: the
+ * server resolves `title_en`/`title_zh` down to a plain `title` before it responds,
+ * so `getArticles` collapses these localised maps the same way. A component must not
+ * be able to tell whether it received live or fallback data.
+ *
+ * These three mirror seeded rows in server/db/seed/articles.seed.js, so the fallback
+ * is a stale copy of real content rather than invented content.
+ */
+export const articlesFixture = [
+  {
+    id: 'fixture-annual-report',
+    slug: '2024-25-annual-impact-report',
+    category: 'report',
+    cover_image_url: '/brand/gallery.jpeg',
+    published_at: '2026-06-01T09:00:00+00:00',
+    reading_time_minutes: 3,
+    is_featured: true,
+    title: {
+      en: '2024–25 Annual Impact Report: A Year of Measurable Growth',
+      'zh-Hant': '2024–25 年度影響報告：可量度的成長',
+      'zh-Hans': '2024–25 年度影响报告：可量度的成长',
+    },
+    excerpt: {
+      en: '6,859 sessions. 490 families. A 30% jump from the year before.',
+      'zh-Hant': '6,859 節活動、490 個家庭，比去年增長 30%。',
+      'zh-Hans': '6,859 节活动、490 个家庭，比去年增长 30%。',
+    },
+    cover_alt: {
+      en: 'A Love 21 coach high-fiving a young athlete during a sports session',
+      'zh-Hant': 'Love 21 教練在運動課堂上與年輕運動員擊掌',
+      'zh-Hans': 'Love 21 教练在运动课堂上与年轻运动员击掌',
+    },
+  },
+  {
+    id: 'fixture-dragonboat',
+    slug: 'dragon-boat-season',
+    category: 'news',
+    cover_image_url: '/brand/dragonboat.jpeg',
+    published_at: '2026-05-12T09:00:00+00:00',
+    reading_time_minutes: 2,
+    is_featured: false,
+    title: {
+      en: 'Our dragon boat crew returns to the water',
+      'zh-Hant': '龍舟隊重返水上',
+      'zh-Hans': '龙舟队重返水上',
+    },
+    excerpt: {
+      en: 'Members train and compete alongside the Royal Hong Kong Yacht Club.',
+      'zh-Hant': '會員與香港遊艇會一起訓練及比賽。',
+      'zh-Hans': '会员与香港游艇会一起训练及比赛。',
+    },
+    cover_alt: {
+      en: 'Love 21 members paddling a dragon boat in Victoria Harbour',
+      'zh-Hant': 'Love 21 會員在維多利亞港划龍舟',
+      'zh-Hans': 'Love 21 会员在维多利亚港划龙舟',
+    },
+  },
+  {
+    id: 'fixture-nutrition',
+    slug: 'nutrition-programme',
+    category: 'education',
+    cover_image_url: '/brand/nutritionprog.jpeg',
+    published_at: '2026-04-20T09:00:00+00:00',
+    reading_time_minutes: 4,
+    is_featured: false,
+    title: {
+      en: 'Why nutrition sits at the centre of our programmes',
+      'zh-Hant': '為何營養是我們活動的核心',
+      'zh-Hans': '为何营养是我们活动的核心',
+    },
+    excerpt: {
+      en: 'Small, repeatable changes to everyday eating, taught alongside families.',
+      'zh-Hant': '與家庭一起學習日常飲食中細微而可持續的改變。',
+      'zh-Hans': '与家庭一起学习日常饮食中细微而可持续的改变。',
+    },
+    cover_alt: {
+      en: 'Members preparing a shared meal in the Love 21 nutrition kitchen',
+      'zh-Hant': '會員在 Love 21 營養廚房準備共享餐點',
+      'zh-Hans': '会员在 Love 21 营养厨房准备共享餐点',
+    },
+  },
+]
+
+/**
  * Collective milestones for the Home page "Achievements & Impact" band.
  * No individual names — these are org-level facts, safe to publish as-is.
  * `icon` maps to a lucide-react icon in achievements-band.jsx.

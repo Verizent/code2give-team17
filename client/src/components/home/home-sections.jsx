@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useSite } from '@/components/site-provider'
 import { cn } from '@/lib/utils'
+import { getArticles, getReportArticle } from '@/features/content/api'
 import {
   ANNUAL_REPORT,
   BOARD,
@@ -66,12 +67,30 @@ export function HomeSectionNav() {
 
 export function AnnualReportBar() {
   const { locale } = useSite()
+  const [report, setReport] = useState(null)
+
+  useEffect(() => {
+    let cancelled = false
+    getReportArticle(locale).then((data) => {
+      if (!cancelled) setReport(data)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [locale])
+
+  // The published report article supplies the headline and standfirst when it exists;
+  // the link stays the hardcoded PDF either way, because there is no in-site article
+  // route to send people to (App.jsx redirects /news straight back to /#stories).
+  const title = report?.title ?? pickLocale(ANNUAL_REPORT.title, locale)
+  const body = report?.excerpt ?? pickLocale(ANNUAL_REPORT.body, locale)
+
   return (
     <div className="mx-auto flex max-w-[1120px] items-center justify-center px-5 py-12 sm:px-8 sm:py-16">
       <div className="flex w-full flex-col items-center gap-5 rounded-md border border-navy/10 bg-white px-6 py-8 text-center sm:px-10">
         <div className="max-w-xl">
-          <h3 className="text-lg font-bold text-navy">{pickLocale(ANNUAL_REPORT.title, locale)}</h3>
-          <p className="mt-1 text-navy/75">{pickLocale(ANNUAL_REPORT.body, locale)}</p>
+          <h3 className="text-lg font-bold text-navy">{title}</h3>
+          <p className="mt-1 text-navy/75">{body}</p>
         </div>
         <a
           href={ANNUAL_REPORT.href}
@@ -257,6 +276,104 @@ export function StoryTimeline() {
             </article>
           ))}
         </div>
+      </div>
+    </section>
+  )
+}
+
+/** Bundled stand-in for article covers that fail to load (see the onError below). */
+const STORY_COVER_FALLBACK = '/brand/gallery.jpeg'
+
+/**
+ * The only Home surface fed by editorial content staff actually publish:
+ * an article created in /admin/articles shows up here on the next load.
+ * Cards deliberately do not link anywhere — there is no article detail route
+ * yet, and a card that bounces you back to Home reads as a broken page.
+ */
+export function LatestStories() {
+  const { locale } = useSite()
+  const [articles, setArticles] = useState([])
+
+  useEffect(() => {
+    let cancelled = false
+    getArticles({ locale, limit: 3 }).then((data) => {
+      if (!cancelled) setArticles(data)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [locale])
+
+  if (!articles.length) return null
+
+  const dateFormatter = new Intl.DateTimeFormat(locale === 'en' ? 'en-GB' : locale, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  })
+
+  return (
+    <section aria-labelledby="latest-stories-heading" className="bg-paper px-5 py-14 sm:px-8 sm:py-20">
+      <div className="mx-auto max-w-[1120px]">
+        <p className="kicker text-navy/60">
+          {locale === 'en' ? 'From the newsroom' : locale === 'zh-Hans' ? '最新消息' : '最新消息'}
+        </p>
+        <h2
+          id="latest-stories-heading"
+          className="mt-3 font-display text-[clamp(1.85rem,4vw,2.75rem)] font-semibold text-navy"
+        >
+          {locale === 'en'
+            ? 'Latest stories'
+            : locale === 'zh-Hans'
+              ? '最新故事'
+              : '最新故事'}
+        </h2>
+
+        <ul className="mt-8 grid gap-5 sm:grid-cols-3">
+          {articles.map((article) => (
+            <li
+              key={article.id}
+              className="flex flex-col overflow-hidden rounded-md border border-navy/10 bg-white"
+            >
+              <div className="aspect-[16/10] overflow-hidden bg-navy/10">
+                <img
+                  src={article.cover_image_url || STORY_COVER_FALLBACK}
+                  alt={article.cover_alt || ''}
+                  loading="lazy"
+                  className="h-full w-full object-cover"
+                  onError={(event) => {
+                    // Seeded rows carry placehold.co cover URLs, so every card breaks
+                    // the moment the demo machine is offline. Swap to a bundled asset
+                    // once, and let the second failure alone so we cannot loop.
+                    const img = event.currentTarget
+                    if (img.dataset.fallbackApplied) return
+                    img.dataset.fallbackApplied = 'true'
+                    img.src = STORY_COVER_FALLBACK
+                  }}
+                />
+              </div>
+              <div className="flex flex-1 flex-col p-5">
+                <p className="kicker text-navy/50">{article.category}</p>
+                <h3 className="mt-2 font-display text-lg font-bold text-navy">{article.title}</h3>
+                <p className="mt-2 flex-1 text-sm leading-relaxed text-navy/75">
+                  {article.excerpt}
+                </p>
+                {article.published_at && (
+                  <p className="mt-4 text-xs font-bold text-navy/50">
+                    <time dateTime={article.published_at}>
+                      {dateFormatter.format(new Date(article.published_at))}
+                    </time>
+                    {article.reading_time_minutes
+                      ? ` · ${article.reading_time_minutes} ${
+                          locale === 'en' ? 'min read' : locale === 'zh-Hans' ? '分钟' : '分鐘'
+                        }`
+                      : ''}
+                  </p>
+                )}
+              </div>
+            </li>
+          ))}
+        </ul>
       </div>
     </section>
   )
