@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useSite } from '@/components/site-provider'
-import { ACTIVITY_TYPES, MOMENTS_OF_ABILITY_COUNT, knowledgeStats, stories } from '@/lib/mock'
+import { ACTIVITY_TYPES, knowledgeStats, stories } from '@/lib/mock'
 import { cn } from '@/lib/utils'
 import { useReducedMotion } from '@/lib/use-reduced-motion'
 import { FadeRise } from '@/components/community/fade-rise'
@@ -21,16 +21,16 @@ const PAGE_SIZE = 10
 const EMBED_SPACING = 3
 
 /** Count-up header for the Ability Wall. Plays once, on first scroll into view. */
-function MomentsCounter() {
+function MomentsCounter({ count }) {
   const { t } = useSite()
   const reduced = useReducedMotion()
   const ref = useRef(null)
-  const [display, setDisplay] = useState(reduced ? MOMENTS_OF_ABILITY_COUNT : 0)
+  const [display, setDisplay] = useState(reduced ? count : 0)
 
   useEffect(() => {
     const node = ref.current
     if (!node || reduced) {
-      setDisplay(MOMENTS_OF_ABILITY_COUNT)
+      setDisplay(count)
       return
     }
     const io = new IntersectionObserver(
@@ -42,7 +42,7 @@ function MomentsCounter() {
         const step = (now) => {
           const progress = Math.min((now - start) / duration, 1)
           const eased = 1 - Math.pow(1 - progress, 3)
-          setDisplay(Math.round(eased * MOMENTS_OF_ABILITY_COUNT))
+          setDisplay(Math.round(eased * count))
           if (progress < 1) requestAnimationFrame(step)
         }
         requestAnimationFrame(step)
@@ -51,7 +51,7 @@ function MomentsCounter() {
     )
     io.observe(node)
     return () => io.disconnect()
-  }, [reduced])
+  }, [reduced, count])
 
   return (
     <p
@@ -59,7 +59,7 @@ function MomentsCounter() {
       className="font-display text-[clamp(1.5rem,4vw,2.25rem)] font-bold text-navy"
     >
       <span aria-hidden="true">{display.toLocaleString()}</span>
-      <span className="sr-only">{MOMENTS_OF_ABILITY_COUNT.toLocaleString()}</span>{' '}
+      <span className="sr-only">{count.toLocaleString()}</span>{' '}
       {t.community.momentsLabel}
     </p>
   )
@@ -147,6 +147,12 @@ export function StoryFeed() {
 
   const { entries: feed, total, from, to, pageCount } = buildFeed(filter, voices, embeds, page)
 
+  // The headline counts every moment on the wall, not the current tab or page — it is
+  // a claim about the community, so it must not shrink when someone picks a filter.
+  // Instagram embeds are excluded: they are the foundation's own posts, not a member
+  // moment, and counting them would inflate the number.
+  const momentsTotal = stories.length + voices.length
+
   function changeFilter(id) {
     setFilter(id)
     // Without this, switching to a tab with three stories while on page 3 shows an
@@ -172,7 +178,7 @@ export function StoryFeed() {
         Story feed
       </h2>
 
-      <MomentsCounter />
+      <MomentsCounter count={momentsTotal} />
 
       <div
         role="tablist"
