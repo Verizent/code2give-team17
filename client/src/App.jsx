@@ -6,8 +6,6 @@ import { LoginPage } from '@/pages/LoginPage'
 import { AdminLayout } from '@/features/admin/AdminLayout'
 import { AdminDashboardPage } from '@/pages/AdminDashboardPage'
 import { AdminCampaignsPage } from '@/pages/AdminCampaignsPage'
-import { AdminAttendancePage } from '@/pages/AdminAttendancePage'
-import { AdminStoryDeskPage } from '@/pages/AdminStoryDeskPage'
 import { AdminModerationPage } from '@/pages/AdminModerationPage'
 import { AdminArticlesPage } from '@/pages/AdminArticlesPage'
 import { VolunteerPage } from '@/pages/VolunteerPage'
@@ -40,13 +38,14 @@ export default function App() {
       <Route path="/admin" element={<AdminLayout />}>
         <Route index element={<AdminDashboardPage />} />
         <Route path="articles" element={<AdminArticlesPage />} />
-        <Route path="stories" element={<AdminStoryDeskPage />} />
         <Route path="campaigns" element={<AdminCampaignsPage />} />
-        <Route path="attendance" element={<AdminAttendancePage />} />
         <Route path="moderation" element={<AdminModerationPage />} />
-        <Route path="proofs" element={<Navigate to="/admin/stories" replace />} />
-        <Route path="social" element={<Navigate to="/admin/stories" replace />} />
-        <Route path="instagram" element={<Navigate to="/admin/stories" replace />} />
+        {/* Story desk and Class roll were removed; send their old links to the hub. */}
+        <Route path="stories" element={<Navigate to="/admin" replace />} />
+        <Route path="attendance" element={<Navigate to="/admin" replace />} />
+        <Route path="proofs" element={<Navigate to="/admin" replace />} />
+        <Route path="social" element={<Navigate to="/admin" replace />} />
+        <Route path="instagram" element={<Navigate to="/admin" replace />} />
       </Route>
       <Route path="/support" element={<SupportPage />} />
       <Route path="/about" element={<Navigate to="/" replace />} />

@@ -65,6 +65,27 @@ async function listPending({ from, to }) {
 }
 
 /**
+ * Counts posts in one moderation state, without transferring any rows.
+ *
+ * `head: true` asks PostgREST for the count alone — the dashboard needs the number and
+ * nothing else, and `community_posts` carries `contact_email`, which should not travel
+ * to a caller that is only going to render a badge.
+ *
+ * @param {string} status
+ * @returns {Promise<number>}
+ */
+async function countByStatus(status) {
+  const { error, count } = await getSupabase()
+    .from("community_posts")
+    .select("id", { count: "exact", head: true })
+    .eq("status", status);
+
+  assertOk(error);
+
+  return count ?? 0;
+}
+
+/**
  * Inserts a new submission (status defaults to 'pending' at the DB level).
  *
  * The caller is responsible for stripping the honeypot `website` field before calling
@@ -110,4 +131,12 @@ async function moderate(id, { status, moderation_note }) {
   return data ?? null;
 }
 
-module.exports = { listApproved, listPending, create, moderate, PUBLIC_COLUMNS, ADMIN_COLUMNS };
+module.exports = {
+  listApproved,
+  listPending,
+  countByStatus,
+  create,
+  moderate,
+  PUBLIC_COLUMNS,
+  ADMIN_COLUMNS,
+};

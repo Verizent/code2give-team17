@@ -23,10 +23,9 @@ export function AdminLayout() {
   const NAV = [
     { to: '/admin', end: true, label: a.navOverview, hint: a.navOverviewHint },
     { to: '/admin/articles', end: false, label: a.navArticles, hint: a.navArticlesHint },
-    { to: '/admin/stories', end: false, label: a.navStories, hint: a.navStoriesHint },
     { to: '/admin/campaigns', end: false, label: a.navCampaigns, hint: a.navCampaignsHint },
-    { to: '/admin/attendance', end: false, label: a.navAttendance, hint: a.navAttendanceHint },
     { to: '/admin/moderation', end: false, label: a.navModeration, hint: a.navModerationHint },
+    { to: '/admin/analytics', end: false, label: a.navAnalytics, hint: a.navAnalyticsHint },
   ]
 
   useEffect(() => {

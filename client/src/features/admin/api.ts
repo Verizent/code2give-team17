@@ -9,7 +9,6 @@ export type DashboardMetrics = {
   pending_campaigns: number
   pending_voices: number
   voices_available: boolean
-  pending_proofs?: number
   impact_current?: boolean
 }
 
@@ -28,27 +27,6 @@ export type DashboardPayload = {
     volunteer_hours_by_month: Array<{ month: string; hours: number }>
   }
   queue: DashboardQueueItem[]
-}
-
-export type AttendanceSession = {
-  id: string
-  title: string
-  location: string
-  programme: string
-  starts_at: string
-  ends_at: string
-  capacity: number
-  spots_filled: number
-  source: string
-  headcount_confirmed: number
-  headcount_expected: number
-  signups: Array<{
-    id: string
-    status: string
-    hours_logged: number
-    attended_at: string | null
-    volunteer: { id: string; full_name: string | null; email: string | null }
-  }>
 }
 
 export type CommunityPost = {
@@ -89,37 +67,6 @@ export type FunnelPayload = {
   note?: string
 }
 
-export type ProofItem = {
-  id: string
-  title: string
-  programme: string
-  captured_at: string
-  consent: 'consented' | 'partial' | 'none'
-  members_visible: number
-  members_blurred: number
-  thumb: string
-  status: 'pending' | 'approved'
-  approved_at: string | null
-  fanout: {
-    website_story: { locale: string; headline: string; excerpt: string; path: string }
-    drafts: Array<{ channel: string; lang: string; caption: string }>
-    languages: string[]
-    stats_delta: { sessions_featured: number; photos_published: number }
-    blur_note: string
-  } | null
-}
-
-export type SocialDraft = {
-  id: string
-  channel: 'instagram' | 'facebook'
-  lang: 'en' | 'zh-Hant' | 'zh-Hans'
-  caption: string
-  status: 'draft' | 'queued' | 'copied'
-  scheduled_for: string | null
-  proof_id: string | null
-  created_at: string
-}
-
 export async function fetchAdminDashboard(): Promise<DashboardPayload> {
   const { data } = await apiData<DashboardPayload>('/api/admin/dashboard')
   return data
@@ -127,87 +74,6 @@ export async function fetchAdminDashboard(): Promise<DashboardPayload> {
 
 export async function fetchAdminFunnel(): Promise<FunnelPayload> {
   const { data } = await apiData<FunnelPayload>('/api/admin/funnel')
-  return data
-}
-
-export async function fetchProofs(): Promise<{ items: ProofItem[]; available: boolean }> {
-  const res = await apiClient<Envelope<ProofItem[]> & { meta?: { available?: boolean } }>(
-    '/api/admin/proofs',
-  )
-  return {
-    items: res.data ?? [],
-    available: res.meta?.available !== false,
-  }
-}
-
-export async function approveProof(id: string): Promise<ProofItem> {
-  const { data } = await apiData<ProofItem>(
-    `/api/admin/proofs/${encodeURIComponent(id)}/approve`,
-    { method: 'POST', body: '{}' },
-  )
-  return data
-}
-
-export async function fetchSocialDrafts(): Promise<{ items: SocialDraft[]; available: boolean }> {
-  const res = await apiClient<Envelope<SocialDraft[]> & { meta?: { available?: boolean } }>(
-    '/api/admin/social',
-  )
-  return {
-    items: res.data ?? [],
-    available: res.meta?.available !== false,
-  }
-}
-
-export async function scheduleSocialDraft(id: string, scheduled_for: string) {
-  const { data } = await apiData<SocialDraft>(
-    `/api/admin/social/${encodeURIComponent(id)}`,
-    {
-      method: 'PATCH',
-      body: JSON.stringify({ scheduled_for }),
-    },
-  )
-  return data
-}
-
-export async function markSocialCopied(id: string) {
-  const { data } = await apiData<SocialDraft>(
-    `/api/admin/social/${encodeURIComponent(id)}/copy`,
-    { method: 'POST', body: '{}' },
-  )
-  return data
-}
-
-export async function fetchAttendance(from?: string, to?: string): Promise<{
-  sessions: AttendanceSession[]
-  from: string
-  to: string
-}> {
-  const params = new URLSearchParams()
-  if (from) params.set('from', from)
-  if (to) params.set('to', to)
-  const qs = params.toString()
-  const path = qs ? `/api/admin/attendance?${qs}` : '/api/admin/attendance'
-  const res = await apiClient<Envelope<AttendanceSession[]> & { meta?: { from?: string; to?: string } }>(
-    path,
-  )
-  return {
-    sessions: res.data ?? [],
-    from: res.meta?.from ?? '',
-    to: res.meta?.to ?? '',
-  }
-}
-
-export async function markSignupAttended(
-  signupId: string,
-  hours_logged?: number,
-): Promise<{ signup: { id: string; status: string }; badges_awarded: string[] }> {
-  const { data } = await apiData<{
-    signup: { id: string; status: string }
-    badges_awarded: string[]
-  }>(`/api/admin/volunteer-signups/${encodeURIComponent(signupId)}/attendance`, {
-    method: 'POST',
-    body: JSON.stringify(hours_logged != null ? { hours_logged } : {}),
-  })
   return data
 }
 

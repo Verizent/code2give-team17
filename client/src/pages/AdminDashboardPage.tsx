@@ -256,9 +256,7 @@ export function AdminDashboardPage() {
     },
     {
       label: a.dashboardTilePending,
-      value: String(
-        metrics.pending_campaigns + metrics.pending_voices + (metrics.pending_proofs ?? 0),
-      ),
+      value: String(metrics.pending_campaigns + metrics.pending_voices),
       hint: a.dashboardPendingHint,
     },
   ]
