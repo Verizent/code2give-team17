@@ -1,108 +1,86 @@
-const crypto = require("node:crypto");
 const { getSupabase } = require("../config/supabase");
-const { assertOk } = require("./supabase-error");
-
-const COLUMNS = [
-  "id",
-  "email",
-  "full_name",
-  "locale",
-  "profile_id",
-  "tracking_opt_in",
-  "access_token",
-  "created_at",
-  "updated_at",
-].join(", ");
-
-function newAccessToken() {
-  return crypto.randomBytes(24).toString("hex");
-}
 
 /**
- * @param {string} email normalised
- * @returns {Promise<object | null>}
+ * @param {string} email Normalised (lowercase, trimmed) email.
+ * @returns {Promise<object|null>}
  */
 async function findByEmail(email) {
   const { data, error } = await getSupabase()
     .from("donors")
-    .select(COLUMNS)
+    .select("id, email, access_token, full_name, tracking_opt_in")
     .eq("email", email)
     .maybeSingle();
-  assertOk(error);
-  return data;
-}
 
-/**
- * @param {string} profileId
- * @returns {Promise<object | null>}
- */
-async function findByProfileId(profileId) {
-  const { data, error } = await getSupabase()
-    .from("donors")
-    .select(COLUMNS)
-    .eq("profile_id", profileId)
-    .maybeSingle();
-  assertOk(error);
+  if (error) throw error;
   return data;
 }
 
 /**
  * @param {string} token
- * @returns {Promise<object | null>}
+ * @returns {Promise<object|null>}
  */
-async function findByAccessToken(token) {
+async function findByToken(token) {
   const { data, error } = await getSupabase()
     .from("donors")
-    .select(COLUMNS)
+    .select("id, email, access_token, full_name, locale, tracking_opt_in")
     .eq("access_token", token)
     .maybeSingle();
-  assertOk(error);
+
+  if (error) throw error;
   return data;
 }
 
 /**
- * @param {{ email: string, full_name?: string | null, locale?: string, tracking_opt_in?: boolean, profile_id?: string | null }} input
+ * @param {{ email: string, full_name?: string, locale?: string, access_token: string, tracking_opt_in: boolean }} row
  * @returns {Promise<object>}
  */
-async function insert(input) {
-  const row = {
-    email: input.email,
-    full_name: input.full_name ?? null,
-    locale: input.locale === "zh-Hant" ? "zh-Hant" : "en",
-    tracking_opt_in: Boolean(input.tracking_opt_in),
-    access_token: newAccessToken(),
-    profile_id: input.profile_id ?? null,
-  };
-
+async function createDonor(row) {
   const { data, error } = await getSupabase()
     .from("donors")
     .insert(row)
-    .select(COLUMNS)
+    .select("id, email, access_token, full_name")
     .single();
-  assertOk(error);
+
+  if (error) throw error;
   return data;
 }
 
 /**
- * @param {string} donorId
- * @param {{ tracking_opt_in?: boolean, full_name?: string | null, profile_id?: string | null }} patch
+ * @param {string} id
+ * @param {object} updates
  */
-async function update(donorId, patch) {
+async function updateDonor(id, updates) {
+  const { error } = await getSupabase().from("donors").update(updates).eq("id", id);
+  if (error) throw error;
+}
+
+/**
+ * @param {string} id
+ * @returns {Promise<object|null>}
+ */
+async function findById(id) {
   const { data, error } = await getSupabase()
     .from("donors")
-    .update(patch)
-    .eq("id", donorId)
-    .select(COLUMNS)
-    .single();
-  assertOk(error);
+    .select("id, email, access_token, full_name, locale, tracking_opt_in")
+    .eq("id", id)
+    .maybeSingle();
+  if (error) throw error;
   return data;
 }
 
-module.exports = {
-  findByEmail,
-  findByProfileId,
-  findByAccessToken,
-  insert,
-  update,
-  newAccessToken,
-};
+/**
+ * Admin list — donors ordered by created_at desc.
+ * @param {{ limit?: number }} [opts]
+ * @returns {Promise<object[]>}
+ */
+async function listRecent({ limit = 50 } = {}) {
+  const { data, error } = await getSupabase()
+    .from("donors")
+    .select("id, email, full_name, locale, tracking_opt_in, created_at")
+    .order("created_at", { ascending: false })
+    .limit(Math.min(limit, 200));
+  if (error) throw error;
+  return data ?? [];
+}
+
+module.exports = { findByEmail, findByToken, findById, createDonor, updateDonor, listRecent };

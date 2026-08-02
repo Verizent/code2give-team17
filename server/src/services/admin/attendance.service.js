@@ -1,113 +1,114 @@
-const { ApiError } = require("../../lib/api-error");
-const { resolveLocale } = require("../../lib/locale");
-const opportunitiesRepo = require("../../data/opportunities.repo");
-const signupsRepo = require("../../data/signups.repo");
-const volunteersRepo = require("../../data/volunteers.repo");
-const badgesService = require("../volunteering/badges.service");
+const signupsRepo = require("../../data/volunteer-signups.repo");
+const opportunitiesRepo = require("../../data/volunteer-opportunities.repo");
+const badgesService = require("./badges.service");
+const thankYouService = require("../email/thank-you.service");
 
 /**
- * @param {string} fromIso
- * @param {string} toIso
- * @param {string} [locale]
- */
-async function listAttendance(fromIso, toIso, locale = "en") {
-  const opportunities = await opportunitiesRepo.listInRange({ fromIso, toIso });
-  const ids = opportunities.map((o) => o.id);
-  const signups = await signupsRepo.listByOpportunityIds(ids);
-
-  const volunteerIds = [...new Set(signups.map((s) => s.volunteer_id))];
-  /** @type {Map<string, object>} */
-  const volunteers = new Map();
-  for (const id of volunteerIds) {
-    const v = await volunteersRepo.findById(id);
-    if (v) volunteers.set(id, v);
-  }
-
-  const byOpp = new Map();
-  for (const id of ids) byOpp.set(id, []);
-  for (const signup of signups) {
-    const list = byOpp.get(signup.opportunity_id);
-    if (!list) continue;
-    const volunteer = volunteers.get(signup.volunteer_id);
-    list.push({
-      id: signup.id,
-      status: signup.status,
-      hours_logged: Number(signup.hours_logged) || 0,
-      attended_at: signup.attended_at,
-      volunteer: volunteer
-        ? {
-            id: volunteer.id,
-            full_name: volunteer.full_name,
-            email: volunteer.email,
-          }
-        : { id: signup.volunteer_id, full_name: null, email: null },
-    });
-  }
-
-  return opportunities.map((row) => {
-    const localised = resolveLocale(
-      row,
-      ["title", "description", "location"],
-      locale,
-    );
-    const roster = byOpp.get(row.id) ?? [];
-    return {
-      id: row.id,
-      title: localised.title,
-      location: localised.location,
-      programme: row.programme,
-      starts_at: row.starts_at,
-      ends_at: row.ends_at,
-      capacity: row.capacity,
-      spots_filled: row.spots_filled,
-      source: row.source,
-      signups: roster,
-      headcount_confirmed: roster.filter((s) => s.status === "attended").length,
-      headcount_expected: roster.filter((s) => s.status !== "no_show").length,
-    };
-  });
-}
-
-/**
- * Mark one signup attended and run badge evaluation (§16).
+ * Bulk mark-attendance write. For each signup row: patch `status`, `hours_logged`,
+ * `attended_at`, then evaluate badge criteria (deduped per volunteer — a volunteer
+ * with two signups in the same batch is evaluated once, not twice), then send the
+ * thank-you email (per signup, guarded by `thank_you_email_sent_at` so a second
+ * attendance-mark cannot re-send).
  *
- * @param {string} signupId
- * @param {{ hours_logged?: number }} body
+ * @param {string} opportunityId Not written to signups (their FK is set at signup
+ *   time) — used by the route layer for auditing/validation. Kept in the service
+ *   signature so callers can be swapped later without touching the API.
+ * @param {{ id: string, hours_logged: number, status: string }[]} signupPatches
  */
-async function markAttendance(signupId, body = {}) {
-  const signup = await signupsRepo.findById(signupId);
-  if (!signup || signup.status === "cancelled") {
-    throw ApiError.notFound("Signup not found");
-  }
-  if (signup.status === "attended") {
-    return { signup, badges_awarded: [] };
+async function markAttendance(_opportunityId, signupPatches) {
+  const attendedAt = new Date().toISOString();
+
+  const updatedSignups = [];
+  for (const patch of signupPatches) {
+    const updated = await signupsRepo.markAttendance(patch.id, {
+      hours_logged: patch.hours_logged,
+      status: patch.status,
+      attended_at: attendedAt,
+    });
+    updatedSignups.push(updated);
   }
 
-  let hours = body.hours_logged;
-  if (hours == null) {
-    const opportunity = await opportunitiesRepo.findById(signup.opportunity_id);
-    if (opportunity?.starts_at && opportunity?.ends_at) {
-      const ms =
-        new Date(opportunity.ends_at).getTime() -
-        new Date(opportunity.starts_at).getTime();
-      if (ms > 0) hours = Math.round((ms / 3_600_000) * 10) / 10;
+  const uniqueVolunteerIds = [
+    ...new Set(updatedSignups.map((row) => row.volunteer_id)),
+  ];
+
+  /** @type {Record<string, string[]>} */
+  const awardedByVolunteer = {};
+  for (const volunteerId of uniqueVolunteerIds) {
+    const awarded = await badgesService.awardAfterAttendance(volunteerId);
+    if (awarded.length > 0) {
+      awardedByVolunteer[volunteerId] = awarded;
     }
-    if (hours == null) hours = 1.5;
   }
 
-  const updated = await signupsRepo.markAttended(signupId, {
-    hours_logged: hours,
-  });
+  const thankYouSent = await sendThankYouEmails(updatedSignups);
 
-  let badges_awarded = [];
-  try {
-    badges_awarded = await badgesService.evaluateForVolunteer(updated.volunteer_id);
-  } catch {
-    // Badge tables may be empty in some environments — attendance still succeeds.
-    badges_awarded = [];
-  }
-
-  return { signup: updated, badges_awarded };
+  return {
+    signups: updatedSignups,
+    awarded_badges_by_volunteer: awardedByVolunteer,
+    thank_you_emails_sent: thankYouSent,
+  };
 }
 
-module.exports = { listAttendance, markAttendance };
+/**
+ * Fires the thank-you email for each attended signup that has not already been
+ * thanked. A send failure is logged and swallowed — the badge award and
+ * attendance write must not be undone by an email outage. The `thank_you_email_
+ * sent_at` stamp lands only on success, so a retry later still works.
+ *
+ * @param {object[]} updatedSignups
+ * @returns {Promise<number>} count actually sent
+ */
+async function sendThankYouEmails(updatedSignups) {
+  let sent = 0;
+
+  for (const signup of updatedSignups) {
+    if (signup.status !== "attended") {
+      continue;
+    }
+    if (signup.thank_you_email_sent_at) {
+      continue;
+    }
+
+    const volunteer = signup.volunteers;
+    const opportunity = signup.volunteer_opportunities;
+    if (!volunteer || !opportunity) {
+      continue;
+    }
+
+    let recommendations = [];
+    try {
+      const { rows } = await opportunitiesRepo.listOpen({
+        from: 0,
+        to: 3,
+        programme: opportunity.programme,
+      });
+      recommendations = (rows || [])
+        .filter((row) => row.id !== opportunity.id)
+        .slice(0, 3);
+    } catch (error) {
+      console.error(
+        `attendance thank-you: recommendation lookup failed for signup ${signup.id}: ${error.message}`,
+      );
+    }
+
+    try {
+      await thankYouService.sendThankYou({
+        volunteer,
+        signup,
+        opportunity,
+        recommendations,
+      });
+      await signupsRepo.markThankYouSent(signup.id, new Date().toISOString());
+      sent += 1;
+    } catch (error) {
+      console.error(
+        `attendance thank-you: send failed for signup ${signup.id}: ${error.message}`,
+      );
+    }
+  }
+
+  return sent;
+}
+
+module.exports = { markAttendance };

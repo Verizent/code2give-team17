@@ -43,5 +43,3 @@ create trigger impact_periods_set_updated_at
   for each row execute function public.set_updated_at();
 
 alter table public.impact_periods enable row level security;
-
-grant select, insert, update, delete on table public.impact_periods to service_role;

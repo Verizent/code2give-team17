@@ -1,61 +1,44 @@
 const express = require("express");
 const { validate } = require("../middleware/validate");
-const { requireAuth, optionalAuth } = require("../middleware/auth");
-const {
-  createSignupSchema,
-  createProgrammeInterestSchema,
-  signupIdParamSchema,
-} = require("../schemas/volunteer.schema");
-const { envelope } = require("../lib/envelope");
+const { requireAuth, optionalAuth } = require("../middleware/require-auth");
+const volunteerContext = require("../middleware/volunteer-context");
 const signupsService = require("../services/volunteering/signups.service");
 const interestsService = require("../services/volunteering/interests.service");
+const badgesRepo = require("../data/badges.repo");
+const signupsRepo = require("../data/volunteer-signups.repo");
+const { actorFromAuth } = require("../lib/actor");
+const { envelope } = require("../lib/envelope");
+const {
+  guestSignupBodySchema,
+  createProgrammeInterestBodySchema,
+  signupIdParamsSchema,
+} = require("../schemas/volunteering.schema");
 
 const router = express.Router();
 
-router.get("/me", requireAuth, async (request, response, next) => {
-  try {
-    const me = await signupsService.getVolunteerMe(request.user);
-    response.json(envelope(me));
-  } catch (error) {
-    next(error);
-  }
-});
-
-router.post(
-  "/interest",
-  optionalAuth,
-  validate({ body: createProgrammeInterestSchema }),
+router.get(
+  "/me",
+  requireAuth,
+  volunteerContext,
   async (request, response, next) => {
     try {
-      const { opportunity_id, ...body } = request.body;
-      if (opportunity_id) {
-        const result = await interestsService.registerInterest(
-          opportunity_id,
-          body,
-          request.user ?? null,
-        );
-        response.status(201).json(envelope(result));
-        return;
-      }
+      const volunteer = request.volunteer;
+      const [totalHours, badges, signups] = await Promise.all([
+        signupsRepo.sumHoursForVolunteer(volunteer.id),
+        badgesRepo.listBadgesForVolunteer(volunteer.id),
+        signupsService.listSignups(volunteer.id),
+      ]);
 
-      const volunteer = await signupsService.resolveVolunteer({
-        email: body.email,
-        full_name: body.full_name,
-        phone: body.phone,
-        locale: body.locale,
-        user: request.user ?? null,
-      });
-
-      response.status(201).json(
+      response.json(
         envelope({
-          interest: null,
-          volunteer: {
-            id: volunteer.id,
-            email: volunteer.email,
-            full_name: volunteer.full_name,
-          },
-          opportunity: null,
-          message: body.message ?? null,
+          id: volunteer.id,
+          email: volunteer.email,
+          full_name: volunteer.full_name,
+          locale: volunteer.locale,
+          claimed_at: volunteer.claimed_at,
+          total_hours: totalHours,
+          badges,
+          signups,
         }),
       );
     } catch (error) {
@@ -65,12 +48,38 @@ router.post(
 );
 
 router.post(
-  "/signups",
+  "/interest",
   optionalAuth,
-  validate({ body: createSignupSchema }),
+  validate({ body: createProgrammeInterestBodySchema }),
   async (request, response, next) => {
     try {
-      const result = await signupsService.createSignup(request.body, request.user ?? null);
+      const { opportunity_id, ...body } = request.body;
+
+      if (opportunity_id) {
+        const result = await interestsService.registerInterest(
+          opportunity_id,
+          body,
+          actorFromAuth(request.auth),
+        );
+        response.status(201).json(envelope(result));
+        return;
+      }
+
+      const result = await interestsService.registerProgrammeInterest(body);
+      response.status(201).json(envelope(result));
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+router.post(
+  "/signups",
+  optionalAuth,
+  validate({ body: guestSignupBodySchema }),
+  async (request, response, next) => {
+    try {
+      const result = await signupsService.createSignup(request.body, actorFromAuth(request.auth));
       response.status(201).json(envelope(result));
     } catch (error) {
       next(error);
@@ -81,12 +90,14 @@ router.post(
 router.delete(
   "/signups/:id",
   requireAuth,
-  validate({ params: signupIdParamSchema }),
+  validate({ params: signupIdParamsSchema }),
   async (request, response, next) => {
     try {
+      // requireAuth guarantees request.auth here, so the actor is never null and
+      // cancelSignup's ownership check always has an identity to compare against.
       const cancelled = await signupsService.cancelSignup(
-        request.validatedParams.id,
-        request.user,
+        request.params.id,
+        actorFromAuth(request.auth),
       );
       response.json(envelope(cancelled));
     } catch (error) {

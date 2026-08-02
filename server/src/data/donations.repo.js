@@ -1,205 +1,153 @@
 const { getSupabase } = require("../config/supabase");
 const { assertOk } = require("./supabase-error");
 
-// Live `donations` table (shared project) has no `programme` / `designation`
-// column yet — CONTEXT §13 still describes them. Do not select missing cols.
-const COLUMNS = [
-  "id",
-  "donor_id",
-  "amount_hkd",
-  "frequency",
-  "campaign_id",
-  "status",
-  "is_anonymous",
-  "message",
-  "referral_source",
-  "referral_source_other",
-  "created_at",
-  "updated_at",
-].join(", ");
-
 /**
- * @param {{
- *   donor_id: string,
- *   amount_hkd: number,
- *   frequency: string,
- *   programme?: string | null,
- *   campaign_id?: string | null,
- *   status?: string,
- *   message?: string | null,
- * }} input
+ * @param {{ donor_id: string, amount_hkd: number, frequency?: string, campaign_id?: string|null, status?: string }} row
  * @returns {Promise<object>}
  */
-async function insert(input) {
-  const row = {
-    donor_id: input.donor_id,
-    amount_hkd: input.amount_hkd,
-    frequency: input.frequency,
-    campaign_id: input.campaign_id ?? null,
-    status: input.status ?? "pending",
-  };
-  // Stash programme intent in message until the column lands (demo-safe).
-  if (input.programme && !input.message) {
-    row.message = `programme:${input.programme}`;
-  } else if (input.message) {
-    row.message = input.message;
-  }
-
+async function insertDonation(row) {
   const { data, error } = await getSupabase()
     .from("donations")
-    .insert(row)
-    .select(COLUMNS)
+    .insert({ status: "succeeded", ...row })
+    .select("id, amount_hkd, frequency, status, created_at")
     .single();
+
   assertOk(error);
-  return withProgramme(data);
+  return data;
 }
 
 /**
- * Recover programme from the temporary message stash, if present.
- * @param {object | null} row
+ * Second line of defence on idempotency: the same `stripe_session_id` must never produce two
+ * rows. `stripe_events` is the first — see `stripe-events.repo.js`.
+ *
+ * @param {string} sessionId
+ * @returns {Promise<object|null>}
  */
-function withProgramme(row) {
-  if (!row) return row;
-  const msg = row.message;
-  if (typeof msg === "string" && msg.startsWith("programme:")) {
-    return { ...row, programme: msg.slice("programme:".length) };
-  }
-  return { ...row, programme: row.programme ?? null };
-}
-
-/**
- * @param {string} donorId
- * @returns {Promise<object[]>}
- */
-async function listByDonorId(donorId) {
+async function findByStripeSession(sessionId) {
   const { data, error } = await getSupabase()
     .from("donations")
-    .select(COLUMNS)
-    .eq("donor_id", donorId)
-    .order("created_at", { ascending: false });
-  assertOk(error);
-  return (data ?? []).map(withProgramme);
-}
-
-/**
- * @param {string} donationId
- * @returns {Promise<object | null>}
- */
-async function findById(donationId) {
-  const { data, error } = await getSupabase()
-    .from("donations")
-    .select(COLUMNS)
-    .eq("id", donationId)
+    .select(
+      "id, donor_id, amount_hkd, frequency, status, events_credited, cost_per_event_at_donation, tracking_opt_in, created_at",
+    )
+    .eq("stripe_session_id", sessionId)
     .maybeSingle();
+
   assertOk(error);
-  return withProgramme(data);
+  return data;
 }
 
 /**
- * Aggregate money metrics for the admin dashboard.
- * Counts succeeded + pending (in-flight) gifts; excludes failed/refunded.
+ * Creates the `pending` row that a checkout session points at.
  *
- * @returns {Promise<{ total_hkd: number, count: number }>}
+ * `donor_id` is deliberately absent — the donate form collects nothing Stripe already collects
+ * (CONTEXT.md §15), so the donor is not known until the webhook carries their email. The column
+ * is nullable for exactly this window.
+ *
+ * @param {{ amount_hkd: number, frequency: string, campaign_id?: string|null,
+ *   stripe_session_id: string, tracking_opt_in?: boolean }} row
+ * @returns {Promise<object>}
  */
-async function sumAmounts() {
+async function insertPendingDonation(row) {
   const { data, error } = await getSupabase()
     .from("donations")
-    .select("amount_hkd, status");
-  assertOk(error);
-  const rows = data ?? [];
-  let total_hkd = 0;
-  let count = 0;
-  for (const row of rows) {
-    if (row.status === "failed" || row.status === "refunded") continue;
-    total_hkd += Number(row.amount_hkd) || 0;
-    count += 1;
-  }
-  return { total_hkd, count };
-}
+    .insert({ ...row, status: "pending" })
+    .select("id, amount_hkd, frequency, status, stripe_session_id, created_at")
+    .single();
 
-/**
- * Monthly donation totals for charting (last ~12 months of rows).
- *
- * @returns {Promise<Array<{ month: string, amount_hkd: number }>>}
- */
-async function sumByMonth() {
-  const { data, error } = await getSupabase()
-    .from("donations")
-    .select("amount_hkd, created_at, status")
-    .order("created_at", { ascending: true });
   assertOk(error);
-
-  /** @type {Map<string, number>} */
-  const byMonth = new Map();
-  for (const row of data ?? []) {
-    if (row.status === "failed" || row.status === "refunded") continue;
-    const month = String(row.created_at).slice(0, 7);
-    byMonth.set(month, (byMonth.get(month) ?? 0) + (Number(row.amount_hkd) || 0));
-  }
-  return [...byMonth.entries()].map(([month, amount_hkd]) => ({ month, amount_hkd }));
+  return data;
 }
 
 /**
  * @param {string} id
- * @param {string} status
- * @returns {Promise<object>}
+ * @param {object} updates
  */
-async function updateStatus(id, status) {
-  const { data, error } = await getSupabase()
-    .from("donations")
-    .update({ status })
-    .eq("id", id)
-    .select(COLUMNS)
-    .single();
+async function updateDonation(id, updates) {
+  const { error } = await getSupabase().from("donations").update(updates).eq("id", id);
   assertOk(error);
-  return withProgramme(data);
 }
 
 /**
- * Recent donations (internal tooling / legacy demo advance picker).
+ * Succeeded donations for a donor, newest first.
  *
- * @param {number} [limit]
+ * `events_credited` and `created_at` come back because the lifetime strip and the edition
+ * windows are both derived from them (PLAN.md Phase B) — nothing is stored as a counter.
+ *
+ * @param {string} donorId
  * @returns {Promise<object[]>}
  */
-async function listRecent(limit = 8) {
+async function listByDonor(donorId) {
   const { data, error } = await getSupabase()
     .from("donations")
-    .select(COLUMNS)
-    .order("created_at", { ascending: false })
-    .limit(limit);
+    .select(
+      "id, amount_hkd, frequency, status, events_credited, cost_per_event_at_donation, created_at",
+    )
+    .eq("donor_id", donorId)
+    .eq("status", "succeeded")
+    .order("created_at", { ascending: false });
+
   assertOk(error);
-  return (data ?? []).map(withProgramme);
+  return data ?? [];
 }
 
 /**
- * How donors said they found Love 21 (form answers, not UTMs).
- *
- * @returns {Promise<Array<{ source: string, count: number }>>}
+ * Fetch a single donation by id — for post-payment feedback (§Phase C3).
+ * @param {string} id
+ * @returns {Promise<object|null>}
  */
-async function countByReferralSource() {
+async function findById(id) {
   const { data, error } = await getSupabase()
     .from("donations")
-    .select("referral_source, status");
+    .select("id, donor_id, amount_hkd, frequency, status, events_credited, cost_per_event_at_donation, tracking_opt_in, created_at, message, referral_source, is_anonymous")
+    .eq("id", id)
+    .maybeSingle();
   assertOk(error);
+  return data;
+}
 
-  /** @type {Map<string, number>} */
-  const counts = new Map();
-  for (const row of data ?? []) {
-    if (row.status === "failed" || row.status === "refunded") continue;
-    const source = row.referral_source || "unknown";
-    counts.set(source, (counts.get(source) ?? 0) + 1);
-  }
-  return [...counts.entries()].map(([source, count]) => ({ source, count }));
+/**
+ * Whitelist-writing update for post-payment feedback. Fields already narrowed at the
+ * service layer — repo just persists.
+ * @param {string} id
+ * @param {{ message?: string, referral_source?: string, referral_source_other?: string, is_anonymous?: boolean }} fields
+ * @returns {Promise<object>}
+ */
+async function updateFeedback(id, fields) {
+  const { data, error } = await getSupabase()
+    .from("donations")
+    .update(fields)
+    .eq("id", id)
+    .select("id, message, referral_source, referral_source_other, is_anonymous, updated_at")
+    .single();
+  assertOk(error);
+  return data;
+}
+
+/**
+ * Admin dashboard: recent donations, newest first.
+ * @param {{ limit?: number, status?: string }} [opts]
+ * @returns {Promise<object[]>}
+ */
+async function listRecent({ limit = 50, status } = {}) {
+  let query = getSupabase()
+    .from("donations")
+    .select("id, donor_id, amount_hkd, frequency, status, events_credited, cost_per_event_at_donation, is_anonymous, message, referral_source, stripe_session_id, stripe_payment_intent, created_at")
+    .order("created_at", { ascending: false })
+    .limit(Math.min(limit, 200));
+  if (status) query = query.eq("status", status);
+
+  const { data, error } = await query;
+  assertOk(error);
+  return data ?? [];
 }
 
 module.exports = {
-  insert,
-  listByDonorId,
+  insertDonation,
+  insertPendingDonation,
+  findByStripeSession,
   findById,
-  sumAmounts,
-  sumByMonth,
-  updateStatus,
+  updateDonation,
+  updateFeedback,
+  listByDonor,
   listRecent,
-  countByReferralSource,
-  withProgramme,
 };

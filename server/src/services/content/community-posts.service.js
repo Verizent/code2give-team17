@@ -1,66 +1,75 @@
-const { ApiError } = require("../../lib/api-error");
-const { isMissingTable } = require("../../lib/missing-table");
-const { parsePaging, buildMeta } = require("../../lib/pagination");
 const communityPostsRepo = require("../../data/community-posts.repo");
+const { ApiError } = require("../../lib/api-error");
+const { parsePaging, buildMeta } = require("../../lib/pagination");
 
 /**
- * Thin Voices moderation queue. Returns empty + unavailable when the table
- * is not applied yet (CONTENT migrations still pending — §28).
+ * `GET /api/community-posts` — approved Voices for the public tab.
  *
- * @param {{ page?: unknown, limit?: unknown, status?: string }} query
+ * @param {{ page?: number, limit?: number }} query
+ * @returns {Promise<{ items: object[], meta: { total: number, page: number, limit: number } }>}
  */
-async function listForAdmin(query) {
+async function listVoices(query = {}) {
   const paging = parsePaging(query);
-  const status = query.status || "pending";
-  try {
-    const { rows, total } = await communityPostsRepo.list({
-      ...paging,
-      status: status === "all" ? undefined : status,
-    });
-    return {
-      items: rows,
-      meta: buildMeta(total, paging),
-      available: true,
-    };
-  } catch (error) {
-    if (isMissingTable(error, "community_posts")) {
-      return {
-        items: [],
-        meta: buildMeta(0, paging),
-        available: false,
-      };
-    }
-    throw error;
-  }
+  const { rows, total } = await communityPostsRepo.listApproved({
+    from: paging.from,
+    to: paging.to,
+  });
+  return { items: rows, meta: buildMeta(total, paging) };
 }
 
 /**
- * @param {string} id
- * @param {'approved' | 'rejected'} status
- * @param {{ id?: string } | null} [moderator]
+ * `POST /api/community-posts` — a supporter, parent or volunteer submits a story.
+ *
+ * The `website` field is the honeypot. When it is filled, we return a fake 201 and write
+ * nothing — telling a bot it was caught (with a 400) would reveal which field to omit.
+ * The honeypot must run before any actor-aware logic so a signed-in bot gets the same
+ * treatment as an anonymous one. This reads like a bug; it is deliberate.
+ *
+ * @param {{ author_name: string, relationship: string, story: string, photo_url?: string, contact_email?: string, consent_given: true, website?: string }} body
+ * @param {{ userId?: string } | undefined} actor - `request.auth` from optionalAuth; absent for anonymous submissions
+ * @returns {Promise<{ id: string | null, submitted_at: string }>}
  */
-async function moderate(id, status, moderator = null) {
-  let existing;
-  try {
-    existing = await communityPostsRepo.findById(id);
-  } catch (error) {
-    if (isMissingTable(error, "community_posts")) {
-      throw ApiError.badRequest(
-        "Voices moderation is unavailable until community_posts is applied",
-      );
-    }
-    throw error;
+async function submitVoice(body, actor) {
+  const { website, ...postData } = body;
+
+  if (website) {
+    return { id: null, submitted_at: new Date().toISOString() };
   }
-  if (!existing) {
-    throw ApiError.notFound("Community post not found");
-  }
-  if (existing.status !== "pending") {
-    throw ApiError.badRequest("Only pending posts can be moderated");
-  }
-  return communityPostsRepo.updateModeration(id, {
-    status,
-    moderated_by: moderator?.id ?? null,
+
+  return communityPostsRepo.create({
+    ...postData,
+    submitted_by: actor?.userId ?? null,
   });
 }
 
-module.exports = { listForAdmin, moderate };
+/**
+ * `GET /api/admin/community-posts` — pending queue for the moderation UI.
+ *
+ * @param {{ page?: number, limit?: number }} query
+ * @returns {Promise<{ items: object[], meta: { total: number, page: number, limit: number } }>}
+ */
+async function listPendingVoices(query = {}) {
+  const paging = parsePaging(query);
+  const { rows, total } = await communityPostsRepo.listPending({
+    from: paging.from,
+    to: paging.to,
+  });
+  return { items: rows, meta: buildMeta(total, paging) };
+}
+
+/**
+ * `POST /api/admin/community-posts/:id/moderate` — approve or reject a submission.
+ *
+ * @param {string} id
+ * @param {{ status: 'approved'|'rejected', moderation_note?: string }} body
+ * @returns {Promise<object>}
+ */
+async function moderateVoice(id, body) {
+  const row = await communityPostsRepo.moderate(id, body);
+  if (!row) {
+    throw ApiError.notFound(`No community post with id "${id}"`);
+  }
+  return row;
+}
+
+module.exports = { listVoices, submitVoice, listPendingVoices, moderateVoice };

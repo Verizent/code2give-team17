@@ -1,15 +1,16 @@
 const express = require("express");
-const { requireAuth } = require("../middleware/auth");
+const { requireAuth } = require("../middleware/require-auth");
 const { envelope } = require("../lib/envelope");
-const impactService = require("../services/me/impact.service");
+const meService = require("../services/auth/me.service");
 
 const router = express.Router();
 
-/** PAGE 5 — supporter retention: garden, proof receipts, conversion, prefs. */
-router.get("/impact", requireAuth, async (request, response, next) => {
+// requireAuth, not optionalAuth: an anonymous caller has no identity to describe,
+// so 401 is the honest answer rather than an empty body the client must interpret.
+router.get("/", requireAuth, async (request, response, next) => {
   try {
-    const impact = await impactService.getMeImpact(request.user);
-    response.json(envelope(impact));
+    const me = await meService.getMe(request.auth);
+    response.json(envelope(me));
   } catch (error) {
     next(error);
   }

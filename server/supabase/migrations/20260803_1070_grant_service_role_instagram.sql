@@ -1,0 +1,24 @@
+-- Grant service_role DML on instagram_embeds.
+--
+-- Non-destructive: adds privileges only. Safe to run at any time, including mid-demo.
+--
+-- Same defect as content_events and sessions: a table created through apply_migration
+-- lands with no DML grants for the Supabase roles. service_role bypasses RLS, but that
+-- does not bypass the underlying table privilege — every read and write fails 42501
+-- "permission denied for table".
+--
+-- Verified on live before writing this file:
+--
+--   select has_table_privilege('service_role','public.instagram_embeds','SELECT') ...
+--   -> select/insert/update/delete all false
+--
+-- Latent on backend-dev today (nothing queries the table yet), but
+-- `feature/admin/dashboard` adds src/data/instagram.repo.js with five query sites
+-- against it, so all five 42501 the moment that branch merges.
+--
+-- The companion grants for content_events and sessions live in the donations track's
+-- 20260803_1065_grant_service_role_content_events.sql. Kept as a separate file here
+-- because instagram_embeds belongs to the content/admin track, and the two branches
+-- merge independently.
+
+grant select, insert, update, delete on public.instagram_embeds to service_role;

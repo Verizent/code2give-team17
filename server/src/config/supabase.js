@@ -72,22 +72,12 @@ function getSupabase() {
 
 async function checkSupabaseConnection() {
   const { url, serviceRoleKey } = getSupabaseConfig();
-  let response;
-  try {
-    response = await fetch(`${url.replace(/\/$/, "")}/auth/v1/health`, {
-      headers: {
-        apikey: serviceRoleKey,
-      },
-      signal: AbortSignal.timeout(5000),
-    });
-  } catch (error) {
-    const cause = error instanceof Error ? error.message : "unknown network error";
-    const wrapped = new Error(
-      `Cannot reach Supabase at ${url} (${cause}). Check SUPABASE_URL, DNS, and that the project is not paused.`,
-    );
-    wrapped.status = 503;
-    throw wrapped;
-  }
+  const response = await fetch(`${url.replace(/\/$/, "")}/auth/v1/health`, {
+    headers: {
+      apikey: serviceRoleKey,
+    },
+    signal: AbortSignal.timeout(5000),
+  });
 
   if (!response.ok) {
     const error = new Error(`Supabase responded with HTTP ${response.status}`);
@@ -99,4 +89,3 @@ async function checkSupabaseConnection() {
 }
 
 module.exports = { getSupabase, getServiceClient, checkSupabaseConnection };
-

@@ -1,46 +1,53 @@
 const express = require("express");
-const { validate } = require("../middleware/validate");
-const { listQuerySchema, slugParamSchema } = require("../schemas/query.schema");
-const { createCampaignSchema } = require("../schemas/campaign.schema");
-const { envelope } = require("../lib/envelope");
-const campaignsService = require("../services/donations/campaigns.service");
+const {
+  listCampaignsForGive,
+  getCampaignBySlug,
+  createCampaign,
+} = require("../services/campaigns.service");
 
 const router = express.Router();
 
-/** Approved fundraisers only — public directory. */
-router.get("/", validate({ query: listQuerySchema }), async (request, response, next) => {
+router.get("/", async (request, response, next) => {
   try {
-    const { items, meta } = await campaignsService.listApproved(request.validatedQuery);
-    response.json(envelope(items, meta));
+    const slugs = String(request.query.slugs || "")
+      .split(",")
+      .map((slug) => slug.trim())
+      .filter(Boolean);
+    const { public: publicItems, mine } = await listCampaignsForGive(slugs);
+    response.json({
+      public: publicItems,
+      mine,
+      meta: { public: publicItems.length, mine: mine.length },
+    });
   } catch (error) {
     next(error);
   }
 });
 
-router.post(
-  "/",
-  validate({ body: createCampaignSchema }),
-  async (request, response, next) => {
-    try {
-      const campaign = await campaignsService.createCampaign(request.body);
-      response.status(201).json(envelope(campaign));
-    } catch (error) {
-      next(error);
-    }
-  },
-);
+router.post("/", async (request, response, next) => {
+  try {
+    const campaign = await createCampaign(request.body);
+    response.status(201).json(campaign);
+  } catch (error) {
+    next(error);
+  }
+});
 
-router.get(
-  "/:slug",
-  validate({ params: slugParamSchema }),
-  async (request, response, next) => {
-    try {
-      const campaign = await campaignsService.getBySlug(request.validatedParams.slug);
-      response.json(envelope(campaign));
-    } catch (error) {
-      next(error);
+router.get("/:slug", async (request, response, next) => {
+  try {
+    const campaign = await getCampaignBySlug(request.params.slug);
+    if (!campaign) {
+      response.status(404).json({
+        error: "Not Found",
+        message: "Campaign not found",
+        code: "NOT_FOUND",
+      });
+      return;
     }
-  },
-);
+    response.json(campaign);
+  } catch (error) {
+    next(error);
+  }
+});
 
 module.exports = router;

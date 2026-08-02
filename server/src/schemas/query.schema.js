@@ -54,21 +54,20 @@ const slugParamSchema = z.object({
   slug: z.string().min(1).max(120),
 });
 
-/**
- * `GET /api/opportunities` — upcoming volunteer listings from Supabase.
- */
-const opportunityListQuerySchema = listQuerySchema
-  .omit({ locale: true })
-  .extend({
-    programme: z
-      .enum(["sports", "fitness", "nutrition", "family_support", "community_education"])
-      .optional(),
-    source: z.enum(["internal", "handson"]).optional(),
-  });
-
-/** `GET /api/opportunities/:id`. */
-const opportunityIdParamSchema = z.object({
+/** `POST /api/admin/community-posts/:id/moderate` — the `:id` path segment. */
+const idParamSchema = z.object({
   id: z.string().uuid(),
+});
+
+/**
+ * `POST /api/admin/community-posts/:id/moderate` body.
+ *
+ * Strict so unknown keys 400 rather than being silently ignored — this is an admin
+ * action and a stray field is more likely a client bug than a benign query parameter.
+ */
+const moderateSchema = z.strictObject({
+  status: z.enum(["approved", "rejected"]),
+  moderation_note: z.string().optional(),
 });
 
 module.exports = {
@@ -76,6 +75,6 @@ module.exports = {
   localeQuerySchema,
   articleListQuerySchema,
   slugParamSchema,
-  opportunityListQuerySchema,
-  opportunityIdParamSchema,
+  idParamSchema,
+  moderateSchema,
 };

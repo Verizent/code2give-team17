@@ -1,99 +1,78 @@
-const crypto = require("node:crypto");
-const { getSupabase } = require("../config/supabase");
-const { assertOk } = require("./supabase-error");
+const { getServiceClient } = require("../config/supabase");
+const { throwIfDbError } = require("./supabase-error");
+const { normalizeEmail } = require("../lib/normalize-email");
+const { generateAccessToken } = require("../lib/tokens");
 
-const COLUMNS = [
-  "id",
-  "email",
-  "full_name",
-  "phone",
-  "locale",
-  "profile_id",
-  "claimed_at",
-  "access_token",
-  "created_at",
-  "updated_at",
-].join(", ");
-
-function newAccessToken() {
-  return crypto.randomBytes(24).toString("hex");
-}
-
-/**
- * @param {string} email normalised
- * @returns {Promise<object | null>}
- */
 async function findByEmail(email) {
-  const { data, error } = await getSupabase()
+  const db = getServiceClient();
+  const { data, error } = await db
     .from("volunteers")
-    .select(COLUMNS)
-    .eq("email", email)
+    .select("*")
+    .eq("email", normalizeEmail(email))
     .maybeSingle();
-  assertOk(error);
+
+  throwIfDbError(error);
   return data;
 }
 
-/**
- * @param {string} profileId auth.users id
- * @returns {Promise<object | null>}
- */
-async function findByProfileId(profileId) {
-  const { data, error } = await getSupabase()
+async function findByAccessToken(accessToken) {
+  const db = getServiceClient();
+  const { data, error } = await db
     .from("volunteers")
-    .select(COLUMNS)
+    .select("*")
+    .eq("access_token", accessToken)
+    .maybeSingle();
+
+  throwIfDbError(error);
+  return data;
+}
+
+async function findByProfileId(profileId) {
+  const db = getServiceClient();
+  const { data, error } = await db
+    .from("volunteers")
+    .select("*")
     .eq("profile_id", profileId)
     .maybeSingle();
-  assertOk(error);
+
+  throwIfDbError(error);
   return data;
 }
 
 /**
- * @param {string} id
- * @returns {Promise<object | null>}
+ * @param {object} values
  */
-async function findById(id) {
-  const { data, error } = await getSupabase()
-    .from("volunteers")
-    .select(COLUMNS)
-    .eq("id", id)
-    .maybeSingle();
-  assertOk(error);
+async function createVolunteer(values) {
+  const db = getServiceClient();
+  const { data, error } = await db.from("volunteers").insert(values).select().single();
+
+  throwIfDbError(error, { conflictMessage: "A volunteer with this email already exists" });
   return data;
 }
 
 /**
  * @param {{ email: string, full_name: string, phone?: string | null, locale?: string, profile_id?: string | null }} input
- * @returns {Promise<object>}
  */
 async function insert(input) {
-  const row = {
-    email: input.email,
+  const profileId = input.profile_id ?? null;
+  return createVolunteer({
+    email: normalizeEmail(input.email),
     full_name: input.full_name,
     phone: input.phone ?? null,
     locale: input.locale === "zh-Hant" ? "zh-Hant" : "en",
-    access_token: newAccessToken(),
-    profile_id: input.profile_id ?? null,
-    claimed_at: input.profile_id ? new Date().toISOString() : null,
-  };
-
-  const { data, error } = await getSupabase()
-    .from("volunteers")
-    .insert(row)
-    .select(COLUMNS)
-    .single();
-  assertOk(error);
-  return data;
+    access_token: generateAccessToken(),
+    profile_id: profileId,
+    claimed_at: profileId ? new Date().toISOString() : null,
+  });
 }
 
 /**
- * Link an existing volunteer row to an auth user (claim soft identity).
- *
  * @param {string} volunteerId
  * @param {string} profileId
- * @returns {Promise<object>}
  */
 async function claim(volunteerId, profileId) {
-  const { data, error } = await getSupabase()
+  const db = getServiceClient();
+  const { data, error } = await db
     .from("volunteers")
     .update({
       profile_id: profileId,
@@ -101,9 +80,27 @@ async function claim(volunteerId, profileId) {
     })
     .eq("id", volunteerId)
     .is("profile_id", null)
-    .select(COLUMNS)
+    .select()
     .single();
-  assertOk(error);
+
+  throwIfDbError(error);
+  return data;
+}
+
+/**
+ * @param {string} id
+ * @param {object} patch
+ */
+async function updateVolunteer(id, patch) {
+  const db = getServiceClient();
+  const { data, error } = await db
+    .from("volunteers")
+    .update(patch)
+    .eq("id", id)
+    .select()
+    .single();
+
+  throwIfDbError(error);
   return data;
 }
 
@@ -112,22 +109,16 @@ async function claim(volunteerId, profileId) {
  * @param {{ full_name?: string, phone?: string | null }} patch
  */
 async function updateBasics(volunteerId, patch) {
-  const { data, error } = await getSupabase()
-    .from("volunteers")
-    .update(patch)
-    .eq("id", volunteerId)
-    .select(COLUMNS)
-    .single();
-  assertOk(error);
-  return data;
+  return updateVolunteer(volunteerId, patch);
 }
 
 module.exports = {
   findByEmail,
+  findByAccessToken,
   findByProfileId,
-  findById,
+  createVolunteer,
   insert,
   claim,
+  updateVolunteer,
   updateBasics,
-  newAccessToken,
 };
