@@ -292,4 +292,106 @@ function renderDonorChinese({ name, credited, recurring, trackingUrl, donation, 
   return { subject, text, html };
 }
 
-module.exports = { renderThankYou, renderDonorThankYou };
+/**
+ * "A session you supported has happened" — sent the moment attendance is recorded, not on the
+ * 15th/EOM boundary.
+ *
+ * The batch email answers "what happened this fortnight"; this one answers "the thing you paid
+ * for just took place". A donor who gave for a specific class should hear about that class
+ * while it is still the thing they remember doing, not up to two weeks later.
+ *
+ * @param {{ full_name?: string|null, locale?: string }} donor
+ * @param {{ title_en?: string, title_zh?: string|null, location_en?: string,
+ *   location_zh?: string|null, starts_at?: string, attendance_count?: number|null }} session
+ * @param {string|null} trackingUrl
+ */
+function renderSessionUpdate(donor, session, trackingUrl) {
+  const locale = donor.locale === "zh-Hant" ? "zh-Hant" : "en";
+  const name = donor.full_name?.trim() || null;
+  const title = pickLocale(session, "title", locale) || "a Love 21 session";
+  const location = pickLocale(session, "location", locale);
+  const when = session.starts_at ? formatHkt(session.starts_at) : null;
+  // Null means staff have not recorded a headcount yet — distinct from a session nobody came
+  // to. Saying "0 members came along" about a class that ran fine is a worse lie than saying
+  // nothing, so the line is omitted entirely.
+  //
+  // Tested against `Number(x)` deliberately: `Number(null)` is 0, which IS finite, so a
+  // `Number.isFinite(Number(...))` guard reports every unrecorded session as zero attendance.
+  const raw = session.attendance_count;
+  const attended = raw === null || raw === undefined || raw === "" ? null : Number(raw);
+
+  return locale === "zh-Hant"
+    ? renderSessionUpdateChinese({ name, title, location, when, attended, trackingUrl })
+    : renderSessionUpdateEnglish({ name, title, location, when, attended, trackingUrl });
+}
+
+function renderSessionUpdateEnglish({ name, title, location, when, attended, trackingUrl }) {
+  const lines = [
+    name ? `Hi ${name},` : `Hi,`,
+    ``,
+    `A session your gift supported has just happened.`,
+    ``,
+    `  ${title}`,
+    `  ${[when, location].filter(Boolean).join(" · ")}`,
+  ];
+
+  if (attended !== null) {
+    lines.push(
+      ``,
+      attended === 1
+        ? `One member came along.`
+        : `${attended} members came along.`,
+    );
+  }
+
+  if (trackingUrl) {
+    lines.push(``, `Everything your giving supports:`, trackingUrl);
+  }
+
+  lines.push(``, `Thank you,`, `Love 21 Foundation`);
+
+  const text = lines.join("\n");
+  const html = `<p>${lines
+    .map((line) =>
+      line === trackingUrl && trackingUrl
+        ? `<a href="${escapeHtml(line)}">${escapeHtml(line)}</a>`
+        : escapeHtml(line),
+    )
+    .join("<br>")}</p>`;
+
+  return { subject: `${title} — a session you supported has happened`, text, html };
+}
+
+function renderSessionUpdateChinese({ name, title, location, when, attended, trackingUrl }) {
+  const lines = [
+    name ? `${name} 你好，` : `你好，`,
+    ``,
+    `你捐助支持的一節活動剛剛舉行了。`,
+    ``,
+    `  ${title}`,
+    `  ${[when, location].filter(Boolean).join(" · ")}`,
+  ];
+
+  if (attended !== null) {
+    lines.push(``, `共有 ${attended} 位成員參加。`);
+  }
+
+  if (trackingUrl) {
+    lines.push(``, `查看你的捐助支持的所有活動：`, trackingUrl);
+  }
+
+  lines.push(``, `謝謝你，`, `Love 21 Foundation 謹啟`);
+
+  const text = lines.join("\n");
+  const html = `<p>${lines
+    .map((line) =>
+      line === trackingUrl && trackingUrl
+        ? `<a href="${escapeHtml(line)}">${escapeHtml(line)}</a>`
+        : escapeHtml(line),
+    )
+    .join("<br>")}</p>`;
+
+  return { subject: `${title} — 你支持的活動已經舉行`, text, html };
+}
+
+module.exports = { renderThankYou, renderDonorThankYou, renderSessionUpdate };
