@@ -24,6 +24,7 @@ export function AdminLayout() {
     { to: '/admin', end: true, label: a.navOverview, hint: a.navOverviewHint },
     { to: '/admin/articles', end: false, label: a.navArticles, hint: a.navArticlesHint },
     { to: '/admin/campaigns', end: false, label: a.navCampaigns, hint: a.navCampaignsHint },
+    { to: '/admin/volunteers', end: false, label: a.navVolunteers, hint: a.navVolunteersHint },
     { to: '/admin/moderation', end: false, label: a.navModeration, hint: a.navModerationHint },
     { to: '/admin/instagram', end: false, label: a.navInstagram, hint: a.navInstagramHint },
     { to: '/admin/wishlist', end: false, label: a.navWishlist, hint: a.navWishlistHint },

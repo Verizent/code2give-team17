@@ -32,8 +32,10 @@ router.post(
   validate({ body: createOpportunityBodySchema }),
   async (request, response, next) => {
     try {
-      const row = await adminOpportunitiesService.createOpportunity(request.body);
-      response.status(201).json(envelope(row));
+      // `{ opportunity, session }` — creating a listing also creates the session row it is
+      // linked to, and the caller needs both ids to say what it just made.
+      const created = await adminOpportunitiesService.createOpportunity(request.body);
+      response.status(201).json(envelope(created));
     } catch (error) {
       next(error);
     }

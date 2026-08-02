@@ -18,7 +18,19 @@ export const PROGRAMME_LABELS: Record<string, string> = {
   sports: 'Sports',
   where_needed: 'Where needed',
   community_education: 'Community education',
+  // What `community_education` becomes on the `sessions` side when a volunteer listing
+  // creates its linked session.
+  community: 'Community education',
 }
+
+/** The five values `createOpportunityBodySchema` accepts, in the order the form offers them. */
+export const OPPORTUNITY_PROGRAMMES = [
+  'sports',
+  'fitness',
+  'nutrition',
+  'family_support',
+  'community_education',
+] as const
 
 export const SOURCE_LABELS: Record<string, string> = {
   instagram: 'Instagram',

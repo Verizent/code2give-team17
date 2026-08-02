@@ -323,6 +323,84 @@ export async function deleteInstagramEmbed(id: string): Promise<void> {
   await apiClient(`/api/admin/instagram/${encodeURIComponent(id)}`, { method: 'DELETE' })
 }
 
+// ── Volunteers ─────────────────────────────────────────────────────────────
+
+export type AdminOpportunity = {
+  id: string
+  title_en: string
+  title_zh: string
+  description_en: string
+  description_zh: string
+  location_en: string
+  location_zh: string
+  programme: string
+  starts_at: string
+  ends_at: string | null
+  capacity: number
+  min_age: number
+  skills: string[]
+  status: string
+  source: string
+  /**
+   * Signups on our side, from `volunteer_signups`. Not `spots_filled_handson`, which counts
+   * bookings made inside HandsOn's system and must never be read as our roster size.
+   */
+  signup_count: number
+}
+
+export type OpportunitySignup = {
+  id: string
+  status: string
+  created_at: string
+  volunteer: { id: string; email: string; full_name: string | null; locale: string | null } | null
+}
+
+export type OpportunityCreatePayload = {
+  title_en: string
+  title_zh: string
+  description_en: string
+  description_zh: string
+  location_en: string
+  location_zh: string
+  programme: string
+  starts_at: string
+  ends_at: string
+  capacity: number
+  min_age?: number
+  skills?: string[]
+}
+
+/**
+ * `limit=50` is the server's ceiling (`parsePaging` clamps there) and the default of 12
+ * would quietly hide most of the list. Rows come back `starts_at` descending, so future
+ * sessions sort first and are never what gets cut off.
+ */
+export async function fetchAdminOpportunities(): Promise<{
+  items: AdminOpportunity[]
+  total: number
+}> {
+  const res = await apiClient<Envelope<AdminOpportunity[]>>('/api/admin/postings?limit=50')
+  return { items: res.data ?? [], total: res.meta?.total ?? (res.data?.length ?? 0) }
+}
+
+export async function fetchOpportunitySignups(id: string): Promise<OpportunitySignup[]> {
+  const res = await apiClient<Envelope<OpportunitySignup[]>>(
+    `/api/admin/postings/${encodeURIComponent(id)}/signups`,
+  )
+  return res.data ?? []
+}
+
+/** Creating a listing also creates the `sessions` row linked to it; both come back. */
+export async function createOpportunity(
+  payload: OpportunityCreatePayload,
+): Promise<{ opportunity: AdminOpportunity; session: { id: string } }> {
+  const { data } = await apiData<{ opportunity: AdminOpportunity; session: { id: string } }>(
+    '/api/admin/postings',
+    { method: 'POST', body: JSON.stringify(payload) },
+  )
+  return data
+}
+
 /**
  * Uploads a cover image and returns its public URL.
  *

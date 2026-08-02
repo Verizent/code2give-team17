@@ -21,6 +21,9 @@ const ADMIN_COLUMNS = [
   "starts_at", "ends_at", "location",
   "capacity", "attendance_count", "attendance_source", "photo_url",
   "estimated_cost_hkd", "status", "created_at", "updated_at",
+  // Sessions created alongside a volunteer listing carry the link. Without it here the
+  // insert succeeds and returns a row that looks unlinked, which is worse than no row.
+  "volunteer_opportunity_id",
 ].join(", ");
 
 /** Columns the allocation service needs — never `select('*')`. */

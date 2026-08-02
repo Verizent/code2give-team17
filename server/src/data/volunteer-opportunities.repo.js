@@ -238,6 +238,37 @@ async function countLocalSignupsByOpportunity(opportunityIds) {
   return counts;
 }
 
+/**
+ * Roster size per opportunity — every signup that still stands, whatever became of it.
+ *
+ * Deliberately not `countLocalSignupsByOpportunity`, which counts `confirmed` only because
+ * it answers "are there seats left". A past session whose volunteers are all `attended`
+ * has a roster and no confirmed rows, and would report zero people through that helper.
+ *
+ * @param {string[]} opportunityIds
+ */
+async function countRosterByOpportunity(opportunityIds) {
+  if (opportunityIds.length === 0) {
+    return new Map();
+  }
+
+  const db = getServiceClient();
+  const { data, error } = await db
+    .from("volunteer_signups")
+    .select("opportunity_id")
+    .in("opportunity_id", opportunityIds)
+    .neq("status", "cancelled");
+
+  throwIfDbError(error);
+
+  const counts = new Map();
+  for (const row of data || []) {
+    counts.set(row.opportunity_id, (counts.get(row.opportunity_id) || 0) + 1);
+  }
+
+  return counts;
+}
+
 module.exports = {
   listOpportunities,
   listOpen,
@@ -249,4 +280,5 @@ module.exports = {
   deleteOpportunity,
   countInterestsByOpportunity,
   countLocalSignupsByOpportunity,
+  countRosterByOpportunity,
 };

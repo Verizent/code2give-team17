@@ -7,6 +7,7 @@ import { LoginPage } from '@/pages/LoginPage'
 import { AdminLayout } from '@/features/admin/AdminLayout'
 import { AdminDashboardPage } from '@/pages/AdminDashboardPage'
 import { AdminCampaignsPage } from '@/pages/AdminCampaignsPage'
+import { AdminVolunteersPage } from '@/pages/AdminVolunteersPage'
 import { AdminModerationPage } from '@/pages/AdminModerationPage'
 import { AdminArticlesPage } from '@/pages/AdminArticlesPage'
 import { VolunteerPage } from '@/pages/VolunteerPage'
@@ -49,6 +50,7 @@ export default function App() {
         <Route index element={<AdminDashboardPage />} />
         <Route path="articles" element={<AdminArticlesPage />} />
         <Route path="campaigns" element={<AdminCampaignsPage />} />
+        <Route path="volunteers" element={<AdminVolunteersPage />} />
         <Route path="moderation" element={<AdminModerationPage />} />
         <Route path="instagram" element={<AdminInstagramPage />} />
         <Route path="wishlist" element={<AdminWishlistPage />} />
