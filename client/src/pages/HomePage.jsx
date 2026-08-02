@@ -7,7 +7,6 @@ import { AchievementsBand } from '@/components/home/achievements-band'
 import { ThreePaths } from '@/components/home/three-paths'
 import {
   AnnualReportBar,
-  CommunityGallery,
   CommunityMilestones,
   HomeSectionNav,
   LeadershipBand,
@@ -28,13 +27,14 @@ export function HomePage() {
           <StatsBand />
           <AnnualReportBar />
         </div>
-        <CommunityMilestones />
-        <AchievementsBand />
-        <PartnerCsrBand />
-        <StoryTimeline />
+        <div id="stories" className="scroll-mt-28">
+          <CommunityMilestones />
+          <AchievementsBand />
+          <PartnerCsrBand />
+          <StoryTimeline />
+        </div>
         <ProgrammesBand />
         <LeadershipBand />
-        <CommunityGallery />
         <ThreePaths />
       </main>
       <SiteFooter />
