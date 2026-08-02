@@ -6,7 +6,7 @@ import { SkipLink } from '@/components/skip-link'
 import { useSite } from '@/components/site-provider'
 import { MEMBER_LOGIN_URL } from '@/lib/member-portal'
 
-// Real love21foundation.com URLs — form is their live family/registration intake;
+// Real Love 21 destinations — form is their live family/registration intake;
 // MEMBER_LOGIN_URL is the real family portal where classes/schedules live.
 const SUPPORT_FORM_URL =
   'https://docs.google.com/forms/d/e/1FAIpQLScxXfbxdMlHBDphqwJhMZS1YuUuF9anGC8Mb_ncgpwiEes-Pw/viewform'

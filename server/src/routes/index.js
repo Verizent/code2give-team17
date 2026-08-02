@@ -5,12 +5,15 @@ const { requireRole } = require("../middleware/require-role");
 // collide, and an alphabetical list merges more cleanly than an ad-hoc one.
 const adminArticlesRoutes = require("./admin/articles.routes");
 const adminAttendanceRoutes = require("./admin/attendance.routes");
-const adminCampaignsRoutes = require("./admin.routes");
+const adminCampaignsRoutes = require("./admin/campaigns.routes");
 const adminCommunityPostsRoutes = require("./admin/community-posts.routes");
 const adminHandsonRoutes = require("./admin/handson.routes");
 const adminImpactRoutes = require("./admin/impact.routes");
 const adminInstagramRoutes = require("./admin/instagram.routes");
 const adminPostingsRoutes = require("./admin/postings.routes");
+// The bare "/api/admin" router (dashboard, analytics, allocations, donors, cron). Named for
+// its mount path, not a domain, because that is exactly what makes it match everything.
+const adminRootRoutes = require("./admin.routes");
 const adminSessionsRoutes = require("./admin/sessions.routes");
 const adminUploadsRoutes = require("./admin/uploads.routes");
 const adminWishlistRoutes = require("./admin/wishlist.routes");
@@ -52,6 +55,7 @@ router.get("/api", (request, response) => {
 
 router.use("/api/admin/articles", adminGuard, adminArticlesRoutes);
 router.use("/api/admin/attendance", adminGuard, adminAttendanceRoutes);
+router.use("/api/admin/campaigns", adminGuard, adminCampaignsRoutes);
 router.use("/api/admin/community-posts", adminGuard, adminCommunityPostsRoutes);
 router.use("/api/admin/handson", adminGuard, adminHandsonRoutes);
 router.use("/api/admin/impact", adminGuard, adminImpactRoutes);
@@ -70,7 +74,7 @@ router.use("/api/admin/wishlist", adminGuard, adminWishlistRoutes);
 // lists donor emails, and POST /api/admin/cron/close-periods, which mutates financial
 // state. The guard is applied here rather than inside admin.routes.js so every admin
 // surface is gated in one readable place.
-router.use("/api/admin", adminGuard, adminCampaignsRoutes);
+router.use("/api/admin", adminGuard, adminRootRoutes);
 router.use("/api/articles", articlesRoutes);
 router.use("/api/campaigns", campaignsRoutes);
 router.use("/api/community-posts", communityPostsRoutes);
