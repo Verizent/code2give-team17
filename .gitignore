@@ -37,3 +37,8 @@ desktop.ini
 .idea/
 *.swp
 *.swo
+
+# Git worktrees live inside the repo dir; they must never be tracked.
+# worktree-frontend was committed as an orphan 160000 gitlink with no .gitmodules,
+# which breaks `git clone` for everyone else.
+worktree-frontend/
