@@ -20,6 +20,10 @@ const { instagramEmbeds } = require("./instagram.seed");
 const { generateSessions } = require("./sessions.seed");
 const { awardDemoBadges } = require("./volunteer-badges.seed");
 const { opportunities } = require("./volunteer-opportunities.seed");
+// Briefing-backed listings. client/src/features/volunteering/briefings.ts keys its content
+// on these ids, so a database without them renders sessions with no briefing at all. The
+// file sat unimported, which is why those rows could not be re-seeded after a wipe.
+const { opportunities: briefedOpportunities } = require("./opportunities.seed");
 
 async function upsert(table, rows, onConflict) {
   const { data, error } = await getSupabase()
@@ -110,7 +114,11 @@ async function main() {
   // Volunteer track first so opportunities + badges land even if a later step
   // hits schema drift (§26 demo-first — a partial seed is better than none).
   await safeSeed("volunteer_opps", async () => {
-    const n = await upsert("volunteer_opportunities", opportunities, "id");
+    const n = await upsert(
+      "volunteer_opportunities",
+      [...opportunities, ...briefedOpportunities],
+      "id",
+    );
     console.log(`  volunteer_opps    ${n} upserted`);
   });
 

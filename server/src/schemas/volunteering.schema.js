@@ -16,7 +16,7 @@ const programmeSchema = z.enum([
 
 const sourceSchema = z.enum(["internal", "handson"]);
 
-const statusSchema = z.enum(["draft", "open", "full", "closed", "cancelled"]);
+const statusSchema = z.enum(["draft", "open", "closed", "cancelled"]);
 
 const listOpportunitiesQuerySchema = z.object({
   locale: localeSchema,
@@ -68,6 +68,22 @@ const createSignupBodySchema = z.object({
 // their inbox again would be theatre. Everyone else must present a token — this endpoint
 // is unauthenticated, so it is the only thing standing between it and signing up an
 // address the caller does not own.
+// Mirrors the database's discovery_sources_are_known constraint. Kept in step by hand: a
+// value accepted here and rejected there is a 500 on an otherwise valid signup.
+const discoverySourceSchema = z.enum([
+  "instagram",
+  "facebook",
+  "word_of_mouth",
+  "university",
+  "company",
+  "handson",
+  "time_auction",
+  "search",
+  "love21_site",
+  "event",
+  "other",
+]);
+
 const guestSignupBodySchema = z.object({
   opportunity_id: z.string().uuid(),
   full_name: z.string().trim().min(1).max(120),
@@ -75,6 +91,10 @@ const guestSignupBodySchema = z.object({
   verification_token: z.string().min(32).optional(),
   phone: z.string().trim().max(40).optional().nullable(),
   locale: z.enum(["en", "zh-Hant"]).optional(),
+  // Optional: an existing volunteer has already answered, and nobody should be blocked from
+  // a session for declining to say where they heard about us.
+  discovery_sources: z.array(discoverySourceSchema).max(11).optional(),
+  discovery_other: z.string().trim().max(200).optional().nullable(),
 });
 
 const listSignupsQuerySchema = z.object({

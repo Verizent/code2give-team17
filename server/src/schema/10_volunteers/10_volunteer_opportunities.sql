@@ -18,21 +18,28 @@ create table public.volunteer_opportunities (
 
   -- Bookings made on HandsOn ONLY. Never our own signups, and never a pre-computed "seats left".
   -- Storing the external number keeps the two systems independent, so an admin refresh and a
-  -- local signup cannot clobber each other.
-  spots_filled integer not null default 0 check (spots_filled >= 0),
+  -- local signup cannot clobber each other. Registration for a handson listing happens on both
+  -- sites, which is exactly why the partner count is a column and ours is a row count: we own
+  -- one and only observe the other.
+  spots_filled_handson integer not null default 0 check (spots_filled_handson >= 0),
 
   min_age integer not null default 16 check (min_age >= 0),
   skills text[] not null default '{}',
 
+  -- Lifecycle ONLY, and only a human sets it. Fullness is NOT here: it is derived by
+  -- opportunities.service#toPublic from capacity against spots_filled_handson plus confirmed
+  -- signups. A stored 'full' used to be written when signups reached capacity and nothing
+  -- rewrote it when they went away, so a capacity-6 session with zero signups sat there
+  -- claiming to be full. A value nothing keeps true is worse than no value.
   status text not null default 'open'
-    check (status in ('draft', 'open', 'full', 'closed', 'cancelled')),
+    check (status in ('draft', 'open', 'closed', 'cancelled')),
 
   source text not null default 'internal'
     check (source in ('internal', 'handson')),
   handson_url text,
   handson_opportunity_id text,
 
-  -- How stale spots_filled is. With capacity often 1 (§5), one HandsOn booking is the difference
+  -- How stale spots_filled_handson is. With capacity often 1 (§5), one HandsOn booking is the difference
   -- between open and full, so anything showing seats-left should show this beside it.
   last_synced_at timestamptz,
 
@@ -41,6 +48,13 @@ create table public.volunteer_opportunities (
 
   constraint handson_rows_carry_provenance
     check (source <> 'handson' or handson_url is not null),
+
+  -- The mirror of the rule above: an internal listing has no HandsOn presence, so nobody can
+  -- book through HandsOn for it. A seeded row once carried spots_filled_handson = 1 with
+  -- source 'internal' and no handson_url at all, describing a booking that could not exist
+  -- while silently inflating that session's filled count.
+  constraint handson_spots_only_on_handson_source
+    check (source = 'handson' or spots_filled_handson = 0),
   constraint ends_after_starts
     check (ends_at is null or ends_at > starts_at)
 );
@@ -48,7 +62,7 @@ create table public.volunteer_opportunities (
 comment on table public.volunteer_opportunities is
   'Volunteer listings. source records where registration can happen and is not the same thing as '
   'volunteer_signups.discovery_source, which records how the VOLUNTEER found the listing.';
-comment on column public.volunteer_opportunities.spots_filled is
+comment on column public.volunteer_opportunities.spots_filled_handson is
   'Bookings inside HandsOn''s system only. NEVER sum with volunteer_interests - those are leads '
   'that may never convert (§17, §29). Our own bookings live in volunteer_signups.';
 comment on column public.volunteer_opportunities.min_age is
@@ -65,7 +79,7 @@ create trigger set_updated_at
 
 alter table public.volunteer_opportunities enable row level security;
 
--- DO NOT ADD: check (spots_filled <= capacity)
+-- DO NOT ADD: check (spots_filled_handson <= capacity)
 -- It looks obviously right and is harmful. If HandsOn oversells, or capacity is revised down, the
 -- sync write fails and the number freezes stale — a failure on our side of a system we do not
 -- control. Overbooking belongs in a derived status, not a write barrier.

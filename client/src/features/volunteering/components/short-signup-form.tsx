@@ -58,6 +58,17 @@ export function ShortSignupForm({
   const [verificationId, setVerificationId] = useState<string | null>(null)
   const [code, setCode] = useState('')
 
+  // Multi-select on purpose: people arrive through more than one route ("a friend shared
+  // their Instagram post"), and a single answer throws away the overlap between channels.
+  const [discovery, setDiscovery] = useState<string[]>([])
+  const [discoveryOther, setDiscoveryOther] = useState('')
+
+  function toggleDiscovery(key: string) {
+    setDiscovery((current) =>
+      current.includes(key) ? current.filter((k) => k !== key) : [...current, key],
+    )
+  }
+
   useEffect(() => {
     if (!auth.ready) return
     if (auth.user?.email) {
@@ -141,6 +152,8 @@ export function ShortSignupForm({
         emergency_name: loggedIn ? undefined : emergencyName || undefined,
         emergency_phone: loggedIn ? undefined : emergencyPhone || undefined,
         verification_token,
+        discovery_sources: discovery.length > 0 ? discovery : undefined,
+        discovery_other: discovery.includes('other') ? discoveryOther || undefined : undefined,
       })
 
       if (!result.ok) {
@@ -318,6 +331,43 @@ export function ShortSignupForm({
           </label>
         </div>
       ) : null}
+
+      <fieldset className={cn(step === 'verify' && 'hidden')}>
+        <legend className="text-sm font-semibold text-navy">{v.discoveryTitle}</legend>
+        <p className="mt-1 text-xs text-navy/55">{v.discoveryHint}</p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {Object.entries(v.discoverySources).map(([key, label]) => {
+            const active = discovery.includes(key)
+            return (
+              <button
+                key={key}
+                type="button"
+                aria-pressed={active}
+                onClick={() => toggleDiscovery(key)}
+                className={cn(
+                  'min-h-11 rounded-full border px-4 text-sm font-semibold transition-colors',
+                  active
+                    ? 'border-navy bg-navy text-white'
+                    : 'border-navy/15 bg-white text-navy hover:border-navy/50',
+                )}
+              >
+                {label as string}
+              </button>
+            )
+          })}
+        </div>
+        {discovery.includes('other') && (
+          <label className="mt-3 block text-sm font-semibold text-navy">
+            {v.discoveryOther}
+            <input
+              value={discoveryOther}
+              onChange={(e) => setDiscoveryOther(e.target.value)}
+              maxLength={200}
+              className={fieldClass}
+            />
+          </label>
+        )}
+      </fieldset>
 
       <label
         className={cn(

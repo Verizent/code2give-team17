@@ -63,7 +63,7 @@ async function createSignup(body, user) {
     await emailVerification.assertVerificationTokenForEmail(body.verification_token, body.email);
   }
 
-  const { row, localFilled } = await opportunitiesService.assertSeatAvailable(body.opportunity_id);
+  const { row } = await opportunitiesService.assertSeatAvailable(body.opportunity_id);
 
   const volunteer = await resolveVolunteer({
     email: body.email,
@@ -79,6 +79,21 @@ async function createSignup(body, user) {
     await volunteersRepo.markEmailVerified(volunteer.id);
   }
 
+  // Asked once. Skipped when nothing was offered, and never overwritten — a volunteer who
+  // answered on their first signup is not re-asked, and a later blank submission must not
+  // erase what they told us.
+  const offered = body.discovery_sources ?? [];
+  const alreadyAnswered = (volunteer.discovery_sources ?? []).length > 0;
+
+  if (offered.length > 0 && !alreadyAnswered) {
+    await volunteersRepo.setDiscovery(volunteer.id, {
+      discovery_sources: offered,
+      // The note belongs to 'other' and the database rejects it otherwise. Dropping a stray
+      // one here keeps it from failing an otherwise perfectly good signup.
+      discovery_other: offered.includes("other") ? body.discovery_other?.trim() || null : null,
+    });
+  }
+
   try {
     const signup = await signupsRepo.createSignup({
       opportunity_id: body.opportunity_id,
@@ -87,7 +102,6 @@ async function createSignup(body, user) {
       status: "confirmed",
     });
 
-    await opportunitiesService.syncStatusAfterSignup(body.opportunity_id, localFilled + 1);
 
     const opportunity = await opportunitiesService.getOpportunityById(body.opportunity_id);
 
@@ -133,7 +147,7 @@ async function createSignup(body, user) {
  * @param {string} [profileId]
  */
 async function createSignupForVolunteer(volunteerId, opportunityId, profileId) {
-  const { localFilled } = await opportunitiesService.assertSeatAvailable(opportunityId);
+  await opportunitiesService.assertSeatAvailable(opportunityId);
 
   const signup = await signupsRepo.createSignup({
     opportunity_id: opportunityId,
@@ -142,7 +156,6 @@ async function createSignupForVolunteer(volunteerId, opportunityId, profileId) {
     status: "confirmed",
   });
 
-  await opportunitiesService.syncStatusAfterSignup(opportunityId, localFilled + 1);
   return signup;
 }
 
@@ -176,7 +189,6 @@ async function deleteSignup(signupId, volunteerId) {
   }
 
   await signupsRepo.cancelSignup(signupId);
-  await opportunitiesService.syncStatusAfterCancel(signup.opportunity_id);
 }
 
 /**
@@ -198,7 +210,6 @@ async function cancelSignup(signupId, user) {
   }
 
   const cancelled = await signupsRepo.cancelSignup(signupId);
-  await opportunitiesService.syncStatusAfterCancel(signup.opportunity_id);
   return cancelled;
 }
 

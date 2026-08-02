@@ -70,13 +70,13 @@ likely to be wrong. Each suite also pins the rules that are silent when broken:
 | Badges | re-awarding is refused, which is what makes evaluation safely re-runnable |
 | Cascades | deleting a volunteer removes signups, interests and awards — but **not** verifications, which prove an address rather than a relationship |
 | HandsOn | a `handson` listing with no `handson_url` is refused |
-| Overbooking | `spots_filled` **may exceed** `capacity` — asserted deliberately, see below |
-| Never sum | `spots_filled` and interest counts are read as two separate figures |
+| Overbooking | `spots_filled_handson` **may exceed** `capacity` — asserted deliberately, see below |
+| Never sum | `spots_filled_handson` and interest counts are read as two separate figures |
 | Verification | a token cannot exist on an unconsumed row; consuming twice fails the second time |
 
 > **Two tests assert that something is *allowed*, and both are load-bearing.**
 >
-> `spots_filled` may exceed `capacity`: if HandsOn oversells or capacity is revised down, the
+> `spots_filled_handson` may exceed `capacity`: if HandsOn oversells or capacity is revised down, the
 > sync write must still land. A `CHECK` there would freeze the number stale on a failure we do
 > not control.
 >

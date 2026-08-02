@@ -84,8 +84,8 @@ describe("volunteer_interests", { skip }, () => {
 
   // ------------------------------------------------------------------ READ
 
-  it("counts interest separately from spots_filled, and never sums them", async () => {
-    // §17/§29: spots_filled is authoritative bookings inside HandsOn's system; these are our
+  it("counts interest separately from spots_filled_handson, and never sums them", async () => {
+    // §17/§29: spots_filled_handson is authoritative bookings inside HandsOn's system; these are our
     // leads and may never convert there. Rendering "1 booked · 2 interested" is correct;
     // rendering "3" is the bug this test exists to prevent.
     const listing = track(
@@ -95,7 +95,7 @@ describe("volunteer_interests", { skip }, () => {
         programme: "sports",
         starts_at: new Date(Date.now() + 6 * 86_400_000).toISOString(),
         capacity: 4,
-        spots_filled: 1,
+        spots_filled_handson: 1,
         source: "handson",
         handson_url: "https://volunteer.handsonhongkong.org/opportunity/y",
       }),
@@ -119,15 +119,15 @@ describe("volunteer_interests", { skip }, () => {
 
     const { data: opp } = await db()
       .from("volunteer_opportunities")
-      .select("spots_filled, capacity")
+      .select("spots_filled_handson, capacity")
       .eq("id", listing.id)
       .single();
 
-    assert.equal(opp.spots_filled, 1, "HandsOn bookings");
+    assert.equal(opp.spots_filled_handson, 1, "HandsOn bookings");
     assert.equal(interestedCount, 2, "our leads");
     assert.notEqual(
-      opp.spots_filled + interestedCount,
-      opp.spots_filled,
+      opp.spots_filled_handson + interestedCount,
+      opp.spots_filled_handson,
       "these are two distinct figures and must be rendered as such",
     );
   });

@@ -10,10 +10,11 @@ const programmeSchema = z.enum([
 
 const sourceSchema = z.enum(["internal", "handson"]);
 
-const statusSchema = z.enum(["draft", "open", "full", "closed", "cancelled"]);
+const statusSchema = z.enum(["draft", "open", "closed", "cancelled"]);
 
 /**
- * Server-derived fields — `id`, `spots_filled`, `last_synced_at`, `handson_opportunity_id`,
+ * Server-derived fields — `id`, `spots_filled_handson` (HandsOn sync only), `last_synced_at`,
+ * `handson_opportunity_id`,
  * `status` (defaults to 'open' via DB) — are absent so a client sending one gets a 400 (§29)
  * rather than a silent strip and lost field.
  */

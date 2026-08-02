@@ -10,12 +10,22 @@ const { ApiError } = require("../../lib/api-error");
  * @param {number} localSignupsCount
  */
 function toPublic(row, interestedCount = 0, localSignupsCount = 0) {
-  const handsonFilled = Number(row.spots_filled) || 0;
+  const handsonFilled = Number(row.spots_filled_handson) || 0;
   const localFilled = Number(localSignupsCount) || 0;
   const effectiveFilled = handsonFilled + localFilled;
   const capacity = Number(row.capacity) || 0;
+
+  // `full` is computed here and never stored. The column carries lifecycle only — draft,
+  // open, closed, cancelled — the states a human chooses. Writing `full` back was how a
+  // capacity-6 session with zero signups ended up claiming to be full: the value was set
+  // when signups reached capacity and nothing rewrote it when they went away.
+  //
+  // `cancelled` and `closed` outrank fullness: a cancelled session is cancelled whether or
+  // not it happens to be at capacity, and saying "full" would invite someone to wait for
+  // a spot that is never coming.
+  const derivable = row.status === "open" || row.status === "draft";
   const status =
-    effectiveFilled >= capacity && capacity > 0 ? "full" : row.status;
+    derivable && capacity > 0 && effectiveFilled >= capacity ? "full" : row.status;
 
   return {
     id: row.id,
@@ -106,7 +116,7 @@ async function assertSeatAvailable(opportunityId) {
 
   const localCounts = await opportunitiesRepo.countLocalSignupsByOpportunity([opportunityId]);
   const localFilled = localCounts.get(opportunityId) || 0;
-  const effectiveFilled = Number(row.spots_filled) + localFilled;
+  const effectiveFilled = Number(row.spots_filled_handson) + localFilled;
 
   if (effectiveFilled >= Number(row.capacity)) {
     throw ApiError.conflict("This opportunity is full");
@@ -115,45 +125,17 @@ async function assertSeatAvailable(opportunityId) {
   return { row, localFilled };
 }
 
-/**
- * @param {string} opportunityId
- * @param {number} localFilledAfterSignup
+/*
+ * syncStatusAfterSignup / syncStatusAfterCancel are gone. They existed only to keep a
+ * stored `full` in step with the counts, and they could not: cancel a signup outside
+ * cancelSignup, delete one, or change capacity, and the written value was stale with
+ * nothing to correct it. Fullness is derived in toPublic now, so there is nothing left
+ * to synchronise.
  */
-async function syncStatusAfterSignup(opportunityId, localFilledAfterSignup) {
-  const row = await opportunitiesRepo.findOpportunityById(opportunityId);
-  if (!row) {
-    return;
-  }
-
-  const effectiveFilled = Number(row.spots_filled) + localFilledAfterSignup;
-  if (effectiveFilled >= Number(row.capacity) && row.status !== "full") {
-    await opportunitiesRepo.updateOpportunity(opportunityId, { status: "full" });
-  }
-}
-
-/**
- * @param {string} opportunityId
- */
-async function syncStatusAfterCancel(opportunityId) {
-  const row = await opportunitiesRepo.findOpportunityById(opportunityId);
-  if (!row || row.status !== "full") {
-    return;
-  }
-
-  const localCounts = await opportunitiesRepo.countLocalSignupsByOpportunity([opportunityId]);
-  const localFilled = localCounts.get(opportunityId) || 0;
-  const effectiveFilled = Number(row.spots_filled) + localFilled;
-
-  if (effectiveFilled < Number(row.capacity)) {
-    await opportunitiesRepo.updateOpportunity(opportunityId, { status: "open" });
-  }
-}
 
 module.exports = {
   listOpportunities,
   getOpportunityById,
   toPublic,
   assertSeatAvailable,
-  syncStatusAfterSignup,
-  syncStatusAfterCancel,
 };

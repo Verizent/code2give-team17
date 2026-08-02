@@ -13,7 +13,7 @@ const LIST_COLUMNS = [
   "starts_at",
   "ends_at",
   "capacity",
-  "spots_filled",
+  "spots_filled_handson",
   "min_age",
   "skills",
   "status",
@@ -33,7 +33,7 @@ async function listOpen({ from, to, programme, source }) {
   let query = getSupabase()
     .from("volunteer_opportunities")
     .select(LIST_COLUMNS, { count: "exact" })
-    .in("status", ["open", "full"])
+    .in("status", ["open"])
     .order("starts_at", { ascending: true })
     .range(from, to);
 
@@ -59,7 +59,7 @@ async function findOpenById(id) {
     .from("volunteer_opportunities")
     .select(LIST_COLUMNS)
     .eq("id", id)
-    .in("status", ["open", "full"])
+    .in("status", ["open"])
     .maybeSingle();
 
   assertOk(error);
@@ -78,7 +78,7 @@ async function listInRange({ fromIso, toIso }) {
     .select(LIST_COLUMNS)
     .gte("starts_at", fromIso)
     .lte("starts_at", toIso)
-    .in("status", ["open", "full"])
+    .in("status", ["open"])
     .order("starts_at", { ascending: true });
   assertOk(error);
   return data ?? [];
@@ -90,8 +90,8 @@ async function listInRange({ fromIso, toIso }) {
 async function summariseOpen() {
   const { data, error } = await getSupabase()
     .from("volunteer_opportunities")
-    .select("id, capacity, spots_filled, starts_at, status")
-    .in("status", ["open", "full"]);
+    .select("id, capacity, spots_filled_handson, starts_at, status")
+    .in("status", ["open"]);
   assertOk(error);
 
   const now = Date.now();
@@ -99,7 +99,7 @@ async function summariseOpen() {
   let spots_open = 0;
   for (const row of data ?? []) {
     if (new Date(row.starts_at).getTime() >= now) upcoming += 1;
-    const open = Math.max(0, (row.capacity ?? 0) - (row.spots_filled ?? 0));
+    const open = Math.max(0, (row.capacity ?? 0) - (row.spots_filled_handson ?? 0));
     spots_open += open;
   }
   return { upcoming, spots_open };

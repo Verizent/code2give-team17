@@ -174,7 +174,7 @@ describe("volunteer_signups", { skip }, () => {
   });
 
   it("counts confirmed bookings for a listing, which is the seats-left input", async () => {
-    // seats_left = capacity − spots_filled (HandsOn) − confirmed signups (ours).
+    // seats_left = capacity − spots_filled_handson (HandsOn) − confirmed signups (ours).
     // This asserts the third number, and that 'applied' is not yet counted.
     const listing = track(
       "volunteer_opportunities",

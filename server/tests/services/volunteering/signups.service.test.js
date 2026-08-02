@@ -26,10 +26,9 @@ const BODY = () => ({
  */
 function stubHappyPath(t, { assertToken } = {}) {
   mock.method(opportunitiesService, "assertSeatAvailable", async () => ({
-    row: { id: OPPORTUNITY_ID, capacity: 10, spots_filled: 0 },
+    row: { id: OPPORTUNITY_ID, capacity: 10, spots_filled_handson: 0 },
     localFilled: 0,
   }));
-  mock.method(opportunitiesService, "syncStatusAfterSignup", async () => {});
   mock.method(opportunitiesService, "getOpportunityById", async () => ({ id: OPPORTUNITY_ID }));
   mock.method(volunteersRepo, "findByEmail", async () => ({
     id: "vol-1",
@@ -184,4 +183,93 @@ test("createSignup still returns the signup when the confirmation cannot be sent
   const result = await signupsService.createSignup(BODY(), null);
 
   assert.equal(result.signup.id, "signup-1");
+});
+
+/**
+ * How someone first heard about Love 21 is a property of the person, not of a session, so
+ * it is stored once on the volunteer. Multi-select because people arrive through more than
+ * one route, and a single answer throws away the overlap between channels.
+ */
+test("createSignup records how the volunteer heard about Love 21", async (t) => {
+  stubHappyPath(t);
+  const setDiscovery = mock.fn(async (id, patch) => ({ id, ...patch }));
+  mock.method(volunteersRepo, "setDiscovery", setDiscovery);
+  mock.method(emailLib, "sendEmail", async () => ({ mode: "log", delivered: true }));
+
+  await signupsService.createSignup(
+    { ...BODY(), discovery_sources: ["instagram", "word_of_mouth"] },
+    null,
+  );
+
+  assert.equal(setDiscovery.mock.callCount(), 1);
+  const [id, patch] = setDiscovery.mock.calls[0].arguments;
+  assert.equal(id, "vol-1");
+  assert.deepEqual(patch.discovery_sources, ["instagram", "word_of_mouth"]);
+});
+
+test("createSignup keeps the free-text note when 'other' is chosen", async (t) => {
+  stubHappyPath(t);
+  const setDiscovery = mock.fn(async (id, patch) => ({ id, ...patch }));
+  mock.method(volunteersRepo, "setDiscovery", setDiscovery);
+  mock.method(emailLib, "sendEmail", async () => ({ mode: "log", delivered: true }));
+
+  await signupsService.createSignup(
+    { ...BODY(), discovery_sources: ["other"], discovery_other: "Saw a poster at the MTR" },
+    null,
+  );
+
+  const [, patch] = setDiscovery.mock.calls[0].arguments;
+  assert.equal(patch.discovery_other, "Saw a poster at the MTR");
+});
+
+/**
+ * The note is only meaningful alongside 'other' — the database rejects it otherwise, so
+ * dropping it here keeps a stray note from failing an otherwise valid signup.
+ */
+test("createSignup drops a stray note when 'other' was not chosen", async (t) => {
+  stubHappyPath(t);
+  const setDiscovery = mock.fn(async (id, patch) => ({ id, ...patch }));
+  mock.method(volunteersRepo, "setDiscovery", setDiscovery);
+  mock.method(emailLib, "sendEmail", async () => ({ mode: "log", delivered: true }));
+
+  await signupsService.createSignup(
+    { ...BODY(), discovery_sources: ["instagram"], discovery_other: "ignored" },
+    null,
+  );
+
+  const [, patch] = setDiscovery.mock.calls[0].arguments;
+  assert.equal(patch.discovery_other, null);
+});
+
+/**
+ * Asked once. A volunteer who already answered is not re-asked on their second signup, and
+ * a later empty submission must not wipe what they told us the first time.
+ */
+test("createSignup does not overwrite discovery already recorded", async (t) => {
+  stubHappyPath(t);
+  mock.method(volunteersRepo, "findByEmail", async () => ({
+    id: "vol-1",
+    email: "dana@example.test",
+    full_name: "Dana Volunteer",
+    email_verified_at: "2026-08-01T00:00:00.000Z",
+    discovery_sources: ["facebook"],
+  }));
+  const setDiscovery = mock.fn(async (id, patch) => ({ id, ...patch }));
+  mock.method(volunteersRepo, "setDiscovery", setDiscovery);
+  mock.method(emailLib, "sendEmail", async () => ({ mode: "log", delivered: true }));
+
+  await signupsService.createSignup({ ...BODY(), discovery_sources: ["instagram"] }, null);
+
+  assert.equal(setDiscovery.mock.callCount(), 0);
+});
+
+test("createSignup skips discovery entirely when none is offered", async (t) => {
+  stubHappyPath(t);
+  const setDiscovery = mock.fn(async () => ({}));
+  mock.method(volunteersRepo, "setDiscovery", setDiscovery);
+  mock.method(emailLib, "sendEmail", async () => ({ mode: "log", delivered: true }));
+
+  await signupsService.createSignup(BODY(), null);
+
+  assert.equal(setDiscovery.mock.callCount(), 0);
 });

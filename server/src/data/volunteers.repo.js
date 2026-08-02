@@ -123,7 +123,19 @@ async function markEmailVerified(volunteerId) {
   return updateVolunteer(volunteerId, { email_verified_at: new Date().toISOString() });
 }
 
+/**
+ * Records how the volunteer first heard about Love 21. Callers check that nothing is
+ * recorded yet — it is asked once, and a later blank submission must not erase it.
+ *
+ * @param {string} volunteerId
+ * @param {{ discovery_sources: string[], discovery_other: string | null }} patch
+ */
+async function setDiscovery(volunteerId, patch) {
+  return updateVolunteer(volunteerId, patch);
+}
+
 module.exports = {
+  setDiscovery,
   findByEmail,
   findByAccessToken,
   findByProfileId,
