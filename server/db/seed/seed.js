@@ -16,7 +16,9 @@ const { articles } = require("./articles.seed");
 const { badges } = require("./badges.seed");
 const { communityPosts } = require("./community-posts.seed");
 const { impactPeriods } = require("./impact.seed");
+const { instagramEmbeds } = require("./instagram.seed");
 const { generateSessions } = require("./sessions.seed");
+const { awardDemoBadges } = require("./volunteer-badges.seed");
 const { opportunities } = require("./volunteer-opportunities.seed");
 
 async function upsert(table, rows, onConflict) {
@@ -133,6 +135,18 @@ async function main() {
   // aborted every later step. That is exactly how the sessions seed got skipped when
   // the articles upsert failed.
   await safeSeed("sessions", seedSessions);
+
+  await safeSeed("instagram_embeds", async () => {
+    const n = await upsert("instagram_embeds", instagramEmbeds, "id");
+    console.log(`  instagram_embeds  ${n} upserted`);
+  });
+
+  // Last on purpose: it reads volunteer_signups, so it wants the volunteer seeds above
+  // to have landed. Runs the real badge evaluator rather than inserting rows directly.
+  await safeSeed("volunteer_badges", async () => {
+    const { evaluated, awarded } = await awardDemoBadges();
+    console.log(`  volunteer_badges  ${awarded} awarded across ${evaluated} volunteer(s)`);
+  });
 
   console.log("\nDone.");
 }
