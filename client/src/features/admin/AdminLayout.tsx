@@ -6,7 +6,7 @@ import { SkipLink } from '@/components/skip-link'
 import { useAuth } from '@/features/auth/AuthProvider'
 import { fetchAuthMe, type AuthProfile } from '@/features/auth/api'
 import { useSite } from '@/components/site-provider'
-import { ApiError } from '@/lib/apiClient'
+import { ADMIN_AUTH_BYPASS, ApiError } from '@/lib/apiClient'
 import { cn } from '@/lib/utils'
 
 /**
@@ -30,7 +30,7 @@ export function AdminLayout() {
   ]
 
   useEffect(() => {
-    if (!auth.ready || !auth.accessToken) return
+    if (!auth.ready || (!auth.accessToken && !ADMIN_AUTH_BYPASS)) return
     let cancelled = false
     void fetchAuthMe()
       .then((me) => {
@@ -60,7 +60,8 @@ export function AdminLayout() {
 
   useEffect(() => {
     function onVisible() {
-      if (document.visibilityState !== 'visible' || !auth.accessToken) return
+      if (document.visibilityState !== 'visible') return
+      if (!auth.accessToken && !ADMIN_AUTH_BYPASS) return
       void fetchAuthMe()
         .then((me) => {
           setProfile(me)
@@ -91,7 +92,10 @@ export function AdminLayout() {
     )
   }
 
-  if (!auth.user) {
+  // DEMO-ONLY: with the bypass on there is no Supabase session to check, so the
+  // server-stamped identity from X-Demo-Auth is the only gate — real version needs
+  // this redirect unconditional (§19, §26).
+  if (!auth.user && !ADMIN_AUTH_BYPASS) {
     return <Navigate to="/login?redirect=/admin" replace />
   }
 

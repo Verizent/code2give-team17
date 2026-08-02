@@ -12,6 +12,8 @@ const donationsRepo = require("../data/donations.repo");
 const donorsRepo = require("../data/donors.repo");
 const sessionsRepo = require("../data/sessions.repo");
 const { closeReadyPeriods } = require("../services/donations/period-close.service");
+const { getDashboard } = require("../services/admin/dashboard.service");
+const { getFunnel } = require("../services/admin/funnel.service");
 
 const router = express.Router();
 
@@ -19,6 +21,24 @@ const router = express.Router();
 // behind `adminGuard` ([requireAuth, requireRole("admin")]), covering every route in
 // this file. Do not assume a route added here is public — it is not, and it needs no
 // second guard. tests/routes/admin-mount.test.js fails if the mount loses the guard.
+// The Overview page's two reads. Both services existed unrouted, so /admin rendered
+// its chrome and then failed every metric with a 404.
+router.get("/dashboard", async (request, response, next) => {
+  try {
+    response.json(envelope(await getDashboard()));
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get("/funnel", async (request, response, next) => {
+  try {
+    response.json(envelope(await getFunnel()));
+  } catch (error) {
+    next(error);
+  }
+});
+
 router.get("/campaigns", async (request, response, next) => {
   try {
     const items = await listCampaigns();

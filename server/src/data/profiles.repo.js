@@ -2,7 +2,10 @@ const { getSupabase } = require("../config/supabase");
 const { ApiError } = require("../lib/api-error");
 const { assertOk } = require("./supabase-error");
 
-const PROFILE_COLUMNS = ["id", "role", "full_name", "locale"].join(", ");
+// `email` is here so the demo bypass can report an identity: that path builds
+// request.auth from this row alone, where the JWT path reads the address off the
+// verified token. Without it /api/me answers with no email for the demo admin.
+const PROFILE_COLUMNS = ["id", "email", "role", "full_name", "locale"].join(", ");
 
 /**
  * @param {string} id the Supabase Auth user id — profiles.id IS auth.users.id
