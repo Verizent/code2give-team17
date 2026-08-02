@@ -18,21 +18,28 @@ const ELIGIBILITY_MAX_DAYS = 30;
  * to `succeeded`. Also called from the pending-retry job when supply was thin on the
  * first attempt.
  *
+ * **Two different windows are in play, deliberately.** Session *eligibility* is a rolling
+ * range anchored on the donation; *batching* (which edition the gift is reported in) is the
+ * fixed calendar. They do not have to agree, and today they do not — a gift on the 2nd picks
+ * sessions from 9 Aug–1 Sep but is reported under the 15–31 Aug edition, so the donor can see
+ * listed sessions dated before the heading above them. Known and unresolved; do not "fix" one
+ * side in isolation without deciding which window the donor-facing page should follow.
+ *
  * The algorithm — deliberately small, so the invariants are all visible:
  *   1. If the donor opted out, do nothing. `tracking_opt_in` is the whole reason the
  *      allocation exists — a page nobody will see is state we don't need to keep.
  *   2. If `events_credited` is 0 or missing, do nothing. Same reason.
- *   3. Compute the edition window from the donation's own `created_at`, using the fixed
- *      calendar in donation-periods.js.
- *   4. Query eligible sessions in `[selectionStart, windowEnd)` — the selection floor
- *      keeps the event two days ahead of the email, per §15.
- *   5. Snapshot `cost_at_allocation` from `donation.cost_per_event_at_donation` — never
+ *   3. Query eligible sessions in `[created_at + 7d, created_at + 30d]` — the rolling
+ *      window above. The 7-day floor subsumes §15's 2-day rule, so no event can ever
+ *      predate the gift that credited it.
+ *   4. Snapshot `cost_at_allocation` from `donation.cost_per_event_at_donation` — never
  *      from the live constant. Revising the divisor later must not rewrite what a donor
  *      was already told.
- *   6. Find-or-open the donor_period covering this window. Because §15's periods are
- *      per-donor rolling windows and this branch pins them to a fixed calendar, "the
- *      period for this window" is the right lookup — not "the currently open one".
- *   7. Insert the allocations with `status='pending'`. Sessions have not happened yet.
+ *   5. Find-or-open the donor_period for the donation's **edition** — `editionForDonation`
+ *      on the fixed calendar, not the rolling window above, and not "the currently open
+ *      one". `donors.service.js` sums `events_credited` through the same mapping, so the
+ *      two must stay in step.
+ *   6. Insert the allocations with `status='pending'`. Sessions have not happened yet.
  *
  * If eligible < needed, insert what exists and report `insufficient: true` with the
  * remaining count. The pending-retry job (§16) picks these up.

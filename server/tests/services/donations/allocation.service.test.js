@@ -158,6 +158,14 @@ test("allocateForDonation queries sessions with the rolling [+7d, +30d] window",
   assert.equal(windowStart.toISOString().slice(0, 10), "2026-08-12");
   assert.equal(windowEnd.toISOString().slice(0, 10), "2026-09-04");
   assert.equal(limit, 3);
+
+  // The invariant, stated as a property rather than as two dates: no session can be credited
+  // to a gift that predates it. This is the live guarantee — donation-periods.js's
+  // `selectionStart` is not wired in, so its tests do not cover this.
+  assert.ok(
+    windowStart > new Date("2026-08-05T10:00:00Z"),
+    "eligibility must never open before the donation itself",
+  );
 });
 
 test("allocateForDonation caps supply query at events_credited — never over-fetches", async (t) => {
