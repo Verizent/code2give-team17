@@ -4,8 +4,19 @@ import { useAuth } from '@/features/auth/AuthProvider'
 import { describeImpact, impactLadder, type DonateProgramme } from '@/features/donations/api'
 import { startDonationCheckout } from '@/features/donations/checkout'
 import type { GiftFrequency } from '@/features/donations/donation-store'
+import { ApiError } from '@/lib/apiClient'
 import { trackEvent } from '@/lib/analytics'
 import { cn } from '@/lib/utils'
+
+/**
+ * Deliberately permissive: one `@`, a dot-bearing domain, no whitespace. Anything stricter
+ * rejects addresses that are legitimately deliverable (new TLDs, `+` tags, quoted locals), and
+ * a donate form is the worst place to argue with a donor about their own address. The
+ * authority on deliverability is the receipt bouncing, not a regex.
+ */
+function isEmailish(value: string) {
+  return /^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$/.test(value.trim())
+}
 
 export function ImpactLadder({
   onDonated,
@@ -84,6 +95,15 @@ export function ImpactLadder({
       return
     }
 
+    // `type="email"` on the input does nothing here: native constraint validation only runs on
+    // form submit, and this component has no <form> — the button is type="button" with an
+    // onClick. So the field accepted any non-empty string, and "asdf" reached the Section 88
+    // receipt address unchallenged.
+    if (!isEmailish(email)) {
+      setError(g.receiptEmailInvalid)
+      return
+    }
+
     setBusy(true)
     try {
       trackEvent('donate_click', {
@@ -108,8 +128,11 @@ export function ImpactLadder({
         return
       }
       onDonated(result.donation.id)
-    } catch {
-      setError('Could not start checkout. Please try again.')
+    } catch (err) {
+      // Show what the server actually said. `startDonationCheckout` no longer falls back to a
+      // local gift, so this is the only place a checkout failure becomes visible at all.
+      const detail = err instanceof ApiError ? err.message : ''
+      setError(detail || 'Could not start checkout. Please try again.')
     } finally {
       setBusy(false)
     }

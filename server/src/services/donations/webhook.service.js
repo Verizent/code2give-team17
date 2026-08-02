@@ -4,6 +4,7 @@ const donationsRepo = require("../../data/donations.repo");
 const stripeEventsRepo = require("../../data/stripe-events.repo");
 const donorsService = require("../donors.service");
 const allocationService = require("./allocation.service");
+const donorThankYouService = require("./donor-thank-you.service");
 
 /**
  * Stripe webhook handling (CONTEXT.md §15, §17).
@@ -102,7 +103,32 @@ async function handleCheckoutCompleted(session) {
     });
   } catch (allocationError) {
     // The pending-retry job (§16) will pick this up next tick.
+    console.error(
+      `donation ${donation.id}: allocation failed — ${allocationError.message}`,
+    );
     allocationOutcome = { error: allocationError.message };
+  }
+
+  // The thank-you carries the tracking link, which is the donor's ONLY durable route back to
+  // their giving history — the token is shown once on the thanks page and §15 has no
+  // lookup-by-email. Same try/catch reasoning as allocation above: Stripe retries anything
+  // that is not a 200, so a mail failure must not escape. Logged rather than discarded,
+  // because a thank-you that silently never sent is a donor who lost their history.
+  let emailOutcome = null;
+  try {
+    emailOutcome = await donorThankYouService.sendDonorThankYou({
+      donor: { ...donor, tracking_opt_in: donation.tracking_opt_in ?? true },
+      donation: { ...donation, events_credited: eventsCredited },
+      clientOrigin: process.env.CLIENT_ORIGIN || "http://localhost:5173",
+      // Empty when allocation failed above — the email then falls back to the count rather
+      // than listing sessions that were never attached.
+      sessions: allocationOutcome?.sessions ?? [],
+    });
+  } catch (emailError) {
+    console.error(
+      `donation ${donation.id}: thank-you email failed — ${emailError.message}`,
+    );
+    emailOutcome = { sent: false, error: emailError.message };
   }
 
   return {
@@ -110,6 +136,7 @@ async function handleCheckoutCompleted(session) {
     donor_id: donor.id,
     events_credited: eventsCredited,
     allocation: allocationOutcome,
+    email: emailOutcome,
   };
 }
 

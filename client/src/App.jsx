@@ -20,6 +20,7 @@ import { GiveWishlistPage } from '@/pages/GiveWishlistPage'
 import { CampaignCreatePage } from '@/pages/CampaignCreatePage'
 import { CampaignPublicPage } from '@/pages/CampaignPublicPage'
 import { GiveThanksPage } from '@/pages/GiveThanksPage'
+import { DonorTrackPage } from '@/pages/DonorTrackPage'
 import { SupportPage } from '@/pages/SupportPage'
 import { ArticlePage } from '@/pages/ArticlePage'
 import { AdminInstagramPage } from '@/pages/AdminInstagramPage'
@@ -39,6 +40,10 @@ export default function App() {
       <Route path="/give/wishlist" element={<GiveWishlistPage />} />
       <Route path="/give/campaigns/new" element={<CampaignCreatePage />} />
       <Route path="/give/thanks" element={<GiveThanksPage />} />
+      {/* Bearer token in the path (§15). Must sit above the `*` catch-all, or a valid
+          tracking link silently redirects home — the same trap that made Stripe's old
+          /donate/thanks success_url look like it worked. */}
+      <Route path="/give/track/:token" element={<DonorTrackPage />} />
       <Route path="/c/:slug" element={<CampaignPublicPage />} />
       <Route path="/me" element={<MyImpactPage />} />
       <Route path="/admin" element={<AdminLayout />}>
