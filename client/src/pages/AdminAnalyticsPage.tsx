@@ -2,9 +2,17 @@ import { useEffect, useState } from 'react'
 import { fetchAdminAnalytics, type AnalyticsPayload } from '@/features/admin/api'
 import { useSite } from '@/components/site-provider'
 
-/** Programme keys are DB enums; the admin surface is staff-facing English. */
+/**
+ * Programme keys, staff-facing English.
+ *
+ * Covers both vocabularies on purpose: `sessions` uses `family` / `where_needed` while
+ * `volunteer_opportunities` uses `family_support` / `community_education`. Only the
+ * former reaches this page today, but `sessions.programme` carries no CHECK constraint,
+ * so an unmapped value is a question of when — see `label()` for what happens then.
+ */
 const PROGRAMME_LABELS: Record<string, string> = {
   family: 'Family support',
+  family_support: 'Family support',
   fitness: 'Fitness',
   nutrition: 'Nutrition',
   sports: 'Sports',
@@ -21,8 +29,17 @@ const SOURCE_LABELS: Record<string, string> = {
   unknown: 'Not answered',
 }
 
+/**
+ * Falls back to a readable rendering of the raw key rather than the key itself.
+ *
+ * Neither `sessions.programme` nor the coming `source` column is constrained to a fixed
+ * set, so an unmapped value will turn up. "Youth_outreach" is a tolerable label for a
+ * chart nobody has updated yet; `youth_outreach` looks like a bug.
+ */
 function label(map: Record<string, string>, key: string) {
-  return map[key] ?? key
+  if (map[key]) return map[key]
+  const words = key.replace(/[_-]+/g, ' ').trim()
+  return words ? words.charAt(0).toUpperCase() + words.slice(1) : key
 }
 
 /**
