@@ -92,6 +92,7 @@ export type AnalyticsPayload = {
     would_return_rate: number | null
     responses: number
   }
+  donations_by_month: Array<{ month: string; amount_hkd: number }>
   programmes: Array<{
     programme: string
     capacity: number

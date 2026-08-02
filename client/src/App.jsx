@@ -8,7 +8,6 @@ import { AdminDashboardPage } from '@/pages/AdminDashboardPage'
 import { AdminCampaignsPage } from '@/pages/AdminCampaignsPage'
 import { AdminModerationPage } from '@/pages/AdminModerationPage'
 import { AdminArticlesPage } from '@/pages/AdminArticlesPage'
-import { AdminAnalyticsPage } from '@/pages/AdminAnalyticsPage'
 import { VolunteerPage } from '@/pages/VolunteerPage'
 import { VolunteerDetailPage } from '@/pages/VolunteerDetailPage'
 import { VolunteerSuccessPage } from '@/pages/VolunteerSuccessPage'
@@ -41,8 +40,8 @@ export default function App() {
         <Route path="articles" element={<AdminArticlesPage />} />
         <Route path="campaigns" element={<AdminCampaignsPage />} />
         <Route path="moderation" element={<AdminModerationPage />} />
-        <Route path="analytics" element={<AdminAnalyticsPage />} />
         {/* Story desk and Class roll were removed; send their old links to the hub. */}
+        <Route path="analytics" element={<Navigate to="/admin" replace />} />
         <Route path="stories" element={<Navigate to="/admin" replace />} />
         <Route path="attendance" element={<Navigate to="/admin" replace />} />
         <Route path="proofs" element={<Navigate to="/admin" replace />} />
