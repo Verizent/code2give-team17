@@ -19,6 +19,20 @@ const MIN_AMOUNT_HKD = 4;
 const PAYMENT_METHODS = ["card"];
 
 /**
+ * Our `frequency` → Stripe's `recurring.interval`. Absent from this map means a one-off
+ * payment, not an unsupported value — the schema is what rejects unknown frequencies.
+ *
+ * Stripe accepts `day | week | month | year`; only the two the donate form offers are wired.
+ */
+const RECURRING_INTERVALS = { weekly: "week", monthly: "month" };
+
+/** Card-statement product name per frequency. Keep in step with RECURRING_INTERVALS. */
+const PRODUCT_NAMES = {
+  weekly: "Weekly gift to Love 21",
+  monthly: "Monthly gift to Love 21",
+};
+
+/**
  * Integer dollars → cents.
  *
  * **The only place this multiplication happens.** CONTEXT.md §29 makes `amount_hkd` integer
@@ -45,7 +59,8 @@ async function createCheckoutSession(input, { clientOrigin }) {
   }
 
   const frequency = input.frequency ?? "once";
-  const isRecurring = frequency === "monthly";
+  const interval = RECURRING_INTERVALS[frequency];
+  const isRecurring = Boolean(interval);
   const trackingOptIn = input.tracking_opt_in ?? true;
 
   const stripe = stripeLib.getStripe();
@@ -59,9 +74,9 @@ async function createCheckoutSession(input, { clientOrigin }) {
         price_data: {
           currency: "hkd",
           unit_amount: toCents(amountHkd),
-          ...(isRecurring ? { recurring: { interval: "month" } } : {}),
+          ...(isRecurring ? { recurring: { interval } } : {}),
           product_data: {
-            name: isRecurring ? "Monthly gift to Love 21" : "Gift to Love 21",
+            name: PRODUCT_NAMES[frequency] ?? "Gift to Love 21",
             // Never "your gift pays for N sessions" — the §15 copy rule forbids exclusive
             // attribution, and this string appears on the donor's card statement page.
             description: "Your gift helps make Love 21 sessions possible.",

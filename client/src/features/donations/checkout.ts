@@ -41,9 +41,9 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 function toCheckoutBody(input: CheckoutInput) {
   const body: Record<string, unknown> = {
     amount_hkd: input.amount_hkd,
-    // The endpoint takes `once | monthly` only. `weekly` is a form-side option with no
-    // backing Stripe price interval, so it bills monthly until the option is removed.
-    frequency: input.frequency === 'weekly' ? 'monthly' : input.frequency,
+    // Passes through unmapped: the endpoint accepts all three the form offers. This used to
+    // rewrite `weekly` to `monthly`, which billed a weekly pledge monthly without saying so.
+    frequency: input.frequency,
     tracking_opt_in: input.journey_opt_in,
   }
   // `campaign_slug` is a human-readable slug; the column is a uuid. Sending a slug is a 400,
