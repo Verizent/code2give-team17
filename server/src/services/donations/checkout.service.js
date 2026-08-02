@@ -15,6 +15,16 @@ const donationsRepo = require("../../data/donations.repo");
 /** Stripe's minimum charge in HKD, below which the API rejects the session outright. */
 const MIN_AMOUNT_HKD = 4;
 
+/**
+ * Ceiling on a single online gift, matching `recordDonationSchema`.
+ *
+ * Stripe caps `unit_amount` at 999,999,999,999 cents, so without a bound of our own the ×100
+ * in `toCents` pushed an over-large amount past it and the SDK threw *after* validation —
+ * surfacing as a 500 with a raw Stripe message instead of a 400 the form could show. Anything
+ * above this is a conversation with the foundation, not a checkout session.
+ */
+const MAX_AMOUNT_HKD = 1_000_000;
+
 /** Hosted Checkout only. Never Stripe Elements — that changes our PCI position (CONTEXT.md §17). */
 const PAYMENT_METHODS = ["card"];
 
@@ -56,6 +66,9 @@ async function createCheckoutSession(input, { clientOrigin }) {
   const amountHkd = Number(input.amount_hkd);
   if (!Number.isInteger(amountHkd) || amountHkd < MIN_AMOUNT_HKD) {
     throw ApiError.badRequest(`amount_hkd must be a whole number of at least ${MIN_AMOUNT_HKD}`);
+  }
+  if (amountHkd > MAX_AMOUNT_HKD) {
+    throw ApiError.badRequest(`amount_hkd must be at most ${MAX_AMOUNT_HKD}`);
   }
 
   const frequency = input.frequency ?? "once";
@@ -116,4 +129,4 @@ async function createCheckoutSession(input, { clientOrigin }) {
   };
 }
 
-module.exports = { createCheckoutSession, toCents, MIN_AMOUNT_HKD };
+module.exports = { createCheckoutSession, toCents, MIN_AMOUNT_HKD, MAX_AMOUNT_HKD };

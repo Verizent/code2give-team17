@@ -25,7 +25,10 @@ const createDonationSchema = z.strictObject({
 // collects those natively and the webhook reads them back (CONTEXT.md §15) — and no
 // programme, because donors do not choose a designation (PLAN.md §3).
 const checkoutSchema = z.strictObject({
-  amount_hkd:      z.number().int().min(4),
+  // Bounds mirror MIN/MAX_AMOUNT_HKD in checkout.service.js. The max is load-bearing: above it
+  // the ×100 to cents exceeds Stripe's own unit_amount ceiling and the SDK throws mid-call,
+  // which reached the client as a 500 quoting a raw Stripe message instead of a 400.
+  amount_hkd:      z.number().int().min(4).max(1_000_000),
   // Matches the `donations_frequency_check` constraint and the three buttons the donate form
   // shows. This previously omitted "weekly", so a donor who picked Weekly either got a 400 or
   // was quietly billed monthly, depending on which side did the mapping.
