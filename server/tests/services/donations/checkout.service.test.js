@@ -6,6 +6,7 @@ const donationsRepo = require("../../../src/data/donations.repo");
 const {
   createCheckoutSession,
   toCents,
+  MAX_AMOUNT_HKD,
 } = require("../../../src/services/donations/checkout.service");
 
 const URLS = { clientOrigin: "http://localhost:5173" };
@@ -147,6 +148,31 @@ test("rejects an amount below the Stripe minimum with 400", async (t) => {
       `HKD ${amount} should be rejected`,
     );
   }
+});
+
+// Above MAX_AMOUNT_HKD the ×100 to cents passes Stripe's unit_amount ceiling and the SDK
+// throws mid-call, which surfaced to the donate form as a 500 quoting a raw Stripe message.
+// The bound has to be ours, and it has to be a 400.
+test("rejects an amount above the maximum with 400", async (t) => {
+  mockStripe(t);
+
+  for (const amount of [MAX_AMOUNT_HKD + 1, 99_999_999_999]) {
+    await assert.rejects(
+      () => createCheckoutSession({ amount_hkd: amount }, URLS),
+      (error) => {
+        assert.equal(error.status, 400);
+        return true;
+      },
+      `HKD ${amount} should be rejected`,
+    );
+  }
+});
+
+test("accepts the maximum amount exactly", async (t) => {
+  mockStripe(t);
+
+  const result = await createCheckoutSession({ amount_hkd: MAX_AMOUNT_HKD }, URLS);
+  assert.ok(result.checkout_url);
 });
 
 test("no programme is ever sent to Stripe or stored", async (t) => {

@@ -18,6 +18,26 @@ function isEmailish(value: string) {
   return /^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$/.test(value.trim())
 }
 
+/**
+ * Upper bound on a single online gift, matching `recordDonationSchema` and the checkout
+ * route's Zod cap server-side.
+ *
+ * Without it the form accepted any finite number and the ×100 conversion overflowed Stripe's
+ * own maximum, so an over-large amount came back as a 500 carrying a raw Stripe message
+ * rather than as something the donor could act on. A gift beyond this is a conversation with
+ * the foundation, not a checkout session.
+ */
+const MAX_AMOUNT_HKD = 1_000_000
+
+/**
+ * Stripe's minimum charge in HKD, mirroring MIN_AMOUNT_HKD in checkout.service.js.
+ *
+ * The form used to accept anything from HK$1 and say so, but the checkout route rejects
+ * below 4 — so HK$1–3 passed every control the donor could see and failed only after they
+ * committed. The floor belongs where they type the number.
+ */
+const MIN_AMOUNT_HKD = 4
+
 export function ImpactLadder({
   onDonated,
   campaignSlug,
@@ -43,6 +63,9 @@ export function ImpactLadder({
   const [journeyOptIn, setJourneyOptIn] = useState(true)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // Separate from `error`, which renders beside the Donate button in the other column. An
+  // amount the form refused has to be reported where the donor typed it.
+  const [amountError, setAmountError] = useState<string | null>(null)
 
   const presets = impactLadder().map((step) => step.amount)
   const programmes: DonateProgramme[] = [
@@ -64,7 +87,11 @@ export function ImpactLadder({
   }, [accountEmail])
 
   function changeAmount(next: number) {
-    const safe = Math.max(1, Math.round(next) || 1)
+    const safe = Math.min(
+      MAX_AMOUNT_HKD,
+      Math.max(MIN_AMOUNT_HKD, Math.round(next) || MIN_AMOUNT_HKD),
+    )
+    setAmountError(null)
     setAmount(safe)
     setCustomDraft(String(safe))
     trackEvent('ladder_change', { amount: safe, frequency, programme })
@@ -72,7 +99,18 @@ export function ImpactLadder({
 
   function applyCustomDraft() {
     const parsed = Number(customDraft.replace(/,/g, ''))
-    if (!Number.isFinite(parsed) || parsed < 1) return
+    // Every rejection below has to say so. These used to `return` silently, which left the
+    // rejected text sitting in the field with the gift unchanged — indistinguishable from a
+    // dead Apply button.
+    if (!Number.isFinite(parsed) || parsed < MIN_AMOUNT_HKD) {
+      setAmountError(g.amountInvalid)
+      return
+    }
+    if (parsed > MAX_AMOUNT_HKD) {
+      setAmountError(g.amountTooLarge)
+      return
+    }
+    setAmountError(null)
     changeAmount(parsed)
   }
 
@@ -195,7 +233,10 @@ export function ImpactLadder({
                 <input
                   id="custom-amount"
                   inputMode="decimal"
-                  min={1}
+                  min={MIN_AMOUNT_HKD}
+                  max={MAX_AMOUNT_HKD}
+                  aria-invalid={amountError ? true : undefined}
+                  aria-describedby={amountError ? 'custom-amount-error' : undefined}
                   value={customDraft}
                   placeholder={String(amount)}
                   onChange={(event) => setCustomDraft(event.target.value)}
@@ -218,6 +259,15 @@ export function ImpactLadder({
               </button>
             </div>
             <p className="mt-2 text-xs leading-relaxed text-navy/60">{g.customAmountHint}</p>
+            {amountError && (
+              <p
+                id="custom-amount-error"
+                role="alert"
+                className="mt-2 text-xs leading-relaxed font-medium text-red"
+              >
+                {amountError}
+              </p>
+            )}
           </div>
 
           <fieldset className="mt-7">
