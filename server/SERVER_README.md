@@ -497,7 +497,7 @@ than oversights.
 |---|---|---|---|
 | 1 | PLAN §3 A5 | **`GET /api/donations/session/:session_id` does not return `tracking_token`.** PLAN: *"`tracking_token` present only once `succeeded` **and** `tracking_opt_in`."* The route's own comment claims it does; the response body omits it. **The thanks page therefore has no way to link a donor to their tracking page** — the token exists in `donors` the moment the webhook fires, but nothing exposes it. | 🔴 demo-blocking |
 | 2 | HANDOFF | **`content_events` has no `service_role` DML grants** — verified: only `REFERENCES, TRIGGER, TRUNCATE`. Any repo touching it 500s. The handoff called this out explicitly and it was never applied. `donations` and `donors` *are* correctly granted. | 🔴 breaks §23 analytics |
-| 3 | PLAN §4 | **Stale `20260801_1050_donations.sql` was not deleted.** PLAN: *"delete the stale, never-applied file in the same PR, or it stays a second source of truth that contradicts the live DB — which is exactly how the `stripe_session_id` bug got in."* Still present. | 🟠 repeats a known failure |
+| 3 | PLAN §4 | ~~**Stale `20260801_1050_donations.sql` was not deleted.**~~ **Resolved** — deleted. It declared `donations.programme NOT NULL` and `donor_id NOT NULL`, both contradicted by live. See the migrations table below for the `create table` gap this leaves. | ✅ resolved |
 | 4 | PLAN §7 | **Envelope drift in wishlist/campaigns/admin not flagged in the PR.** Six sites bypass `envelope()`: `wishlist.routes.js:13,23`, `campaigns.routes.js:40,47`, `admin.routes.js:23,32` — raw `{items, meta}` and hand-rolled `response.status(404).json(...)`. PLAN deliberately did *not* rewrite them (another track's working code) but required the drift be flagged with the one-line fix offered as follow-up. | 🟡 contract drift |
 | 5 | PLAN §2 | **The whole Stripe mock-gateway design is absent.** No `src/lib/stripe/{mock,live}.driver.js`, no `STRIPE_MODE` env var (absent from `.env.example` and all code), no `/api/mock/stripe/checkout/:id` pages. This branch calls the real Stripe SDK, so a demo needs live `stripe listen` — which is exactly the per-session `STRIPE_WEBHOOK_SECRET` footgun the mock was designed to remove. | 🟠 demo fragility |
 | 6 | HANDOFF + PLAN §Phase B | **No demo-donor seed.** Both documents asked for donors at three lifecycle points — gave yesterday (all upcoming), mid-window (mixed), edition closed (all completed) — so three tracking pages show three states without pressing a force button. `db/seed/sessions.seed.js` seeds sessions only. | 🟠 weakens the demo |
@@ -588,10 +588,17 @@ Apply content migrations one at a time and announce before running — an `ALTER
 
 | File | Contents | Destructive? |
 |---|---|---|
-| `20260801_1050_donations.sql` | `donors`, `donations`, `donor_periods` | No — but **drifted from live**, see below |
 | `20260802_1050_donations_stripe.sql` | Stripe columns, `events_credited`, `stripe_events` | No |
 | `20260803_1055_sessions_and_allocations.sql` | `sessions`, `donation_allocations`, `email_sent_at`, **service_role grants** | No |
 | `20260803_1060_donations_drop_programme.sql` | `drop column donations.programme` | **YES — needs sign-off** |
+| `20260803_1065_grant_service_role_content_events.sql` | `service_role` DML on `content_events` + `sessions` | No — grants only |
+
+> **`donors` and `donations` have no `create table` in this repo.** `20260801_1050_donations.sql`
+> held them and was deleted (PLAN §4) because it contradicted the live schema and was never
+> applied — it declared `donations.programme NOT NULL` and `donor_id NOT NULL`, where live has
+> no `programme` column and a nullable `donor_id`. Both tables exist on the live project; treat
+> the live schema as the source of truth. Rebuilding from an empty project needs them dumped
+> from live first — a known, accepted gap, not an oversight.
 
 > **`service_role` grants are not optional.** A table created through `apply_migration` lands
 > without DML grants. Enabling RLS blocks anon; without the explicit
