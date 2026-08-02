@@ -1,0 +1,41 @@
+-- Grant service_role DML on content_events and sessions.
+--
+-- Non-destructive: adds privileges only. Safe to run at any time, including mid-demo.
+--
+-- ── Why this is needed ─────────────────────────────────────────────────────
+-- A table created through apply_migration lands with NO DML grants for the Supabase
+-- roles. Enabling RLS blocks `anon`/`authenticated` as intended, and `service_role`
+-- bypasses RLS — but bypassing RLS does not bypass the underlying *table* privilege.
+-- Without an explicit grant, every service-role read or write fails 42501
+-- "permission denied for table", regardless of RLS.
+--
+-- ── Verified against the live project, not inferred ────────────────────────
+--   select has_table_privilege('service_role','public.content_events','SELECT') ...
+--
+--   table            | select | insert | update | delete | rls | policies
+--   -----------------+--------+--------+--------+--------+-----+---------
+--   content_events   | false  | false  | false  | false  | on  | 0
+--   sessions         | false  | false  | false  | false  | on  | 0
+--   donations        | true   | true   | true   | true   | on  | 1
+--   donor_periods    | true   | true   | true   | true   | on  | 0
+--   stripe_events    | true   | true   | true   | true   | on  | 0
+--
+-- The three working tables were fixed by the applied migration
+-- `20260801171544_grant_service_role_on_donation_tables`. content_events and sessions
+-- were both missed by it.
+--
+-- ── On sessions ────────────────────────────────────────────────────────────
+-- `20260803_1055_sessions_and_allocations.sql` DECLARES this grant for public.sessions,
+-- but that migration was never applied to the live project — the applied list ends at
+-- 20260801171544. So sessions is broken on live despite the repo appearing to cover it,
+-- which is the more dangerous failure of the two: a declared-but-unapplied grant reads
+-- as done. Granting it here is idempotent, so applying 20260803_1055 later is harmless.
+--
+-- sessions is read by the allocation engine, so without this the donate→track path
+-- 42501s at demo time.
+--
+-- donation_allocations is deliberately absent: that table does not exist on live
+-- (PLAN.md §4 collapsed it into two columns on donations).
+
+grant select, insert, update, delete on public.content_events to service_role;
+grant select, insert, update, delete on public.sessions       to service_role;
