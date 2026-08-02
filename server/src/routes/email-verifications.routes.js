@@ -13,7 +13,9 @@ const router = express.Router();
 
 router.post(
   "/",
-  rateLimit({ key: "email-verification" }),
+  // Per address. Enough for a genuine visitor who mistypes and retries, or whose first
+  // code expires; well short of useful as a way to bomb someone's inbox.
+  rateLimit({ key: "email-verification", limit: 5, windowMs: 15 * 60_000 }),
   validate({ body: startEmailVerificationBodySchema }),
   async (request, response, next) => {
     try {

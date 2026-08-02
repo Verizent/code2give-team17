@@ -112,6 +112,17 @@ async function updateBasics(volunteerId, patch) {
   return updateVolunteer(volunteerId, patch);
 }
 
+/**
+ * Records that the address was proved. Idempotent by intent — callers check
+ * `email_verified_at` first, so this keeps the original proof time rather than moving it
+ * forward on every later signup.
+ *
+ * @param {string} volunteerId
+ */
+async function markEmailVerified(volunteerId) {
+  return updateVolunteer(volunteerId, { email_verified_at: new Date().toISOString() });
+}
+
 module.exports = {
   findByEmail,
   findByAccessToken,
@@ -121,4 +132,5 @@ module.exports = {
   claim,
   updateVolunteer,
   updateBasics,
+  markEmailVerified,
 };

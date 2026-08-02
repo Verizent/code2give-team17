@@ -113,4 +113,82 @@ function escapeHtml(s) {
     .replaceAll(">", "&gt;");
 }
 
-module.exports = { renderThankYou };
+function briefingUrl(signupId) {
+  return `${clientOrigin()}/volunteer/briefing/${signupId}`;
+}
+
+/** "2026-08-08, 10:00–13:00" in Hong Kong time, which is where every session is. */
+function formatWhen(startsAt, endsAt) {
+  const opts = { timeZone: "Asia/Hong_Kong", hour: "2-digit", minute: "2-digit", hour12: false };
+  const day = new Date(startsAt).toLocaleDateString("en-CA", { timeZone: "Asia/Hong_Kong" });
+  const from = new Date(startsAt).toLocaleTimeString("en-GB", opts);
+  if (!endsAt) return `${day}, ${from}`;
+  return `${day}, ${from}–${new Date(endsAt).toLocaleTimeString("en-GB", opts)}`;
+}
+
+/**
+ * Sent the moment a spot is confirmed. Until this existed a volunteer received nothing
+ * at all between signing up and turning up — the only email in the track fired after
+ * attendance, by which point the session had already happened.
+ *
+ * @param {{ full_name: string, locale?: string }} volunteer
+ * @param {{ title_en: string, title_zh?: string|null, location_en?: string|null,
+ *           location_zh?: string|null, starts_at: string, ends_at?: string|null }} opportunity
+ * @param {{ id: string }} signup
+ */
+function renderSignupConfirmation(volunteer, opportunity, signup) {
+  const locale = volunteer.locale === "zh-Hant" ? "zh-Hant" : "en";
+  const title = pickLocale(opportunity, "title", locale);
+  const location = pickLocale(opportunity, "location", locale);
+  const when = formatWhen(opportunity.starts_at, opportunity.ends_at);
+  const briefing = briefingUrl(signup.id);
+  const zh = locale === "zh-Hant";
+
+  const subject = zh ? `你已報名：${title}` : `You're confirmed: ${title}`;
+
+  const lines = zh
+    ? [
+        `${volunteer.full_name} 你好，`,
+        ``,
+        `你的名額已確認。`,
+        ``,
+        `課堂：${title}`,
+        `時間：${when}（香港時間）`,
+        ...(location ? [`地點：${location}`] : []),
+        ``,
+        `出發前請先看簡介：${briefing}`,
+        ``,
+        `如果你未能出席，請盡早告訴我們，讓名額可以留給其他義工。`,
+        ``,
+        `Love 21 Foundation`,
+      ]
+    : [
+        `Hi ${volunteer.full_name},`,
+        ``,
+        `Your spot is confirmed.`,
+        ``,
+        `Session:  ${title}`,
+        `When:     ${when} (Hong Kong time)`,
+        ...(location ? [`Where:    ${location}`] : []),
+        ``,
+        `Read the short briefing before you go: ${briefing}`,
+        ``,
+        `If you can no longer make it, tell us early so the spot can go to someone else.`,
+        ``,
+        `Love 21 Foundation`,
+      ];
+
+  const text = lines.join("\n");
+
+  const html = [
+    `<p>${escapeHtml(zh ? `${volunteer.full_name} 你好，` : `Hi ${volunteer.full_name},`)}</p>`,
+    `<p>${escapeHtml(zh ? "你的名額已確認。" : "Your spot is confirmed.")}</p>`,
+    `<p><strong>${escapeHtml(title)}</strong><br>${escapeHtml(when)}` +
+      `${location ? `<br>${escapeHtml(location)}` : ""}</p>`,
+    `<p><a href="${escapeHtml(briefing)}">${escapeHtml(zh ? "課堂簡介" : "Read the briefing")}</a></p>`,
+  ].join("\n");
+
+  return { subject, text, html };
+}
+
+module.exports = { renderThankYou, renderSignupConfirmation };

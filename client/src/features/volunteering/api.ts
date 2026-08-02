@@ -92,6 +92,52 @@ export function invalidateOpportunitiesCache() {
  * Prefer server signup; fall back to localStorage when the API is down.
  * Capacity is enforced server-side for UUID opportunities.
  */
+/**
+ * Step 1 of proving the address: asks the server to email a six-digit code. The code
+ * itself never comes back over the API — reading it out of the inbox is the whole point.
+ */
+export async function startEmailVerification(
+  email: string,
+): Promise<
+  { ok: true; id: string } | { ok: false; reason: 'rate_limited' | 'undeliverable' | 'error' }
+> {
+  try {
+    const { data } = await apiData<{ id: string }>('/api/email-verifications', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    })
+    return { ok: true, id: data.id }
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 429) return { ok: false, reason: 'rate_limited' }
+    if (err instanceof ApiError && err.status === 502) {
+      return { ok: false, reason: 'undeliverable' }
+    }
+    return { ok: false, reason: 'error' }
+  }
+}
+
+/** Step 2: exchange the emailed code for a short-lived token the signup will carry. */
+export async function confirmEmailVerification(
+  id: string,
+  code: string,
+): Promise<{ ok: true; token: string } | { ok: false; reason: 'bad_code' | 'error' }> {
+  try {
+    const { data } = await apiData<{ verification_token: string }>(
+      `/api/email-verifications/${id}/confirmation`,
+      { method: 'PUT', body: JSON.stringify({ code }) },
+    )
+    return { ok: true, token: data.verification_token }
+  } catch (err) {
+    // 400 covers wrong, expired, and too-many-attempts. All mean "that code did not work",
+    // and distinguishing them for the caller would help someone guessing more than it
+    // helps someone who mistyped.
+    if (err instanceof ApiError && (err.status === 400 || err.status === 409)) {
+      return { ok: false, reason: 'bad_code' }
+    }
+    return { ok: false, reason: 'error' }
+  }
+}
+
 export async function submitSignup(input: {
   opportunity_id: string
   full_name: string
@@ -100,6 +146,8 @@ export async function submitSignup(input: {
   age_group: VolunteerAgeGroup
   emergency_name?: string
   emergency_phone?: string
+  /** Omitted only when signed in as the address being used — the server allows that. */
+  verification_token?: string
 }): Promise<
   { ok: true; signupId: string } | { ok: false; reason: 'full' | 'duplicate' | 'error' }
 > {
@@ -119,6 +167,9 @@ export async function submitSignup(input: {
           full_name: input.full_name,
           email: input.email,
           phone: input.phone ?? null,
+          ...(input.verification_token
+            ? { verification_token: input.verification_token }
+            : {}),
         }),
       })
       invalidateOpportunitiesCache()

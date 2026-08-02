@@ -63,10 +63,16 @@ const createSignupBodySchema = z.object({
   opportunity_id: z.string().uuid(),
 });
 
+// Optional here, enforced in signups.service: a signed-in caller signing up their own
+// address has already proved it to Supabase Auth, and making them read a code out of
+// their inbox again would be theatre. Everyone else must present a token — this endpoint
+// is unauthenticated, so it is the only thing standing between it and signing up an
+// address the caller does not own.
 const guestSignupBodySchema = z.object({
   opportunity_id: z.string().uuid(),
   full_name: z.string().trim().min(1).max(120),
   email: emailSchema,
+  verification_token: z.string().min(32).optional(),
   phone: z.string().trim().max(40).optional().nullable(),
   locale: z.enum(["en", "zh-Hant"]).optional(),
 });

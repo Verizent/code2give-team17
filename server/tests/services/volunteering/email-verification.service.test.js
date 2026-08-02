@@ -2,6 +2,7 @@ const { test, mock } = require("node:test");
 const assert = require("node:assert/strict");
 
 const verificationsRepo = require("../../../src/data/volunteer-email-verifications.repo");
+const emailLib = require("../../../src/lib/email");
 const emailVerification = require("../../../src/services/volunteering/email-verification.service");
 
 const ID = "cccccccc-cccc-cccc-cccc-cccccccccccc";
@@ -119,4 +120,79 @@ test("confirmVerification 404s an unknown id (privacy — no distinction between
       return true;
     },
   );
+});
+
+/**
+ * The code was generated, hashed and stored, but never delivered. That was survivable
+ * while EMAIL_MODE was effectively always log-mode and `demo_code` came back in the
+ * response; with real SMTP wired, a verification nobody can receive is a dead end.
+ */
+test("startVerification emails the code to the address being verified", async (t) => {
+  const original = process.env.EMAIL_MODE;
+  process.env.EMAIL_MODE = "smtp";
+  mock.method(verificationsRepo, "createVerification", async (values) => ({
+    id: ID,
+    email: values.email,
+    expires_at: values.expires_at,
+  }));
+  const sendEmail = mock.fn(async () => ({ mode: "smtp", delivered: true }));
+  mock.method(emailLib, "sendEmail", sendEmail);
+  t.after(() => {
+    mock.restoreAll();
+    process.env.EMAIL_MODE = original;
+  });
+
+  const response = await emailVerification.startVerification("  User@Example.COM  ");
+
+  assert.equal(sendEmail.mock.callCount(), 1);
+  const [message] = sendEmail.mock.calls[0].arguments;
+  assert.equal(message.to, EMAIL, "sent to the address being proved, never anywhere else");
+  assert.match(message.subject, /verification code/i);
+  const code = message.text.match(/\b(\d{6})\b/);
+  assert.ok(code, "the six-digit code appears in the body");
+  assert.equal(response.demo_code, undefined, "plaintext code never leaves via the API");
+});
+
+test("startVerification withholds demo_code outside console mode", async (t) => {
+  const original = process.env.EMAIL_MODE;
+  process.env.EMAIL_MODE = "log";
+  mock.method(verificationsRepo, "createVerification", async (values) => ({
+    id: ID,
+    email: values.email,
+    expires_at: values.expires_at,
+  }));
+  mock.method(emailLib, "sendEmail", async () => ({ mode: "log", delivered: true }));
+  t.after(() => {
+    mock.restoreAll();
+    process.env.EMAIL_MODE = original;
+  });
+
+  const response = await emailVerification.startVerification(EMAIL);
+  assert.equal(response.demo_code, undefined);
+});
+
+/**
+ * A verification the requester cannot receive is worthless, and silently returning 201
+ * would strand them on a code-entry screen forever. Fail loudly instead.
+ */
+test("startVerification surfaces a delivery failure rather than returning a dead verification", async (t) => {
+  const original = process.env.EMAIL_MODE;
+  process.env.EMAIL_MODE = "smtp";
+  mock.method(verificationsRepo, "createVerification", async (values) => ({
+    id: ID,
+    email: values.email,
+    expires_at: values.expires_at,
+  }));
+  mock.method(emailLib, "sendEmail", async () => {
+    throw new Error("535 auth failed");
+  });
+  t.after(() => {
+    mock.restoreAll();
+    process.env.EMAIL_MODE = original;
+  });
+
+  await assert.rejects(() => emailVerification.startVerification(EMAIL), (error) => {
+    assert.equal(error.status, 502);
+    return true;
+  });
 });
