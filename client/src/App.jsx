@@ -21,6 +21,7 @@ import { CampaignPublicPage } from '@/pages/CampaignPublicPage'
 import { GiveThanksPage } from '@/pages/GiveThanksPage'
 import { SupportPage } from '@/pages/SupportPage'
 import { ArticlePage } from '@/pages/ArticlePage'
+import { AdminInstagramPage } from '@/pages/AdminInstagramPage'
 
 export default function App() {
   return (
@@ -47,7 +48,7 @@ export default function App() {
         <Route path="moderation" element={<AdminModerationPage />} />
         <Route path="proofs" element={<Navigate to="/admin/stories" replace />} />
         <Route path="social" element={<Navigate to="/admin/stories" replace />} />
-        <Route path="instagram" element={<Navigate to="/admin/stories" replace />} />
+        <Route path="instagram" element={<AdminInstagramPage />} />
       </Route>
       <Route path="/support" element={<SupportPage />} />
       <Route path="/about" element={<Navigate to="/" replace />} />

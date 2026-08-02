@@ -6,8 +6,19 @@ import { useReducedMotion } from '@/lib/use-reduced-motion'
 import { FadeRise } from '@/components/community/fade-rise'
 import { StoryCard } from '@/components/community/story-card'
 import { KnowledgeCard } from '@/components/community/knowledge-card'
-import { listVoices } from '@/features/content/api'
+import { InstagramCard } from '@/components/community/instagram-card'
+import { listVoices, listInstagram } from '@/features/content/api'
 import { mapVoice } from '@/features/content/map-voice'
+
+/** Stories shown before "Show more"; also the size of each subsequent reveal. */
+const PAGE_SIZE = 10
+/**
+ * An embed with display_order N lands after story N × this. Spreading them out beats
+ * placing them at story N, which would bunch all three at the top — but the product
+ * must divide into PAGE_SIZE, or an embed lands past the fold and is invisible until
+ * the visitor expands. At 3, orders 1–3 sit after stories 3, 6 and 9.
+ */
+const EMBED_SPACING = 3
 
 /** Count-up header for the Ability Wall. Plays once, on first scroll into view. */
 function MomentsCounter() {
@@ -54,18 +65,23 @@ function MomentsCounter() {
   )
 }
 
-function buildFeed(filter, voices) {
+function buildFeed(filter, voices, embeds, limit) {
   const curated =
     filter === 'all' ? stories : stories.filter((s) => s.type === filter)
 
   // Submitted posts have no activity type, so they belong to the unfiltered wall only.
   // Including them under a programme tab would assert a programme nobody recorded.
-  const filtered =
+  const ordered =
     filter === 'all'
       ? [...voices, ...curated].sort(
           (a, b) => new Date(b.postedAt) - new Date(a.postedAt),
         )
       : curated
+
+  // The limit counts stories, not cards: knowledge and Instagram cards are furniture
+  // between them, so counting those would make "show more" reveal fewer stories the
+  // further down you got.
+  const filtered = ordered.slice(0, limit)
 
   const entries = []
   let storyCount = 0
@@ -81,16 +97,25 @@ function buildFeed(filter, voices) {
           entries.push({ key: `know-${k.id}`, kind: 'knowledge', knowledge: k })
         }
       }
+      // display_order is the admin's intent for placement, so it drives position here
+      // rather than being sorted by date like a story — an embed has no post date.
+      for (const embed of embeds) {
+        if (embed.display_order * EMBED_SPACING === storyCount) {
+          entries.push({ key: `ig-${embed.id}`, kind: 'instagram', embed })
+        }
+      }
     }
   }
 
-  return entries
+  return { entries, total: ordered.length, shown: filtered.length }
 }
 
 export function StoryFeed() {
-  const { t } = useSite()
+  const { locale, t } = useSite()
   const [filter, setFilter] = useState('all')
   const [voices, setVoices] = useState([])
+  const [embeds, setEmbeds] = useState([])
+  const [limit, setLimit] = useState(PAGE_SIZE)
 
   // Curated stories render immediately; approved submissions fold in when they land,
   // so a slow API delays nothing the visitor is already looking at.
@@ -104,7 +129,24 @@ export function StoryFeed() {
     }
   }, [])
 
-  const feed = buildFeed(filter, voices)
+  useEffect(() => {
+    let cancelled = false
+    listInstagram(locale).then((rows) => {
+      if (!cancelled) setEmbeds(rows)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [locale])
+
+  const { entries: feed, total, shown } = buildFeed(filter, voices, embeds, limit)
+
+  function changeFilter(id) {
+    setFilter(id)
+    // Without this, switching to a tab with three stories keeps a limit of forty and
+    // the "show more" state reads as though the visitor had already expanded it.
+    setLimit(PAGE_SIZE)
+  }
 
   const tabs = [
     { id: 'all', label: t.community.filterAll },
@@ -132,7 +174,7 @@ export function StoryFeed() {
               type="button"
               role="tab"
               aria-selected={active}
-              onClick={() => setFilter(tab.id)}
+              onClick={() => changeFilter(tab.id)}
               className={cn(
                 'inline-flex min-h-[40px] shrink-0 items-center rounded-full px-4 text-sm font-medium transition-colors',
                 active
@@ -158,11 +200,30 @@ export function StoryFeed() {
             >
               {entry.kind === 'story' ? (
                 <StoryCard story={entry.story} />
+              ) : entry.kind === 'instagram' ? (
+                <InstagramCard embed={entry.embed} />
               ) : (
                 <KnowledgeCard item={entry.knowledge} />
               )}
             </FadeRise>
           ))}
+        </div>
+      )}
+
+      {shown < total && (
+        <div className="mt-10 flex flex-col items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setLimit((n) => n + PAGE_SIZE)}
+            className="inline-flex min-h-[48px] items-center justify-center rounded-xl border border-navy/20 bg-card px-6 text-base font-semibold text-navy transition-colors hover:bg-muted"
+          >
+            {t.community.showMore}
+          </button>
+          {/* aria-live so a screen reader hears the count change after each reveal,
+              which is otherwise silent — the new cards are appended off-screen. */}
+          <p aria-live="polite" className="text-sm text-navy/55">
+            {t.community.showingCount.replace('{n}', shown).replace('{total}', total)}
+          </p>
         </div>
       )}
     </section>

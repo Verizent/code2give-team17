@@ -100,6 +100,27 @@ export async function listVoices({ limit = 50 } = {}) {
 }
 
 /**
+ * GET /api/instagram — active embeds for the Ability Wall, curated in the admin screen.
+ *
+ * The API resolves `caption` and attaches `shortcode`, so nothing here parses a URL.
+ * Returns `[]` on failure: the wall has plenty else to show.
+ *
+ * @param {string} [locale]
+ * @returns {Promise<object[]>}
+ */
+export async function listInstagram(locale = 'en') {
+  if (API_MODE !== 'real') return []
+
+  try {
+    const { data } = await apiClient(`/api/instagram?locale=${toApiLocale(locale)}`)
+    return Array.isArray(data) ? data : []
+  } catch (error) {
+    console.error('listInstagram failed, omitting embeds', error)
+    return []
+  }
+}
+
+/**
  * GET /api/articles — the Home featured strip.
  *
  * The API resolves `_en`/`_zh` into plain `title` / `excerpt` / `cover_alt` for the
