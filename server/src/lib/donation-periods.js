@@ -82,6 +82,15 @@ function editionForDonation(donatedAt) {
 /**
  * The earliest an event may start to be credited to this donation.
  *
+ * **Currently unused in production.** Session eligibility moved to the rolling
+ * `[created_at + 7d, +30d]` window in `services/donations/allocation.service.js`, whose
+ * 7-day floor subsumes the 2-day rule below. Kept because that decision is not settled —
+ * if eligibility ever returns to the fixed calendar, this is the floor it needs.
+ *
+ * Do not read the tests covering this function as proof that the no-event-predates-the-gift
+ * invariant is enforced: it is, but by `ELIGIBILITY_MIN_DAYS` in the allocation service, and
+ * that is where its test lives.
+ *
  * **A safety clause, not a consequence of the calendar arithmetic**, and the distinction is the
  * point. The bucket rule above already keeps events ahead of the gift, but only via an
  * off-by-one that is invisible in the rule itself: a gift on the 14th skips the 15th send and

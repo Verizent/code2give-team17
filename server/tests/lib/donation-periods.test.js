@@ -93,9 +93,11 @@ test("selection floor takes the later of window start and donation + 2 days", ()
   }
 });
 
-test("no credited event can start before the gift, for every day of a month", () => {
-  // The invariant stated once, checked exhaustively — cheaper than trusting the four
-  // hand-picked cases above to stay representative.
+test("selectionStart never resolves before the gift, for every day of a month", () => {
+  // Covers the helper, NOT the production invariant. `selectionStart` is currently unused —
+  // allocation.service.js enforces "no event predates the gift" via its rolling +7d floor,
+  // and the test for that lives in tests/services/donations/allocation.service.test.js.
+  // Retitled so a green run here is not mistaken for the live guarantee being covered.
   for (let day = 1; day <= 31; day += 1) {
     const donatedAt = new Date(Date.UTC(2026, 7, day));
     assert.ok(
