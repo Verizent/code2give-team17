@@ -378,6 +378,47 @@ test("buildTrackView.period.events carry PLAN.md §C1 fields — kind, title, st
   assert.equal(event.cost_at_allocation, undefined, "cost is internal, not exposed");
 });
 
+test("a period is labelled by when it sends, not by the window it spans", async (t) => {
+  // The window ("15 Aug – 30 Aug") is an internal batching rule and says nothing about which
+  // sessions appear beneath it — those come from `[donation +7d, +30d]`. Rendered as a range
+  // above the list it read as a claim about those sessions, so a gift on 2 Aug showed sessions
+  // on the 10th and 11th under a heading saying 15–30 Aug. The send date is the thing a donor
+  // actually wants: when do I hear what happened?
+  stubTrackDeps(t, {
+    periods: [
+      { id: "p1", period_start: "2026-08-15", period_end: "2026-08-31", status: "open" },
+    ],
+  });
+
+  const view = await buildTrackView(trackDonor);
+
+  assert.equal(view.period.label, "31 Aug", "the day the update goes out");
+  assert.equal(view.period.sends_on, "2026-08-31");
+  assert.equal(view.period.period_end, "2026-08-31", "raw column unchanged");
+  assert.equal(view.periods[0].label, view.period.label, "block and archive must agree");
+});
+
+test("the send date is the real end of month, not a fixed 31st", async (t) => {
+  // "The 31st" is not a date. A job or label hardcoding it is wrong five months a year, and
+  // wrong twice over in February.
+  const cases = [
+    ["2026-06-15", "2026-06-30", "30 Jun"],
+    ["2026-02-15", "2026-02-28", "28 Feb"],
+    ["2028-02-15", "2028-02-29", "29 Feb"],
+    ["2026-07-31", "2026-08-15", "15 Aug"],
+  ];
+
+  for (const [start, end, label] of cases) {
+    mock.restoreAll();
+    stubTrackDeps(t, {
+      periods: [{ id: "p1", period_start: start, period_end: end, status: "open" }],
+    });
+
+    const view = await buildTrackView(trackDonor);
+    assert.equal(view.period.label, label, `label for period ending ${end}`);
+  }
+});
+
 test("buildTrackView lists a session once even when several gifts landed on it", async (t) => {
   // Reproduces a real report: HK$500 (1 credit) then HK$1,450 (3 credits) in one window
   // produced 4 allocations across 3 distinct sessions, and "Family support circle" appeared

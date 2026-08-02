@@ -126,7 +126,13 @@ export function DonorTrackPage() {
             {g.trackCurrentEdition}
           </h2>
           <p className="mt-1 text-[14px] text-navy/60">
-            {periods.find((p) => p.id === period.id)?.label ?? ''}
+            {/* When the donor next hears from us — not a window. The period's date range is a
+                batching rule and says nothing about the sessions below, which are chosen by a
+                different rule entirely; showing it here read as a claim about them. */}
+            {(period.is_current ? g.trackNextUpdate : g.trackUpdateSent).replace(
+              '{date}',
+              period.label,
+            )}
             {period.events_credited
               ? ` · ${g.trackCredited.replace('{count}', String(period.events_credited))}`
               : ''}

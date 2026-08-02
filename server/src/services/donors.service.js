@@ -6,7 +6,11 @@ const donorPeriodsRepo = require("../data/donor-periods.repo");
 const sessionsRepo = require("../data/sessions.repo");
 const { normalizeEmail } = require("../lib/normalize");
 const { resolveLocale } = require("../lib/locale");
-const { editionForDonation, editionLabel, MAX_EVENTS_SHOWN } = require("../lib/donation-periods");
+const {
+  editionForDonation,
+  MONTH_ABBREVIATIONS,
+  MAX_EVENTS_SHOWN,
+} = require("../lib/donation-periods");
 const { MAX_EVENTS_SHOWN: MAX_SHOWN_FALLBACK } = require("../lib/donation-credit");
 
 function newAccessToken() {
@@ -225,7 +229,17 @@ async function buildPeriodBlock({ period, allocations, succeeded, donor }) {
   return {
     id: period.id,
     period_start: period.period_start,
+    // **Exclusive**, and therefore also the day the edition email goes out — the window is
+    // half-open `[period_start, period_end)`. Both fields are internal batching detail; the
+    // donor-facing value is `sends_on`.
     period_end: period.period_end,
+    /** When the donor hears what happened. Same instant as `period_end`, named for its use. */
+    sends_on: period.period_end,
+    // e.g. "31 Aug". Identifies the period by when we write, not by the window it spans —
+    // see labelForPeriod. Carried here so a caller never has to find its own period in the
+    // archive to title the block, a lookup that returns nothing for an archived period the
+    // list does not contain.
+    label: labelForPeriod(period),
     status: period.status,
     is_current: period.status === "open",
     events_credited: eventsCredited,
@@ -255,13 +269,33 @@ function toEvent(session, locale) {
   };
 }
 
+/**
+ * A period is identified to the donor by **when we write to them**, not by the window it
+ * spans.
+ *
+ * The window ("15 Aug – 30 Aug") is an internal batching rule: which gifts get grouped into
+ * which email. It was being rendered directly above the session list, where it reads as a
+ * claim about those sessions — and it is not one. Sessions are chosen by a different rule
+ * entirely (`[donation +7d, +30d]` in allocation.service.js), so a gift on 2 Aug shows
+ * sessions on the 10th and 11th beneath a heading saying 15–30 Aug. Two unrelated windows,
+ * one stacked on the other.
+ *
+ * `period_end` is that send date — the window is half-open, so its exclusive end IS the day
+ * the email goes out. "31 Aug" answers the question a donor actually has: when will I hear
+ * what happened?
+ *
+ * @param {{ period_end: string }} period
+ * @returns {string} e.g. `"31 Aug"`
+ */
+function labelForPeriod(period) {
+  const sends = new Date(`${period.period_end}T00:00:00Z`);
+  return `${sends.getUTCDate()} ${MONTH_ABBREVIATIONS[sends.getUTCMonth()]}`;
+}
+
 function toArchiveEntry(period) {
   return {
     id: period.id,
-    label: editionLabel({
-      windowStart: new Date(period.period_start),
-      windowEnd: new Date(period.period_end),
-    }),
+    label: labelForPeriod(period),
     status: period.status,
   };
 }

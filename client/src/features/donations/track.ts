@@ -31,7 +31,17 @@ export type TrackEvent = {
 export type TrackPeriod = {
   id: string
   period_start: string
+  /**
+   * **Exclusive**, and so also the day the edition email sends — the window is half-open.
+   * Internal batching detail: it groups gifts into emails and says nothing about which
+   * sessions appear below, which are chosen by `[donation +7d, +30d]` in allocation.service.js.
+   * Do not render it as a range over the session list; that reads as a claim about them.
+   */
   period_end: string
+  /** Same date as `period_end`, named for the only thing a donor cares about. */
+  sends_on: string
+  /** e.g. `"31 Aug"` — when we write, not the window. Matches the entry in `periods[]`. */
+  label: string
   status: string
   is_current: boolean
   events_credited: number
