@@ -3,7 +3,12 @@ const assert = require("node:assert/strict");
 
 const donorsService = require("../../src/services/donors.service");
 const donationsRepo = require("../../src/data/donations.repo");
-const { createDonation, submitFeedback } = require("../../src/services/donations.service");
+const donorsRepo = require("../../src/data/donors.repo");
+const {
+  createDonation,
+  submitFeedback,
+  getCheckoutStatus,
+} = require("../../src/services/donations.service");
 
 const stubDonor = {
   id: "aaaaaaaa-0000-0000-0000-aaaaaaaaaaaa",
@@ -127,4 +132,96 @@ test("submitFeedback with an empty body still succeeds — every field is option
   await submitFeedback(stubDonation.id, {});
 
   assert.equal(updateFeedback.mock.callCount(), 1);
+});
+
+/**
+ * getCheckoutStatus — the thanks-page poll (PLAN.md §3 A5).
+ *
+ * `tracking_opt_in` lives on the donation row itself, not only on the donor, so both the
+ * still-pending and the opted-out answers are decidable without reading `donors` at all.
+ * These tests assert the lookup is SKIPPED rather than performed-and-discarded: returning
+ * `tracking_token: null` after fetching the donor would satisfy the response shape while
+ * still touching a table the caller has no right to on that path.
+ */
+
+const stubSession = "cs_test_a1b2c3";
+
+function succeededDonation(overrides = {}) {
+  return {
+    id: stubDonation.id,
+    donor_id: stubDonor.id,
+    amount_hkd: 500,
+    frequency: "once",
+    status: "succeeded",
+    events_credited: 1,
+    tracking_opt_in: true,
+    ...overrides,
+  };
+}
+
+test("getCheckoutStatus returns tracking_token when succeeded and opted in", async (t) => {
+  mock.method(donationsRepo, "findByStripeSession", async () => succeededDonation());
+  mock.method(donorsRepo, "findById", async () => stubDonor);
+  t.after(() => mock.restoreAll());
+
+  const result = await getCheckoutStatus(stubSession);
+
+  assert.equal(result.tracking_token, stubDonor.access_token);
+  assert.equal(result.status, "succeeded");
+  assert.equal(result.amount_hkd, 500);
+  assert.equal(result.frequency, "once");
+  assert.equal(result.events_credited, 1);
+});
+
+test("getCheckoutStatus omits tracking_token while the payment is still pending, without reading donors", async (t) => {
+  mock.method(donationsRepo, "findByStripeSession", async () =>
+    succeededDonation({ status: "pending", events_credited: null }),
+  );
+  const findById = mock.method(donorsRepo, "findById", async () => stubDonor);
+  t.after(() => mock.restoreAll());
+
+  const result = await getCheckoutStatus(stubSession);
+
+  assert.equal("tracking_token" in result, false);
+  assert.equal(result.status, "pending");
+  assert.equal(findById.mock.callCount(), 0, "donor lookup must be skipped, not nulled");
+});
+
+test("getCheckoutStatus omits tracking_token when the donor opted out, without reading donors", async (t) => {
+  mock.method(donationsRepo, "findByStripeSession", async () =>
+    succeededDonation({ tracking_opt_in: false }),
+  );
+  const findById = mock.method(donorsRepo, "findById", async () => stubDonor);
+  t.after(() => mock.restoreAll());
+
+  const result = await getCheckoutStatus(stubSession);
+
+  assert.equal("tracking_token" in result, false);
+  assert.equal(result.status, "succeeded");
+  assert.equal(findById.mock.callCount(), 0, "donor lookup must be skipped, not nulled");
+});
+
+test("getCheckoutStatus throws 404 for an unknown checkout session", async (t) => {
+  mock.method(donationsRepo, "findByStripeSession", async () => null);
+  t.after(() => mock.restoreAll());
+
+  await assert.rejects(() => getCheckoutStatus("cs_test_nope"), (err) => {
+    assert.equal(err.status, 404);
+    return true;
+  });
+});
+
+test("getCheckoutStatus tolerates a succeeded donation whose donor_id is not attached yet", async (t) => {
+  // The webhook sets status and donor_id in the same write, but the row is created at
+  // checkout with donor_id null (donations.repo.js). A poll landing mid-write must not 500.
+  mock.method(donationsRepo, "findByStripeSession", async () =>
+    succeededDonation({ donor_id: null }),
+  );
+  const findById = mock.method(donorsRepo, "findById", async () => stubDonor);
+  t.after(() => mock.restoreAll());
+
+  const result = await getCheckoutStatus(stubSession);
+
+  assert.equal("tracking_token" in result, false);
+  assert.equal(findById.mock.callCount(), 0);
 });

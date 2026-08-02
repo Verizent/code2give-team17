@@ -2,10 +2,12 @@ const express = require("express");
 const { validate } = require("../middleware/validate");
 const { z } = require("zod");
 const { envelope } = require("../lib/envelope");
-const { ApiError } = require("../lib/api-error");
-const { createDonation, submitFeedback } = require("../services/donations.service");
+const {
+  createDonation,
+  submitFeedback,
+  getCheckoutStatus,
+} = require("../services/donations.service");
 const { createCheckoutSession } = require("../services/donations/checkout.service");
-const donationsRepo = require("../data/donations.repo");
 
 const router = express.Router();
 
@@ -61,17 +63,7 @@ router.get(
   validate({ params: sessionParamSchema }),
   async (request, response, next) => {
     try {
-      const donation = await donationsRepo.findByStripeSession(request.validatedParams.session_id);
-      if (!donation) throw ApiError.notFound("No donation found for that checkout session");
-
-      response.json(
-        envelope({
-          status: donation.status,
-          amount_hkd: donation.amount_hkd,
-          frequency: donation.frequency,
-          events_credited: donation.events_credited,
-        }),
-      );
+      response.json(envelope(await getCheckoutStatus(request.validatedParams.session_id)));
     } catch (error) {
       next(error);
     }

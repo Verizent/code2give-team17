@@ -90,4 +90,48 @@ async function submitFeedback(donationId, fields) {
   return donationsRepo.updateFeedback(donationId, clean);
 }
 
-module.exports = { createDonation, donorHasHistory, submitFeedback };
+/**
+ * Thanks-page poll for a Stripe checkout session (PLAN.md §3 A5).
+ *
+ * Keyed on the unguessable Stripe session id, so the route needs no auth — which is also
+ * why the token is gated here rather than left to the caller.
+ *
+ * `tracking_token` is returned only when the donation actually succeeded **and** the donor
+ * opted in. Both flags live on the donation row, so a pending or opted-out poll answers
+ * without reading `donors` at all: fetching the donor and then discarding the token would
+ * produce the same JSON while still touching a table this path has no business reading.
+ *
+ * `donor_id` is null between checkout and the webhook landing (donations.repo.js), so a
+ * poll arriving mid-write returns the base shape rather than throwing.
+ *
+ * @param {string} sessionId Stripe Checkout Session id.
+ * @returns {Promise<{ status: string, amount_hkd: number, frequency: string,
+ *   events_credited: number|null, tracking_token?: string }>}
+ * @throws {ApiError} 404 when no donation points at that session.
+ */
+async function getCheckoutStatus(sessionId) {
+  const donation = await donationsRepo.findByStripeSession(sessionId);
+  if (!donation) {
+    throw ApiError.notFound("No donation found for that checkout session");
+  }
+
+  const status = {
+    status: donation.status,
+    amount_hkd: donation.amount_hkd,
+    frequency: donation.frequency,
+    events_credited: donation.events_credited,
+  };
+
+  if (donation.status !== "succeeded" || !donation.tracking_opt_in || !donation.donor_id) {
+    return status;
+  }
+
+  const donor = await donorsRepo.findById(donation.donor_id);
+  if (!donor?.access_token) {
+    return status;
+  }
+
+  return { ...status, tracking_token: donor.access_token };
+}
+
+module.exports = { createDonation, donorHasHistory, submitFeedback, getCheckoutStatus };
