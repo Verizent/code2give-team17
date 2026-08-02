@@ -401,6 +401,7 @@ export const STRINGS = {
       receiptForOtherHint:
         'For a different taxpayer (e.g. a partner or company). The name on the receipt should match who claims the deduction.',
       receiptRequired: 'Add the name and email for the official receipt.',
+      receiptEmailInvalid: 'Check the receipt email — that address does not look right.',
       applyCustom: 'Apply',
       journeyOptInLabel: 'Email me as this gift goes through',
       journeyOptInHelper:
@@ -1182,6 +1183,7 @@ export const STRINGS = {
       receiptForOther: '以他人名義開立收據',
       receiptForOtherHint: '適用於不同納稅人（例如配偶或公司）。收據姓名應與申請扣稅者一致。',
       receiptRequired: '請填寫正式收據所需的姓名與電郵。',
+      receiptEmailInvalid: '請檢查收據電郵，該地址似乎不正確。',
       applyCustom: '套用',
       journeyOptInLabel: '電郵通知我這筆捐款的去向',
       journeyOptInHelper: '已收到 → 配對計劃 → 課堂發生時。只限捐款用途更新，不是通訊。',
@@ -1922,6 +1924,7 @@ export const STRINGS = {
       receiptForOther: '以他人名义开立收据',
       receiptForOtherHint: '适用于不同纳税人（例如配偶或公司）。收据姓名应与申请扣税者一致。',
       receiptRequired: '请填写正式收据所需的姓名与电邮。',
+      receiptEmailInvalid: '请检查收据电邮，该地址似乎不正确。',
       applyCustom: '套用',
       journeyOptInLabel: '电邮通知我这笔捐款的去向',
       journeyOptInHelper: '已收到 → 配对计划 → 课堂发生时。只限捐款用途更新，不是通讯。',
