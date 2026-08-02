@@ -72,6 +72,33 @@ test("closeReadyPeriods emails completed allocations and stamps email_sent_at", 
   assert.equal(result.closed, 0, "emailed but not closed");
 });
 
+test("the batch email carries an absolute link to a route the client serves", async (t) => {
+  // This read `/help/donate/track/<token>` — a path App.jsx does not define, so it hit the `*`
+  // catch-all and redirected home, and relative besides, which is not clickable from an inbox.
+  // The tracking link is the donor's only route back to their giving history (§15 has no
+  // lookup-by-email), so a broken one costs them exactly what this email exists to give.
+  const emailSpy = mock.method(email, "sendEmail", async () => ({ mode: "log", delivered: true }));
+  mock.method(allocationsRepo, "updateAllocation", async () => {});
+  mock.method(donorPeriodsRepo, "updatePeriod", async () => {});
+  mock.method(donorPeriodsRepo, "listDueForClose", async () => [
+    { id: "p1", donor_id: "d1", period_start: "2026-07-15", period_end: "2026-07-31" },
+  ]);
+  mock.method(allocationsRepo, "listByPeriod", async () => [
+    { id: "a1", session_id: "s1", status: "completed", email_sent_at: null },
+  ]);
+  mock.method(sessionsRepo, "listByIds", async () => [
+    { id: "s1", title_en: "Yoga", starts_at: "2026-07-20T10:00:00Z", attendance_count: 10 },
+  ]);
+  mock.method(donorsRepo, "findById", async () => ({ id: "d1", email: "a@b.com", access_token: "tok_x" }));
+  t.after(() => mock.restoreAll());
+
+  await closeReadyPeriods({ clientOrigin: "https://love21.example" });
+
+  const body = emailSpy.mock.calls[0].arguments[0].text;
+  assert.match(body, /https:\/\/love21\.example\/give\/track\/tok_x/);
+  assert.doesNotMatch(body, /\/help\/donate\//, "the old dead path must not return");
+});
+
 test("closeReadyPeriods closes the period once every allocation is terminal", async (t) => {
   // Same shape as above but a3 is cancelled rather than pending. Cancelled is terminal —
   // it can produce no further news — so there is nothing left to tell this donor.

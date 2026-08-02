@@ -41,6 +41,8 @@ const TERMINAL_STATUSES = new Set(["completed", "cancelled"]);
  */
 async function closeReadyPeriods(opts = {}) {
   const today = opts.today ?? new Date();
+  const clientOrigin =
+    opts.clientOrigin || process.env.CLIENT_ORIGIN || "http://localhost:5173";
   const due = await donorPeriodsRepo.listDueForClose(today);
 
   let closed = 0;
@@ -88,7 +90,12 @@ async function closeReadyPeriods(opts = {}) {
         `Hello,\n\n` +
         `Your gift helped make these Love 21 sessions possible:\n\n` +
         `${lines.join("\n")}\n\n` +
-        `See your full tracking page: /help/donate/track/${donorRow.access_token}\n\n` +
+        // Absolute, and pointing at a route the client actually serves. This read
+        // `/help/donate/track/<token>` — a path App.jsx does not define, so it fell through to
+        // the `*` catch-all, and relative besides, which is not clickable from an inbox at all.
+        // The tracking link is the donor's only route back to their giving history, so a
+        // broken one here costs them the thing this email exists to give them.
+        `See your full tracking page: ${clientOrigin}/give/track/${donorRow.access_token}\n\n` +
         `Thank you for supporting the Love 21 community.`,
     });
 
