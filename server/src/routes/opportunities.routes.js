@@ -4,6 +4,7 @@ const { optionalAuth } = require("../middleware/require-auth");
 const opportunitiesService = require("../services/volunteering/opportunities.service");
 const interestsService = require("../services/volunteering/interests.service");
 const rateLimit = require("../middleware/rate-limit");
+const { actorFromAuth } = require("../lib/actor");
 const { envelope } = require("../lib/envelope");
 const {
   listOpportunitiesQuerySchema,
@@ -50,7 +51,7 @@ router.post(
       const result = await interestsService.registerInterest(
         request.params.id,
         request.body,
-        request.user ?? null,
+        actorFromAuth(request.auth),
       );
       response.status(201).json(envelope(result));
     } catch (error) {

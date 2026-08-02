@@ -1,5 +1,6 @@
 const express = require("express");
 const { validate } = require("../middleware/validate");
+const { optionalAuth } = require("../middleware/require-auth");
 const volunteerContext = require("../middleware/volunteer-context");
 const signupsService = require("../services/volunteering/signups.service");
 const feedbackService = require("../services/volunteering/signup-feedback.service");
@@ -20,6 +21,7 @@ const router = express.Router();
 
 router.post(
   "/",
+  optionalAuth,
   volunteerContext,
   validate({ body: createSignupBodySchema }),
   async (request, response, next) => {
@@ -38,6 +40,7 @@ router.post(
 
 router.get(
   "/",
+  optionalAuth,
   volunteerContext,
   validate({ query: listSignupsQuerySchema }),
   async (request, response, next) => {
@@ -57,6 +60,7 @@ router.get(
 // stray token from writing motivation/rating on someone else's signup.
 router.patch(
   "/:id",
+  optionalAuth,
   volunteerContext,
   validate({ params: patchSignupIdParamsSchema, body: patchSignupBodySchema }),
   async (request, response, next) => {
@@ -78,6 +82,7 @@ router.patch(
 
 router.delete(
   "/:id",
+  optionalAuth,
   volunteerContext,
   validate({ params: signupIdParamsSchema }),
   async (request, response, next) => {

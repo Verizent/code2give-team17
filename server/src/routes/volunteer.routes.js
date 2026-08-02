@@ -6,6 +6,7 @@ const signupsService = require("../services/volunteering/signups.service");
 const interestsService = require("../services/volunteering/interests.service");
 const badgesRepo = require("../data/badges.repo");
 const signupsRepo = require("../data/volunteer-signups.repo");
+const { actorFromAuth } = require("../lib/actor");
 const { envelope } = require("../lib/envelope");
 const {
   guestSignupBodySchema,
@@ -58,7 +59,7 @@ router.post(
         const result = await interestsService.registerInterest(
           opportunity_id,
           body,
-          request.user ?? null,
+          actorFromAuth(request.auth),
         );
         response.status(201).json(envelope(result));
         return;
@@ -78,7 +79,7 @@ router.post(
   validate({ body: guestSignupBodySchema }),
   async (request, response, next) => {
     try {
-      const result = await signupsService.createSignup(request.body, request.user ?? null);
+      const result = await signupsService.createSignup(request.body, actorFromAuth(request.auth));
       response.status(201).json(envelope(result));
     } catch (error) {
       next(error);
@@ -92,7 +93,12 @@ router.delete(
   validate({ params: signupIdParamsSchema }),
   async (request, response, next) => {
     try {
-      const cancelled = await signupsService.cancelSignup(request.params.id, request.user);
+      // requireAuth guarantees request.auth here, so the actor is never null and
+      // cancelSignup's ownership check always has an identity to compare against.
+      const cancelled = await signupsService.cancelSignup(
+        request.params.id,
+        actorFromAuth(request.auth),
+      );
       response.json(envelope(cancelled));
     } catch (error) {
       next(error);
