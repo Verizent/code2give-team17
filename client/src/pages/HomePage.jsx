@@ -5,6 +5,7 @@ import { Hero } from '@/components/home/hero'
 import { StatsBand } from '@/components/home/stats-band'
 import { AchievementsBand } from '@/components/home/achievements-band'
 import { ThreePaths } from '@/components/home/three-paths'
+import { NewsStrip } from '@/components/home/news-strip'
 import {
   AnnualReportBar,
   CommunityGallery,
@@ -32,6 +33,7 @@ export function HomePage() {
         <AchievementsBand />
         <PartnerCsrBand />
         <StoryTimeline />
+        <NewsStrip />
         <ProgrammesBand />
         <LeadershipBand />
         <CommunityGallery />

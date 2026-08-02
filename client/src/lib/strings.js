@@ -28,6 +28,24 @@ export const STRINGS = {
     homeSections: {
       navLabel: 'Page sections',
     },
+    news: {
+      eyebrow: 'Newsroom',
+      title: 'Latest from Love 21',
+      subhead: 'Announcements, explainers and our annual reporting.',
+      readMore: 'Read the full story',
+      readingTime: '{n} min read',
+      backToNews: 'Back to home',
+      notFound: 'We could not find that story.',
+      loadFailed: 'That story could not be loaded — please try again.',
+      categories: {
+        news: 'News',
+        education: 'Explainer',
+        report: 'Report',
+      },
+      mythLabel: 'Myth',
+      factLabel: 'Fact',
+      embedFallback: 'View this post on Instagram',
+    },
     hero: {
       eyebrow: '#Somuchability',
       line1: 'So much',
@@ -818,6 +836,24 @@ export const STRINGS = {
     homeSections: {
       navLabel: '頁面章節',
     },
+    news: {
+      eyebrow: '最新消息',
+      title: 'Love 21 最新動態',
+      subhead: '公告、專題解說與年度報告。',
+      readMore: '閱讀全文',
+      readingTime: '閱讀時間 {n} 分鐘',
+      backToNews: '返回首頁',
+      notFound: '找不到這篇文章。',
+      loadFailed: '無法載入這篇文章，請再試一次。',
+      categories: {
+        news: '消息',
+        education: '專題解說',
+        report: '報告',
+      },
+      mythLabel: '迷思',
+      factLabel: '事實',
+      embedFallback: '在 Instagram 上查看貼文',
+    },
     hero: {
       eyebrow: '#Somuchability',
       line1: '無限',
@@ -1557,6 +1593,24 @@ export const STRINGS = {
     },
     homeSections: {
       navLabel: '页面章节',
+    },
+    news: {
+      eyebrow: '最新消息',
+      title: 'Love 21 最新动态',
+      subhead: '公告、专题解说与年度报告。',
+      readMore: '阅读全文',
+      readingTime: '阅读时间 {n} 分钟',
+      backToNews: '返回首页',
+      notFound: '找不到这篇文章。',
+      loadFailed: '无法载入这篇文章，请再试一次。',
+      categories: {
+        news: '消息',
+        education: '专题解说',
+        report: '报告',
+      },
+      mythLabel: '迷思',
+      factLabel: '事实',
+      embedFallback: '在 Instagram 上查看贴文',
     },
     hero: {
       eyebrow: '#Somuchability',

@@ -20,6 +20,7 @@ import { CampaignCreatePage } from '@/pages/CampaignCreatePage'
 import { CampaignPublicPage } from '@/pages/CampaignPublicPage'
 import { GiveThanksPage } from '@/pages/GiveThanksPage'
 import { SupportPage } from '@/pages/SupportPage'
+import { ArticlePage } from '@/pages/ArticlePage'
 
 export default function App() {
   return (
@@ -50,7 +51,8 @@ export default function App() {
       </Route>
       <Route path="/support" element={<SupportPage />} />
       <Route path="/about" element={<Navigate to="/" replace />} />
-      <Route path="/news" element={<Navigate to="/#stories" replace />} />
+      <Route path="/news/:slug" element={<ArticlePage />} />
+      <Route path="/news" element={<Navigate to="/#news" replace />} />
       <Route path="/portal" element={<Navigate to="/" replace />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

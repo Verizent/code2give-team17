@@ -145,6 +145,13 @@ function CelebrateButton({ initialCount }) {
 export function StoryCard({ story }) {
   const { locale, t } = useSite()
   const timeAgo = formatRelativeTime(story.postedAt, t.community)
+  const isSubmitted = story.source === 'community'
+
+  // `relationship` is any non-empty string server-side, so an unrecognised value
+  // falls back to itself rather than rendering "undefined" on the card.
+  const tagLabel = isSubmitted
+    ? (t.community.relationships[story.relationship] ?? story.relationship)
+    : t.community.filters[story.type]
 
   return (
     <article className="break-inside-avoid overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
@@ -166,23 +173,33 @@ export function StoryCard({ story }) {
           </div>
         </div>
         <span className={cn('shrink-0 rounded-full px-3 py-1 text-xs font-semibold', tagStyle[story.accent])}>
-          {t.community.filters[story.type]}
+          {tagLabel}
         </span>
       </div>
 
-      <ImageCarousel images={story.images} alt={t.community.photoAlt} />
+      {story.images.length > 0 && (
+        <ImageCarousel images={story.images} alt={t.community.photoAlt} />
+      )}
 
       <div className="px-4 pt-3">
         <CelebrateButton initialCount={story.celebrateCount} />
       </div>
 
-      {/* Ability first, large — the headline of the post. */}
-      <div className="px-4 pt-3 pb-4">
-        <h3 className="font-display text-xl leading-snug font-extrabold text-navy text-balance">
-          {story.title[locale]}
-        </h3>
-        <p className="mt-1.5 text-base leading-relaxed text-ink/85">{story.line[locale]}</p>
-      </div>
+      {isSubmitted ? (
+        // A submitted post has no title and one language — the submitter's own. Rendered
+        // at body size so it never impersonates a curated achievement headline.
+        <div className="px-4 pt-3 pb-4">
+          <p className="text-base leading-relaxed text-ink/85">{story.story}</p>
+        </div>
+      ) : (
+        /* Ability first, large — the headline of the post. */
+        <div className="px-4 pt-3 pb-4">
+          <h3 className="font-display text-xl leading-snug font-extrabold text-navy text-balance">
+            {story.title[locale]}
+          </h3>
+          <p className="mt-1.5 text-base leading-relaxed text-ink/85">{story.line[locale]}</p>
+        </div>
+      )}
     </article>
   )
 }

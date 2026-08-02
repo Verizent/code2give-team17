@@ -6,6 +6,8 @@ import { useReducedMotion } from '@/lib/use-reduced-motion'
 import { FadeRise } from '@/components/community/fade-rise'
 import { StoryCard } from '@/components/community/story-card'
 import { KnowledgeCard } from '@/components/community/knowledge-card'
+import { listVoices } from '@/features/content/api'
+import { mapVoice } from '@/features/content/map-voice'
 
 /** Count-up header for the Ability Wall. Plays once, on first scroll into view. */
 function MomentsCounter() {
@@ -52,9 +54,18 @@ function MomentsCounter() {
   )
 }
 
-function buildFeed(filter) {
-  const filtered =
+function buildFeed(filter, voices) {
+  const curated =
     filter === 'all' ? stories : stories.filter((s) => s.type === filter)
+
+  // Submitted posts have no activity type, so they belong to the unfiltered wall only.
+  // Including them under a programme tab would assert a programme nobody recorded.
+  const filtered =
+    filter === 'all'
+      ? [...voices, ...curated].sort(
+          (a, b) => new Date(b.postedAt) - new Date(a.postedAt),
+        )
+      : curated
 
   const entries = []
   let storyCount = 0
@@ -79,7 +90,21 @@ function buildFeed(filter) {
 export function StoryFeed() {
   const { t } = useSite()
   const [filter, setFilter] = useState('all')
-  const feed = buildFeed(filter)
+  const [voices, setVoices] = useState([])
+
+  // Curated stories render immediately; approved submissions fold in when they land,
+  // so a slow API delays nothing the visitor is already looking at.
+  useEffect(() => {
+    let cancelled = false
+    listVoices().then((rows) => {
+      if (!cancelled) setVoices(rows.map(mapVoice))
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const feed = buildFeed(filter, voices)
 
   const tabs = [
     { id: 'all', label: t.community.filterAll },
