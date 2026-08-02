@@ -72,8 +72,13 @@ async function createCheckoutSession(input, { clientOrigin }) {
     // Stripe collects the email natively; the webhook reads it back off the session. This is
     // why our own form has no email field at all.
     customer_creation: isRecurring ? undefined : "always",
-    success_url: `${clientOrigin}/donate/thanks?session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${clientOrigin}/donate?cancelled=1`,
+    // These must match routes the client actually serves (client/src/App.jsx). They
+    // previously pointed at `/donate`, which the router does not define — it falls through
+    // to the `*` catch-all and redirects to `/`, so a donor who paid landed on the homepage
+    // with no confirmation. Nothing failed loudly, because Stripe considers any 200 a
+    // successful return. Change these only alongside the routes themselves.
+    success_url: `${clientOrigin}/give/thanks?session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${clientOrigin}/give?cancelled=1`,
     metadata: {
       amount_hkd: String(amountHkd),
       tracking_opt_in: String(trackingOptIn),

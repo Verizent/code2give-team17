@@ -64,6 +64,29 @@ test("a one-off gift is mode=payment; monthly is a subscription", async (t) => {
   assert.deepEqual(recurring.line_items[0].price_data.recurring, { interval: "month" });
 });
 
+test("Stripe returns the donor to routes the client actually serves", async (t) => {
+  // Regression: these read `/donate/thanks` and `/donate`, neither of which App.jsx defines.
+  // The router's `*` catch-all swallowed them and sent a paying donor to the homepage. Stripe
+  // cannot detect this — any 200 counts as a successful return — so only an assertion here
+  // stops it recurring. Keep these strings in step with client/src/App.jsx.
+  const deps = mockStripe(t);
+
+  await createCheckoutSession({ amount_hkd: 100 }, URLS);
+  const sent = deps.create.mock.calls[0].arguments[0];
+
+  assert.equal(
+    sent.success_url,
+    "http://localhost:5173/give/thanks?session_id={CHECKOUT_SESSION_ID}",
+  );
+  assert.equal(sent.cancel_url, "http://localhost:5173/give?cancelled=1");
+
+  // The thanks page polls GET /api/donations/session/:id and has nothing to poll without it.
+  assert.ok(
+    sent.success_url.includes("{CHECKOUT_SESSION_ID}"),
+    "Stripe must interpolate the session id into the success URL",
+  );
+});
+
 test("the donation is created pending, pointing at the session, with no donor yet", async (t) => {
   // The donor is unknown until the webhook carries the email Stripe collected — our form
   // has no email field at all (CONTEXT.md §15).
