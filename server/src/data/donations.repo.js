@@ -9,7 +9,9 @@ async function insertDonation(row) {
   const { data, error } = await getSupabase()
     .from("donations")
     .insert({ status: "succeeded", ...row })
-    .select("id, amount_hkd, frequency, status, created_at")
+    // Includes `campaign_id`: a create should hand back what it actually wrote, and callers
+    // reasonably read the earmark off the returned row.
+    .select("id, amount_hkd, frequency, status, campaign_id, created_at")
     .single();
 
   assertOk(error);

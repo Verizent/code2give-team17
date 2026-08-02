@@ -13,6 +13,10 @@ const LIST_COLUMNS = [
   "starts_at",
   "ends_at",
   "capacity",
+  // Selected under its real name, not aliased to `spots_filled`. The service derives
+  // effective fullness itself and reads `row.spots_filled_handson` directly
+  // (opportunities.service.js), so an alias would leave that read `undefined` and
+  // `Number(undefined) || 0` would silently report zero HandsOn bookings.
   "spots_filled_handson",
   "min_age",
   "skills",
@@ -90,6 +94,11 @@ async function listInRange({ fromIso, toIso }) {
 async function summariseOpen() {
   const { data, error } = await getSupabase()
     .from("volunteer_opportunities")
+    // Real column name: the loop below reads `row.spots_filled_handson`, so an alias would
+    // leave it undefined and `?? 0` would report every seat as open.
+    //
+    // `open` only — fullness is derived now rather than stored, so there is no longer a
+    // `full` status to include.
     .select("id, capacity, spots_filled_handson, starts_at, status")
     .in("status", ["open"]);
   assertOk(error);

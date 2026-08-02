@@ -3,6 +3,8 @@
 // POST /api/webhooks/stripe marks succeeded on checkout.session.completed (§17).
 const { ApiError } = require("../lib/api-error");
 const { normalizeEmail } = require("../lib/normalize");
+// Module object, not destructured, so `mock.method` in the tests replaces what this reads.
+const campaignsRepo = require("../data/campaigns.repo");
 const donationsRepo = require("../data/donations.repo");
 const donorsRepo = require("../data/donors.repo");
 const donorsService = require("./donors.service");
@@ -35,13 +37,43 @@ async function createDonation(input) {
 
   const donor = await donorsService.upsertDonor({ email, trackingOptIn: true });
 
+  const campaignId = input.campaign_id ?? null;
+
   const donation = await donationsRepo.insertDonation({
     donor_id: donor.id,
     amount_hkd: amount,
     frequency,
-    campaign_id: input.campaign_id ?? null,
+    campaign_id: campaignId,
     status: "succeeded",
   });
+
+  // Credit the fundraiser this gift was earmarked for. The Stripe path does this from the
+  // webhook on `checkout.session.completed`; this path has no webhook at all — it writes a
+  // succeeded donation directly — so without this the fundraiser reads zero while its
+  // donations sit plainly in the table.
+  //
+  // Try/caught for the same reason as the webhook, but with a sharper edge here: the
+  // donation row is already written by this point. Throwing would report failure for a gift
+  // that was in fact recorded, and the caller would reasonably retry and double-give.
+  //
+  // Guarded on the local `campaignId`, deliberately NOT on `donation.campaign_id`. Repos here
+  // use explicit column lists, so a field the insert does not select comes back `undefined`
+  // and this branch silently never runs — which is exactly how the Stripe path shipped broken
+  // once already. Reading the value we just wrote removes the dependency entirely.
+  //
+  // DEMO-ONLY: `recalculateRaised` is still read-then-write, so a racing write can store a
+  // briefly stale total — but it recomputes from the donation rows, so the next gift
+  // converges on the truth instead of compounding the error. Real fix is one atomic
+  // statement, which needs a SQL function, i.e. a migration (§19).
+  if (campaignId) {
+    try {
+      await campaignsRepo.recalculateRaised(campaignId);
+    } catch (creditError) {
+      console.error(
+        `donation ${donation.id}: fundraiser credit failed — ${creditError.message}`,
+      );
+    }
+  }
 
   // `access_token` is deliberately absent. It is a bearer capability reaching the donor's
   // tracking page — gift history, amounts, name — and this endpoint is unauthenticated and

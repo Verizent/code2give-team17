@@ -25,7 +25,16 @@ function getStripe() {
 
   const secretKey = process.env.STRIPE_SECRET_KEY;
   if (!secretKey) {
-    throw new ApiError(500, "STRIPE_SECRET_KEY is not set — see server/.env.example");
+    // 503 + PAYMENTS_UNAVAILABLE rather than a bare 500. A missing key is a deployment gap,
+    // not a crash, and the distinction is the only part that survives: NODE_ENV=production
+    // strips `message`, so a 500/INTERNAL leaves the donate form with nothing to say beyond
+    // "something went wrong" — the least useful sentence available under a Give button. With
+    // a code, the form can say payments are unavailable and stop implying a retry will help.
+    throw new ApiError(
+      503,
+      "STRIPE_SECRET_KEY is not set — add an sk_test_… key to server/.env (see server/.env.example)",
+      "PAYMENTS_UNAVAILABLE",
+    );
   }
 
   // A live key here would move real money on a hackathon build. CONTEXT.md §18.6 makes this

@@ -57,10 +57,10 @@ function mockDeps(t, { firstDelivery = true, donation = pendingDonation } = {}) 
   // Stubbed so the suite does not print an email per test, and so the thank-you can be
   // asserted on. `sendEmail` is otherwise a real console write even in log-mode.
   const sendEmail = mock.method(emailLib, "sendEmail", async () => ({ mode: "log", delivered: true }));
-  const addRaised = mock.method(campaignsRepo, "addRaised", async () => ({ id: "c1" }));
+  const recalculateRaised = mock.method(campaignsRepo, "recalculateRaised", async () => ({ id: "c1" }));
   t.after(() => mock.restoreAll());
 
-  return { recordOnce, upsertDonor, findByStripeSession, updateDonation, sendEmail, addRaised };
+  return { recordOnce, upsertDonor, findByStripeSession, updateDonation, sendEmail, recalculateRaised };
 }
 
 /** A donation earmarked for a fundraiser. */
@@ -195,8 +195,8 @@ test("a donation earmarked for a fundraiser credits its raised total", async (t)
 
   const outcome = await handleEvent(sessionCompleted());
 
-  assert.equal(deps.addRaised.mock.callCount(), 1);
-  assert.deepEqual(deps.addRaised.mock.calls[0].arguments, [CAMPAIGN_ID, 2500]);
+  assert.equal(deps.recalculateRaised.mock.callCount(), 1);
+  assert.deepEqual(deps.recalculateRaised.mock.calls[0].arguments, [CAMPAIGN_ID]);
   assert.equal(outcome.result.campaign.credited_hkd, 2500);
 });
 
@@ -205,7 +205,7 @@ test("an unearmarked donation never touches a fundraiser", async (t) => {
 
   await handleEvent(sessionCompleted());
 
-  assert.equal(deps.addRaised.mock.callCount(), 0);
+  assert.equal(deps.recalculateRaised.mock.callCount(), 0);
 });
 
 test("an already-succeeded fundraiser donation is not credited twice", async (t) => {
@@ -218,7 +218,7 @@ test("an already-succeeded fundraiser donation is not credited twice", async (t)
 
   await handleEvent(sessionCompleted());
 
-  assert.equal(deps.addRaised.mock.callCount(), 0);
+  assert.equal(deps.recalculateRaised.mock.callCount(), 0);
 });
 
 test("a failing fundraiser credit does not fail the webhook", async (t) => {
@@ -227,7 +227,7 @@ test("a failing fundraiser credit does not fail the webhook", async (t) => {
   const deps = mockDeps(t, {
     donation: { ...pendingDonation, campaign_id: CAMPAIGN_ID },
   });
-  deps.addRaised.mock.mockImplementation(async () => {
+  deps.recalculateRaised.mock.mockImplementation(async () => {
     throw new Error("campaigns table is on fire");
   });
 

@@ -105,16 +105,16 @@ async function handleCheckoutCompleted(session) {
   // already-succeeded early return above. A double credit raises no error and produces no
   // bad row — the total is simply wrong, which is why it is guarded twice.
   //
-  // DEMO-ONLY: `addRaised` is a read-then-write, so two donations to the same campaign
-  // landing together can lose one update — real version needs an atomic SQL increment
-  // (`raised_hkd = raised_hkd + $1`, via an RPC or a migration). Harmless at demo volume,
-  // wrong under real traffic (§19).
+  // DEMO-ONLY: `recalculateRaised` is still read-then-write, so a racing write can store a
+  // briefly stale total — but it recomputes from the donation rows, so the next gift
+  // converges on the truth instead of compounding the error. Real fix is one atomic
+  // statement, which needs a SQL function, i.e. a migration (§19).
   let campaignOutcome = null;
   if (donation.campaign_id) {
     // Same try/catch reasoning as allocation and email below: anything thrown here becomes a
     // non-2xx, and Stripe then retries the whole handler forever.
     try {
-      await campaignsRepo.addRaised(donation.campaign_id, donation.amount_hkd);
+      await campaignsRepo.recalculateRaised(donation.campaign_id);
       campaignOutcome = {
         campaign_id: donation.campaign_id,
         credited_hkd: donation.amount_hkd,

@@ -132,97 +132,112 @@ export function GivePage() {
           )}
           {tab === 'wishlist' && <WishlistGrid />}
           {tab === 'fundraise' && (
-            <section>
-              <h2 className="font-display text-3xl font-semibold text-navy">{g.fundraiseTitle}</h2>
-              <p className="mt-3 max-w-2xl text-navy/70">{g.fundraiseSubhead}</p>
-              <ol className="mt-8 grid gap-4 sm:grid-cols-3">
-                {g.fundraiseSteps.map((step, index) => (
-                  <li key={step} className="rounded-2xl bg-white p-6">
-                    <span className="font-display text-3xl font-semibold text-red">
-                      {index + 1}
-                    </span>
-                    <p className="mt-3 font-semibold text-navy">{step}</p>
-                  </li>
-                ))}
-              </ol>
-              <Link
-                to="/give/campaigns/new"
-                className="mt-7 inline-flex min-h-12 items-center rounded-md bg-red px-6 font-semibold text-white"
-              >
-                {g.createCampaignCta}
-              </Link>
-
-              <h3 className="mt-14 font-display text-2xl font-semibold text-navy">
-                {g.liveCampaigns}
-              </h3>
-              {liveCampaigns.length ? (
-                <div className="mt-5 grid gap-4 sm:grid-cols-2">
-                  {liveCampaigns.map((campaign) => (
-                    <Link
-                      key={campaign.slug}
-                      to={`/c/${campaign.slug}`}
-                      className="flex gap-4 rounded-2xl bg-white p-4"
-                    >
-                      <img
-                        src={campaign.cover}
-                        alt=""
-                        className="h-24 w-28 rounded-xl object-cover"
-                      />
-                      <div>
-                        <p className="font-display text-lg font-semibold text-navy">
-                          {campaign.title}
-                        </p>
-                        <p className="mt-2 text-sm text-navy/65">
-                          HK${campaign.raised_hkd.toLocaleString()} / HK$
-                          {campaign.goal_hkd.toLocaleString()}
-                        </p>
-                      </div>
-                    </Link>
+            /* Each block is a bordered panel on a tinted ground. The cards inside were
+               white on a white page, so nothing marked where one group ended and the
+               next began. */
+            <section className="space-y-6">
+              <div className="rounded-2xl border border-navy/10 bg-paper p-6 sm:p-8">
+                <h2 className="font-display text-3xl font-semibold text-navy">
+                  {g.fundraiseTitle}
+                </h2>
+                <p className="mt-3 max-w-2xl text-navy/70">{g.fundraiseSubhead}</p>
+                <ol className="mt-8 grid gap-4 sm:grid-cols-3">
+                  {g.fundraiseSteps.map((step, index) => (
+                    <li key={step} className="rounded-2xl border border-navy/10 bg-white p-6">
+                      <span className="font-display text-3xl font-semibold text-red">
+                        {index + 1}
+                      </span>
+                      <p className="mt-3 font-semibold text-navy">{step}</p>
+                    </li>
                   ))}
-                </div>
-              ) : (
-                <p className="mt-5 rounded-2xl bg-white p-5 text-navy/70">{g.noLiveCampaigns}</p>
-              )}
+                </ol>
+                <Link
+                  to="/give/campaigns/new"
+                  className="mt-7 inline-flex min-h-12 items-center rounded-md bg-red px-6 font-semibold text-white"
+                >
+                  {g.createCampaignCta}
+                </Link>
+              </div>
 
-              <h3 className="mt-14 font-display text-2xl font-semibold text-navy">
-                {g.yourCampaigns}
-              </h3>
-              {myCampaigns.length ? (
-                <div className="mt-5 grid gap-4 sm:grid-cols-2">
-                  {myCampaigns.map((campaign) => (
-                    <Link
-                      key={campaign.slug}
-                      to={`/c/${campaign.slug}`}
-                      className="flex gap-4 rounded-2xl bg-white p-4"
-                    >
-                      <img
-                        src={campaign.cover}
-                        alt=""
-                        className="h-24 w-28 rounded-xl object-cover"
-                      />
-                      <div>
-                        <p
-                          className={cn(
-                            'inline-flex rounded-md px-2.5 py-1 text-[12px] font-semibold',
-                            statusClass(campaign.status),
-                          )}
-                        >
-                          {statusLabel(campaign.status, g)}
-                        </p>
-                        <p className="mt-2 font-display text-lg font-semibold text-navy">
-                          {campaign.title}
-                        </p>
-                        <p className="mt-2 text-sm text-navy/65">
-                          HK${campaign.raised_hkd.toLocaleString()} / HK$
-                          {campaign.goal_hkd.toLocaleString()}
-                        </p>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              ) : (
-                <p className="mt-5 rounded-2xl bg-white p-5 text-navy/70">{g.noCampaigns}</p>
-              )}
+              <div className="rounded-2xl border border-navy/10 bg-paper p-6 sm:p-8">
+                <h3 className="font-display text-2xl font-semibold text-navy">
+                  {g.liveCampaigns}
+                </h3>
+                {liveCampaigns.length ? (
+                  <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                    {liveCampaigns.map((campaign) => (
+                      <Link
+                        key={campaign.slug}
+                        to={`/c/${campaign.slug}`}
+                        className="flex gap-4 rounded-2xl border border-navy/10 bg-white p-4"
+                      >
+                        <img
+                          src={campaign.cover}
+                          alt=""
+                          className="h-24 w-28 rounded-xl object-cover"
+                        />
+                        <div>
+                          <p className="font-display text-lg font-semibold text-navy">
+                            {campaign.title}
+                          </p>
+                          <p className="mt-2 text-sm text-navy/65">
+                            HK${campaign.raised_hkd.toLocaleString()} / HK$
+                            {campaign.goal_hkd.toLocaleString()}
+                          </p>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="mt-5 rounded-2xl border border-navy/10 bg-white p-5 text-navy/70">
+                    {g.noLiveCampaigns}
+                  </p>
+                )}
+              </div>
+
+              <div className="rounded-2xl border border-navy/10 bg-paper p-6 sm:p-8">
+                <h3 className="font-display text-2xl font-semibold text-navy">
+                  {g.yourCampaigns}
+                </h3>
+                {myCampaigns.length ? (
+                  <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                    {myCampaigns.map((campaign) => (
+                      <Link
+                        key={campaign.slug}
+                        to={`/c/${campaign.slug}`}
+                        className="flex gap-4 rounded-2xl border border-navy/10 bg-white p-4"
+                      >
+                        <img
+                          src={campaign.cover}
+                          alt=""
+                          className="h-24 w-28 rounded-xl object-cover"
+                        />
+                        <div>
+                          <p
+                            className={cn(
+                              'inline-flex rounded-md px-2.5 py-1 text-[12px] font-semibold',
+                              statusClass(campaign.status),
+                            )}
+                          >
+                            {statusLabel(campaign.status, g)}
+                          </p>
+                          <p className="mt-2 font-display text-lg font-semibold text-navy">
+                            {campaign.title}
+                          </p>
+                          <p className="mt-2 text-sm text-navy/65">
+                            HK${campaign.raised_hkd.toLocaleString()} / HK$
+                            {campaign.goal_hkd.toLocaleString()}
+                          </p>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="mt-5 rounded-2xl border border-navy/10 bg-white p-5 text-navy/70">
+                    {g.noCampaigns}
+                  </p>
+                )}
+              </div>
             </section>
           )}
         </div>

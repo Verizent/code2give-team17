@@ -5,7 +5,7 @@ const communityPostsRepo = require("../../../src/data/community-posts.repo");
 const {
   listVoices,
   submitVoice,
-  listPendingVoices,
+  listVoicesByStatus,
   moderateVoice,
 } = require("../../../src/services/content/community-posts.service");
 
@@ -92,11 +92,11 @@ test("submitVoice strips the website field before passing to repo", async (t) =>
   assert.equal("website" in passedData, false, "website must not reach the repo");
 });
 
-test("listPendingVoices returns the admin queue with paging meta", async (t) => {
-  mock.method(communityPostsRepo, "listPending", async () => ({ rows: [pendingRow], total: 1 }));
+test("listVoicesByStatus returns the admin queue with paging meta", async (t) => {
+  mock.method(communityPostsRepo, "listByStatus", async () => ({ rows: [pendingRow], total: 1 }));
   t.after(() => mock.restoreAll());
 
-  const { items, meta } = await listPendingVoices({ page: 1, limit: 20 });
+  const { items, meta } = await listVoicesByStatus({ page: 1, limit: 20 });
 
   assert.equal(items.length, 1);
   assert.equal(items[0].contact_email, "rachel@example.com");

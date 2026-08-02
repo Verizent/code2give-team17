@@ -13,6 +13,7 @@ const LIST_COLUMNS = [
   "starts_at",
   "ends_at",
   "capacity",
+  // Real column name, not aliased — see opportunities.repo.js for why.
   "spots_filled_handson",
   "min_age",
   "skills",

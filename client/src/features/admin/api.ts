@@ -1,4 +1,5 @@
 import { apiData, apiClient, type Envelope } from '@/lib/apiClient'
+import { ANALYTICS_STUB, analyticsFixture } from './fixtures'
 
 export type DashboardMetrics = {
   donations_total_hkd: number
@@ -80,6 +81,7 @@ export type AnalyticsPayload = {
 }
 
 export async function fetchAdminAnalytics(range = 'all'): Promise<AnalyticsPayload> {
+  if (ANALYTICS_STUB) return analyticsFixture(range)
   const { data } = await apiData<AnalyticsPayload>(
     `/api/admin/analytics?range=${encodeURIComponent(range)}`,
   )
@@ -111,6 +113,16 @@ export async function moderateCommunityPost(
     },
   )
   return data
+}
+
+/**
+ * Permanently removes a submission. Unlike an article, this is a hard delete — there is
+ * no archived state on community_posts, so the row is gone and there is no undo.
+ */
+export async function deleteCommunityPost(id: string): Promise<void> {
+  await apiClient(`/api/admin/community-posts/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+  })
 }
 
 export type AdminArticle = {
@@ -281,6 +293,16 @@ export async function updateAdminWishlistItem(
 /** Server answers 204 with no body, so there is nothing to unwrap. */
 export async function deleteAdminWishlistItem(id: string): Promise<void> {
   await apiClient(`/api/admin/wishlist/${encodeURIComponent(id)}`, { method: 'DELETE' })
+}
+
+/**
+ * Removes an article from the CMS and the public site.
+ *
+ * The server archives rather than dropping the row, so a mis-click is recoverable from
+ * the database — but there is no restore UI, so to the operator this is a delete.
+ */
+export async function deleteAdminArticle(id: string): Promise<void> {
+  await apiClient(`/api/admin/articles/${encodeURIComponent(id)}`, { method: 'DELETE' })
 }
 
 export type AdminInstagramEmbed = {

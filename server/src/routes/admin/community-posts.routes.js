@@ -1,14 +1,20 @@
 const express = require("express");
 const { validate } = require("../../middleware/validate");
-const { listQuerySchema, idParamSchema, moderateSchema } = require("../../schemas/query.schema");
+const {
+  idParamSchema,
+  moderateSchema,
+  voicesListQuerySchema,
+} = require("../../schemas/query.schema");
 const { envelope } = require("../../lib/envelope");
 const communityPostsService = require("../../services/content/community-posts.service");
 
 const router = express.Router();
 
-router.get("/", validate({ query: listQuerySchema }), async (request, response, next) => {
+router.get("/", validate({ query: voicesListQuerySchema }), async (request, response, next) => {
   try {
-    const { items, meta } = await communityPostsService.listPendingVoices(request.validatedQuery);
+    const { items, meta } = await communityPostsService.listVoicesByStatus(
+      request.validatedQuery,
+    );
     response.json(envelope(items, meta));
   } catch (error) {
     next(error);
@@ -30,5 +36,16 @@ router.post(
     }
   },
 );
+
+// 204 with no body, matching DELETE /api/admin/instagram/:id. The row is gone, so there
+// is no resource left to return and an envelope would be describing nothing.
+router.delete("/:id", validate({ params: idParamSchema }), async (request, response, next) => {
+  try {
+    await communityPostsService.deleteVoice(request.validatedParams.id);
+    response.status(204).end();
+  } catch (error) {
+    next(error);
+  }
+});
 
 module.exports = router;
