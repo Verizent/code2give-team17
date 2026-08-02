@@ -604,6 +604,91 @@ Error codes (the `code` field clients branch on):
 
 ---
 
+## Rate limiting
+
+`middleware/rate-limit.js` is a fixed-window limiter held in the process's own memory. It was a
+no-op stub until recently — three routes mounted it and looked protected while being wide open.
+
+Mount it with a budget:
+
+```js
+const rateLimit = require("../middleware/rate-limit");
+
+router.post("/thing", rateLimit({ key: "thing", limit: 10 }), handler);
+```
+
+Each call to `rateLimit()` closes over its **own** `Map`, so routes cannot throttle or evict one
+another, and a test gets a clean store just by building new middleware.
+
+### Current budgets
+
+All windows are 15 minutes.
+
+| Route | Limit | Keyed on | Why |
+|---|---|---|---|
+| `GET /api/donations/referral-status` | 30 | IP | Unauthenticated, so it can be used to test whether an address is a known donor. The donate form calls it from a debounced `onChange`, so one honest donor makes a handful — 30 still makes enumeration useless. |
+| `POST /api/email-verifications` | 5 per address **+** 10 per IP | address, IP | Sends real mail. Capping IP alone still lets a spread of hosts bury one person's inbox; capping the address alone punishes a shared office NAT. Two limiters, two budgets. |
+| `POST /api/opportunities/:id/interest` | 10 | IP | Unauthenticated write. |
+
+`MAX_ATTEMPTS` in `email-verification.service.js` is **not** related — it caps guesses against an
+existing code, not how many codes we send.
+
+### Limiting on more than one axis
+
+`identify(request)` may return several identities. The request is refused when **any** of them is
+exhausted, and every one is charged only if the request is allowed through:
+
+```js
+rateLimit({
+  key: "email-verification-address",
+  limit: 5,
+  identify: (request) =>
+    typeof request.body?.email === "string" ? request.body.email.trim() : null,
+});
+```
+
+`identify` runs **before** `validate()`, so `request.body` is parsed but not yet trusted — check
+types rather than assuming a string is there. Returning nothing lets the request through: an
+unidentifiable caller fails open rather than blocking the route for everyone.
+
+### What a refusal looks like
+
+Standard §29 envelope, plus a `Retry-After` header in whole seconds:
+
+```
+HTTP/1.1 429 Too Many Requests
+Retry-After: 871
+
+{"error":"Too Many Requests","code":"RATE_LIMITED","message":"Too many requests. Try again in 871s."}
+```
+
+### `TRUST_PROXY` — read this before deploying
+
+The limiters key on `request.ip`, and what that means depends on this setting. **Both directions
+fail badly**, so it is not a detail to leave to chance:
+
+| Situation | Result |
+|---|---|
+| Unset, behind a reverse proxy | Every visitor collapses into the proxy's single IP and they throttle each other. The 31st honest donor in the window gets a 429. |
+| Set, but reachable directly | `X-Forwarded-For` is caller-supplied, so anyone can forge a fresh bucket per request and skip the limits entirely. |
+
+Set `TRUST_PROXY=1` for a single proxy hop; leave it empty when the server is directly reachable.
+It defaults to empty, which is what this app has always done.
+
+### Known limits
+
+Both deliberate, and both worth fixing before this faces real traffic:
+
+- **Per process.** Counters reset on restart and do not coordinate across instances — a second
+  instance doubles every limit. A shared store (Postgres or Redis) is the fix.
+- **In-memory only.** Bucket count is capped at `MAX_TRACKED_KEYS` (10,000) with expired entries
+  swept on an interval, so a spray of distinct identities cannot grow the Map without bound.
+
+`RATE_LIMIT_DISABLED=true` bypasses every limiter. It exists so a demo cannot be interrupted by
+its own throttling — never set it anywhere the public can reach.
+
+---
+
 ## Migrations
 
 Two separate SQL homes — both are correct, neither supersedes the other:
