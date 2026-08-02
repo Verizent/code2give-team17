@@ -89,8 +89,14 @@ export function invalidateOpportunitiesCache() {
 }
 
 /**
- * Prefer server signup; fall back to localStorage when the API is down.
- * Capacity is enforced server-side for UUID opportunities.
+ * Server is authoritative for any real (UUID) opportunity. The local store mirrors what
+ * the server accepted so My Impact and the briefing work offline — it never stands in for
+ * a signup the server refused.
+ *
+ * It used to: any non-409 failure fell through to the local mirror, which returned
+ * `ok: true` with a made-up `vs_…` id, so the success page rendered for a signup that did
+ * not exist. That masked every server rejection — including the 400 from the new email
+ * verification gate, which is what made the gate look like it was doing nothing.
  */
 /**
  * Step 1 of proving the address: asks the server to email a six-digit code. The code
@@ -148,6 +154,9 @@ export async function submitSignup(input: {
   emergency_phone?: string
   /** Omitted only when signed in as the address being used — the server allows that. */
   verification_token?: string
+  /** Asked once per volunteer; the server ignores these if they already answered. */
+  discovery_sources?: string[]
+  discovery_other?: string
 }): Promise<
   { ok: true; signupId: string } | { ok: false; reason: 'full' | 'duplicate' | 'error' }
 > {
@@ -170,6 +179,12 @@ export async function submitSignup(input: {
           ...(input.verification_token
             ? { verification_token: input.verification_token }
             : {}),
+          ...(input.discovery_sources?.length
+            ? {
+                discovery_sources: input.discovery_sources,
+                ...(input.discovery_other ? { discovery_other: input.discovery_other } : {}),
+              }
+            : {}),
         }),
       })
       invalidateOpportunitiesCache()
@@ -183,6 +198,7 @@ export async function submitSignup(input: {
         emergency_phone: input.emergency_phone,
         id: data.signup.id,
         skipCapacityCheck: true,
+        countedByServer: true,
       })
       return { ok: true, signupId: data.signup.id }
     } catch (err) {
@@ -202,10 +218,16 @@ export async function submitSignup(input: {
         }
         return { ok: false, reason: 'full' }
       }
-      // Fall through to local mirror.
+
+      // Report the failure. Mirroring locally here would hand back a fabricated id and
+      // render the success page for a signup the server never created — the volunteer
+      // turns up to a session with no record of them.
+      return { ok: false, reason: 'error' }
     }
   }
 
+  // Mock mode, or a fixture id the API does not know about: the local store is the only
+  // record there is, so it is authoritative rather than a mirror.
   const cached = peekOpportunities().find((o) => o.id === input.opportunity_id)
   const result = createSignup({
     opportunity_id: input.opportunity_id,
