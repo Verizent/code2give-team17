@@ -215,3 +215,45 @@ export async function unpublishAdminArticle(id: string): Promise<AdminArticle> {
   )
   return data
 }
+
+export type InstagramEmbed = {
+  id: string
+  url: string
+  caption_en: string | null
+  caption_zh: string | null
+  display_order: number | null
+  is_active: boolean
+}
+
+export async function fetchAdminInstagram(): Promise<InstagramEmbed[]> {
+  const { data } = await apiData<InstagramEmbed[]>('/api/admin/instagram')
+  return data ?? []
+}
+
+export async function createInstagramEmbed(payload: {
+  url: string
+  caption_en?: string
+  caption_zh?: string
+  display_order?: number
+}): Promise<InstagramEmbed> {
+  const { data } = await apiData<InstagramEmbed>('/api/admin/instagram', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+  return data
+}
+
+export async function updateInstagramEmbed(
+  id: string,
+  payload: Partial<Omit<InstagramEmbed, 'id'>>,
+): Promise<InstagramEmbed> {
+  const { data } = await apiData<InstagramEmbed>(
+    `/api/admin/instagram/${encodeURIComponent(id)}`,
+    { method: 'PATCH', body: JSON.stringify(payload) },
+  )
+  return data
+}
+
+export async function deleteInstagramEmbed(id: string): Promise<void> {
+  await apiClient(`/api/admin/instagram/${encodeURIComponent(id)}`, { method: 'DELETE' })
+}

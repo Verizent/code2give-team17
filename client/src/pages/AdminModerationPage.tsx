@@ -5,6 +5,7 @@ import {
   type CommunityPost,
 } from '@/features/admin/api'
 import { useSite } from '@/components/site-provider'
+import { InstagramEmbeds } from '@/features/admin/components/instagram-embeds'
 import { ApiError } from '@/lib/apiClient'
 
 export function AdminModerationPage() {
@@ -95,6 +96,23 @@ export function AdminModerationPage() {
           ))}
         </ul>
       )}
+      <InstagramEmbeds
+        copy={{
+          title: a.igTitle,
+          intro: a.igIntro,
+          urlLabel: a.igUrlLabel,
+          captionLabel: a.igCaptionLabel,
+          orderLabel: a.igOrderLabel,
+          add: a.igAdd,
+          empty: a.igEmpty,
+          active: a.igActive,
+          hidden: a.igHidden,
+          remove: a.igRemove,
+          confirmRemove: a.igConfirmRemove,
+          cancel: a.igCancel,
+          error: a.igError,
+        }}
+      />
     </div>
   )
 }
