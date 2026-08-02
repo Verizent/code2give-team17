@@ -3,10 +3,6 @@ const { z } = require("zod");
 const { validate } = require("../middleware/validate");
 const { envelope } = require("../lib/envelope");
 const { ApiError } = require("../lib/api-error");
-const {
-  listCampaigns,
-  moderateCampaign,
-} = require("../services/campaigns.service");
 const allocationsRepo = require("../data/allocations.repo");
 const donationsRepo = require("../data/donations.repo");
 const donorsRepo = require("../data/donors.repo");
@@ -44,23 +40,8 @@ router.get(
   },
 );
 
-router.get("/campaigns", async (request, response, next) => {
-  try {
-    const items = await listCampaigns();
-    response.json({ items, meta: { total: items.length } });
-  } catch (error) {
-    next(error);
-  }
-});
-
-router.post("/campaigns/:slug/moderate", async (request, response, next) => {
-  try {
-    const campaign = await moderateCampaign(request.params.slug, request.body.status);
-    response.json(campaign);
-  } catch (error) {
-    next(error);
-  }
-});
+// Campaign routes moved to routes/admin/campaigns.routes.js — they are id-keyed there,
+// enveloped, and Zod-validated.
 
 // ── Allocations admin surface (§16) ────────────────────────────────────────
 
