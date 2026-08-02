@@ -99,6 +99,32 @@ export async function startDonationCheckout(
   return { mode: 'local', donation: saveDonation(input) }
 }
 
+/** Shape of `GET /api/donations/session/:session_id` (server: donations.service.js). */
+export type CheckoutStatus = {
+  status: 'pending' | 'succeeded' | 'failed' | 'refunded'
+  amount_hkd: number
+  frequency: string
+  events_credited: number | null
+  /** Present only once the donation succeeded AND the donor opted into tracking. */
+  tracking_token?: string
+}
+
+/**
+ * Thanks-page poll. Stripe returns the donor here the instant the card clears, but the
+ * donation row is still `pending` until the `checkout.session.completed` webhook lands on our
+ * side — a separate network hop we do not control the timing of. So the page arrives before
+ * the data does, and has to wait for it.
+ *
+ * Keyed on the unguessable Stripe session id, which is why this needs no auth. `tracking_token`
+ * is gated server-side on the donation having succeeded with tracking opted in.
+ */
+export async function fetchCheckoutStatus(sessionId: string): Promise<CheckoutStatus> {
+  const res = await apiData<CheckoutStatus>(
+    `/api/donations/session/${encodeURIComponent(sessionId)}`,
+  )
+  return res.data
+}
+
 /** Ask backend to send a gift-use update; soft-fail for local path. */
 export async function requestGiftJourneyNotify(input: {
   email: string
