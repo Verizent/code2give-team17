@@ -1,8 +1,13 @@
 const { getSupabase } = require("../config/supabase");
+const wishlistRepo = require("../data/wishlist.repo");
 const { ApiError } = require("../lib/api-error");
 const { toLocalized } = require("../lib/localized");
 const { normalizeEmail } = require("../lib/normalize");
 const { upsertDonor } = require("./donors.service");
+
+// getSupabase survives here only for the `pledge_wishlist_item` RPC below — reads go
+// through the repo. The RPC is the one write path that must stay a single statement,
+// because it clamps against `needed` and inserts the pledge atomically.
 
 function mapWishlistItem(row) {
   return {
@@ -31,38 +36,13 @@ function mapRpcError(error) {
 }
 
 async function listWishlistItems() {
-  const db = getSupabase();
-  const { data, error } = await db
-    .from("wishlist_items")
-    .select("*")
-    .eq("is_active", true)
-    .order("created_at", { ascending: true });
-
-  if (error) {
-    throw error;
-  }
-
-  return (data ?? []).map(mapWishlistItem);
+  const rows = await wishlistRepo.listActive();
+  return rows.map(mapWishlistItem);
 }
 
 async function getWishlistItem(id) {
-  const db = getSupabase();
-  const { data, error } = await db
-    .from("wishlist_items")
-    .select("*")
-    .eq("id", id)
-    .eq("is_active", true)
-    .maybeSingle();
-
-  if (error) {
-    throw error;
-  }
-
-  if (!data) {
-    return null;
-  }
-
-  return mapWishlistItem(data);
+  const row = await wishlistRepo.findActiveById(id);
+  return row ? mapWishlistItem(row) : null;
 }
 
 async function createPledge(itemId, input) {

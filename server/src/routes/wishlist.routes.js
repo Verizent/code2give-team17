@@ -1,4 +1,5 @@
 const express = require("express");
+const { ApiError } = require("../lib/api-error");
 const {
   listWishlistItems,
   getWishlistItem,
@@ -20,12 +21,10 @@ router.get("/:id", async (request, response, next) => {
   try {
     const item = await getWishlistItem(request.params.id);
     if (!item) {
-      response.status(404).json({
-        error: "Not Found",
-        message: "Wishlist item not found",
-        code: "NOT_FOUND",
-      });
-      return;
+      // Thrown rather than hand-rolled: middleware/error-handler.js produces the same
+      // { error, message, code } body, and a literal response.status().json() here is
+      // how the envelope drifts (§29). Response shape is unchanged.
+      throw ApiError.notFound("Wishlist item not found");
     }
     response.json(item);
   } catch (error) {
