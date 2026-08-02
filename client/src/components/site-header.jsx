@@ -258,13 +258,12 @@ export function SiteHeader() {
     }
   }, [open])
 
-  /** Order: Home · Community · Help · About · News */
+  /** Order: Home · Community · Help · News */
   const leftNav = [
     { href: '/', label: t.nav.home },
     { href: '/community', label: t.nav.community },
   ]
   const rightNav = [
-    { href: '/about', label: t.nav.about },
     { href: '/news', label: t.nav.news },
   ]
 

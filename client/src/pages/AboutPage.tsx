@@ -155,7 +155,7 @@ export function AboutPage() {
         <p className="mt-4 max-w-xl text-lg leading-relaxed text-white/85">{tx(T('Helping every person with Down syndrome and autism reach their full potential.', '幫助每一位唐氏綜合症及自閉症人士發揮全部潛能。'))}</p>
         <div className="mt-8 flex flex-wrap gap-3">
           <a href="/volunteer" className="rounded-full bg-yellow px-6 py-3 text-sm font-bold text-navy">{tx(T('Volunteer', '成為義工'))}</a>
-          <a href="/donate" className="rounded-full border border-white/50 px-6 py-3 text-sm font-bold text-white hover:bg-white hover:text-navy">{tx(T('Donate', '捐款'))}</a>
+          <a href="/give" className="rounded-full border border-white/50 px-6 py-3 text-sm font-bold text-white hover:bg-white hover:text-navy">{tx(T('Donate', '捐款'))}</a>
         </div>
         <div className="mt-7 flex gap-2">{HERO_IMAGES.map((image, index) => <button key={image} type="button" aria-label={`${index + 1}`} onClick={() => setHero(index)} className={cn('h-1 rounded-full transition-all', hero === index ? 'w-10 bg-yellow' : 'w-5 bg-white/50')} />)}</div>
       </div>
@@ -171,7 +171,29 @@ export function AboutPage() {
       </div>
     </div>
 
-    <nav aria-label={tx(T('Page sections', '頁面部分'))} className="sticky top-14 z-30 border-y border-navy/10 bg-white/95 backdrop-blur sm:top-[72px]"><div className="no-scrollbar mx-auto flex max-w-[1120px] gap-2 overflow-x-auto px-4 py-3 sm:px-8">{nav.map((item, index) => <button key={item.en} type="button" onClick={() => scrollTo(index)} className={cn('min-h-11 shrink-0 rounded-full px-5 text-sm font-bold', activeSection === index ? 'bg-navy text-white' : 'text-navy hover:bg-yellow/30')}>0{index + 1} {tx(item)}</button>)}</div></nav>
+    <nav aria-label={tx(T('Page sections', '頁面部分'))} role="tablist" className="sticky top-14 z-30 border-b border-navy/10 bg-white/95 backdrop-blur sm:top-[72px]">
+      <div className="no-scrollbar mx-auto flex max-w-[1120px] gap-2 overflow-x-auto px-4 py-3 sm:px-8">
+        {nav.map((item, index) => (
+          <button
+            key={item.en}
+            type="button"
+            role="tab"
+            aria-selected={activeSection === index}
+            aria-controls={`section-${index}`}
+            id={`tab-${index}`}
+            onClick={() => scrollTo(index)}
+            className={cn(
+              'min-h-11 shrink-0 rounded-full px-5 py-2 text-sm font-bold transition-all',
+              activeSection === index
+                ? 'bg-navy text-white shadow-sm'
+                : 'bg-white text-navy shadow-sm/5 hover:bg-yellow/30',
+            )}
+          >
+            0{index + 1} {tx(item)}
+          </button>
+        ))}
+      </div>
+    </nav>
 
     {/* IMPACT NUMBERS */}
     <section ref={(el) => { pageRefs.current[0] = el }} className="px-5 py-16 sm:px-10 sm:py-24 lg:px-16">
@@ -389,7 +411,7 @@ export function AboutPage() {
         <div><p className="kicker text-yellow">{tx(T('Join the story', '加入故事'))}</p><h2 className="mt-3 max-w-3xl font-display text-[clamp(3rem,7vw,6rem)] font-semibold leading-[0.9] text-white">{tx(T('Ready to make a difference?', '準備好帶來改變嗎？'))}</h2></div>
         <div className="flex flex-wrap gap-3">
           <a href="/volunteer" className="rounded-full bg-yellow px-6 py-3 text-sm font-bold text-navy">{tx(T('Volunteer', '成為義工'))}</a>
-          <a href="/donate" className="rounded-full border border-white/50 px-6 py-3 text-sm font-bold text-white hover:bg-white hover:text-navy">{tx(T('Donate', '捐款'))}</a>
+          <a href="/give" className="rounded-full border border-white/50 px-6 py-3 text-sm font-bold text-white hover:bg-white hover:text-navy">{tx(T('Donate', '捐款'))}</a>
           <a href="mailto:jeff@love21foundation.com" className="rounded-full border border-white/50 px-6 py-3 text-sm font-bold text-white hover:bg-white hover:text-navy">{tx(T('Partner', '合作'))}</a>
         </div>
       </div>
