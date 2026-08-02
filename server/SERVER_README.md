@@ -205,12 +205,12 @@ so there is no accidental overlap.
 > `/api/wishlist/*` used to be listed here as another track's work. They are now built on
 > this branch** — see [Donations + donor tracking](#donations--donor-tracking) above.
 
-> **`sessions` ownership is unresolved.** CONTEXT.md §13 puts it in the shared data model;
-> §30 gives sessions and attendance to the volunteer track. This branch's
-> `20260803_1055` migration creates the table because donor tracking cannot work without it.
-> If the volunteer track lands its own `sessions` DDL, the two must be reconciled **before
-> either is applied** — two `create table sessions` files is a conflict git merges cleanly
-> and silently.
+> **`sessions` is a shared table** (CONTEXT.md §13) and **already exists on live**. This
+> branch reads it for donor tracking but does not own its DDL. Its live shape does not match
+> what this branch's code queries — see
+> [🔴 BLOCKER — `sessions` shape mismatch](#-blocker-for-whoever-merges-this-branch--sessions-shape-mismatch)
+> before merging. The `create table` block in `20260803_1055` should be removed or converted
+> to `alter … add column if not exists` as part of that reconciliation.
 
 ---
 
@@ -578,15 +578,97 @@ Apply content migrations one at a time and announce before running — an `ALTER
 > `42501 permission denied`. `20260803_1055` includes them for both tables it creates — any
 > future donation-track migration must do the same.
 
-> **Live-vs-migration drift.** `20260801_1050_donations.sql` declares columns
-> (`stripe_session_id`, `stripe_payment_intent`, …) that were **not** on the live table when
-> last checked — the live tables came from elsewhere. `donations.repo.findByStripeSession()`
-> queries `stripe_session_id`, so if the live table is still missing it, **the webhook path
-> throws PostgREST 42703 on the first real payment.** Verify with `mcp__supabase__list_tables`
-> before the demo; `20260802_1050_donations_stripe.sql` is additive and closes the gap.
+---
 
-> **The `programme` drop is safe today and unsafe later.** `donations` holds 0 rows, nothing
-> reads the column, and request bodies are `z.strictObject` so a client still sending it gets
-> a clean 400. After real donations exist the column carries historical intent and the answer
-> flips to "leave it defaulted". Split into its own file so the additive migration can be
-> applied without triggering it.
+## 🔴 BLOCKER FOR WHOEVER MERGES THIS BRANCH — `sessions` shape mismatch
+
+**Verified against the live project on 2026-08-02. This is not speculative.**
+
+`public.sessions` **already exists on live** and its shape does **not** match what this
+branch's code queries. `20260803_1055_sessions_and_allocations.sql` uses
+`create table if not exists`, so applying it will **silently no-op** and leave the mismatch
+in place. Every donor-tracking read will then fail with **PostgREST `42703` undefined column**.
+
+`sessions` is a **shared** table (CONTEXT.md §13). Reconciling it is a cross-track decision,
+not a unilateral one — which is why this branch flags it rather than rewriting the table.
+
+### The diff
+
+| Column | Live | This branch's code expects |
+|---|---|---|
+| `location` | ✅ single `text` | ❌ queries `location_en` + `location_zh` |
+| `description_en` / `description_zh` | ✅ present | not referenced |
+| `note_en` / `note_zh` | ❌ absent | ❌ queried in two selects |
+| `completed_at` | ❌ absent | ❌ queried in two selects |
+| `expected_participants` | ❌ absent | read defensively (`?? null`) — safe |
+| `capacity` | ✅ present | closest live analog to `expected_participants` |
+| `ends_at` | `NOT NULL` | seed supplies it — safe |
+| `programme`, `title_en/zh`, `starts_at`, `attendance_count`, `attendance_source`, `photo_url`, `estimated_cost_hkd`, `status` | ✅ | ✅ match |
+
+**Live `sessions` currently holds 0 rows**, so a corrective `ALTER` is cheap right now.
+
+### Exactly what needs changing
+
+| File | Line(s) | Change |
+|---|---|---|
+| `src/data/sessions.repo.js` | 6 (`ELIGIBLE_COLUMNS`) | `location_en, location_zh` → `location` |
+| `src/data/sessions.repo.js` | 41 (`findById`), 61 (`listByIds`) | same, **plus drop** `note_en, note_zh, completed_at` |
+| `src/services/donors.service.js` | `toEvent()` | `resolveLocale(session, ["title","location"], …)` → resolve `title` only; pass `location` straight through |
+| `db/seed/sessions.seed.js` | 54–55 | `location_en` / `location_zh` → single `location` |
+| `tests/services/donors.service.test.js` | 202, 205, 232, 266 | fixture rows use `location_en`/`location_zh` — update to `location` |
+| `20260803_1055_…sql` | `create table sessions` block | Remove it, or convert to `alter table … add column if not exists`. **The table is shared and already live — this branch should not own its DDL.** |
+
+Two ways to resolve — pick one **with the volunteer track**, do not guess:
+
+- **Adopt live's shape** (recommended — smallest diff, no shared-table DDL): change the six
+  code sites above. Accept a single `location` string; bilingual location is lost, which
+  matters for §24's bilingual bar and should be raised explicitly if it's a requirement.
+- **Migrate live to bilingual**: `alter table sessions add column location_en text,
+  add column location_zh text`, backfill from `location`, then drop it. Touches a shared
+  table, so it needs the volunteer track's sign-off and an announcement.
+
+### Second blocker on the same table
+
+`sessions` has **no DML grants for `service_role`** — verified via
+`information_schema.role_table_grants`, which returns only `REFERENCES`, `TRIGGER` and
+`TRUNCATE`. There is no `SELECT`, `INSERT`, `UPDATE` or `DELETE`. Even a corrected column
+list will fail with `42501 permission denied` until this runs:
+
+```sql
+grant select, insert, update, delete on public.sessions to service_role;
+```
+
+`20260803_1055` already carries this statement — but because the `create table if not exists`
+above it no-ops, confirm the grant actually applied rather than assuming.
+
+### Quick verification
+
+```sql
+-- expect: location (not location_en/location_zh); no note_en/note_zh/completed_at
+select column_name, data_type from information_schema.columns
+ where table_schema='public' and table_name='sessions' order by ordinal_position;
+
+-- expect SELECT/INSERT/UPDATE/DELETE for service_role — currently missing
+select grantee, privilege_type from information_schema.role_table_grants
+ where table_schema='public' and table_name='sessions' and grantee='service_role';
+```
+
+`donation_allocations` does **not** exist on live yet (`to_regclass` returns null), so that
+half of `20260803_1055` will create cleanly and its grants will apply normally.
+
+---
+
+> **Live-vs-migration drift on `donations` — RESOLVED, verified 2026-08-02.** An earlier
+> revision of this file warned that `stripe_session_id` might be missing from the live table.
+> It is **not** missing. Queried `information_schema.columns` directly: live `donations` has
+> `stripe_session_id`, `stripe_payment_intent`, `events_credited`,
+> `cost_per_event_at_donation`, `tracking_opt_in`, `is_anonymous`, `message`,
+> `referral_source` and `referral_source_other`. `20260802_1050_donations_stripe.sql` was
+> applied. No action needed.
+
+> **`donations.programme` is already dropped on live** — also verified 2026-08-02, the column
+> is absent. `20260803_1060_donations_drop_programme.sql` is therefore a **no-op** (it uses
+> `drop column if exists`). Note the original safety argument is now stale: `donations` holds
+> **3 rows**, not 0. The drop already happened while the table was empty, so nothing was lost —
+> but do not reuse that "safe because empty" reasoning for any future destructive migration
+> without re-checking the row count.
