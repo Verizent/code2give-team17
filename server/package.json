@@ -10,7 +10,8 @@
     "seed:admin": "node db/seed/admin.seed.js",
     "test": "node --test --test-concurrency=1",
     "test:coverage": "node --test --experimental-test-coverage",
-    "test:schema": "node --test --test-concurrency=1 \"test/schema/**/*.test.js\""
+    "test:schema": "node --test --test-concurrency=1 \"test/schema/**/*.test.js\"",
+    "email:check": "node scripts/email-check.js"
   },
   "keywords": [],
   "author": "",
@@ -23,6 +24,7 @@
     "@supabase/supabase-js": "^2.57.4",
     "dotenv": "^17.2.2",
     "express": "^5.2.1",
+    "nodemailer": "^9.0.3",
     "stripe": "^22.4.0",
     "zod": "^4.4.3"
   }
