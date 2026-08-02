@@ -1,5 +1,6 @@
 const express = require("express");
 const apiRoutes = require("./routes");
+const uploadsRoutes = require("./routes/uploads.routes");
 const webhooksRoutes = require("./routes/webhooks.routes");
 const notFound = require("./middleware/not-found");
 const errorHandler = require("./middleware/error-handler");
@@ -15,8 +16,9 @@ app.disable("x-powered-by");
 // parser consuming the stream first.
 app.use("/api/webhooks/stripe", webhooksRoutes);
 
-app.use(express.json());
-
+// CORS runs before the body parsers, not after, because the photo upload below also has
+// to sit above express.json() and still needs these headers plus the OPTIONS
+// short-circuit — a raw-body route mounted above the old position got neither.
 app.use((request, response, next) => {
   response.set({
     "Access-Control-Allow-Origin": CLIENT_ORIGIN,
@@ -32,6 +34,12 @@ app.use((request, response, next) => {
 
   next();
 });
+
+// Same ordering constraint as the Stripe webhook: this route reads an image as a raw
+// Buffer, so express.json() must not consume the stream first.
+app.use("/api/uploads", uploadsRoutes);
+
+app.use(express.json());
 
 app.get("/", (request, response) => {
   response.json({
