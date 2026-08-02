@@ -4,6 +4,7 @@ import { useAuth } from '@/features/auth/AuthProvider'
 import { describeImpact, impactLadder, type DonateProgramme } from '@/features/donations/api'
 import { startDonationCheckout } from '@/features/donations/checkout'
 import type { GiftFrequency } from '@/features/donations/donation-store'
+import { ApiError } from '@/lib/apiClient'
 import { trackEvent } from '@/lib/analytics'
 import { cn } from '@/lib/utils'
 
@@ -108,8 +109,11 @@ export function ImpactLadder({
         return
       }
       onDonated(result.donation.id)
-    } catch {
-      setError('Could not start checkout. Please try again.')
+    } catch (err) {
+      // Show what the server actually said. `startDonationCheckout` no longer falls back to a
+      // local gift, so this is the only place a checkout failure becomes visible at all.
+      const detail = err instanceof ApiError ? err.message : ''
+      setError(detail || 'Could not start checkout. Please try again.')
     } finally {
       setBusy(false)
     }
