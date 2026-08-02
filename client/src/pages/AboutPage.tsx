@@ -11,7 +11,7 @@ const T = (en: string, zh: string) => ({ en, zh })
 const HERO_IMAGES = [
   '/brand/dragonboat.jpeg',
   '/brand/beyond-limit.jpeg',
-  '/brand/music.jpeg',
+  '/brand/music2.jpeg',
 ]
 
 const HERO_STATS = [
@@ -28,7 +28,7 @@ const ACHIEVEMENTS = [
     stat: T('5 Medals Won', '奪得 5 面獎牌'),
     image: '/brand/karate.jpeg',
     color: 'from-yellow/40 to-red/30',
-    link: '#'
+    link: 'https://www.facebook.com/share/p/1D3rjLeYs1/?mibextid=WC7FNe'
   },
   { 
     icon: '🍽️', 
@@ -37,7 +37,7 @@ const ACHIEVEMENTS = [
     stat: T('Sold Out Event', '全場爆滿'),
     image: '/brand/beyond-limit.jpeg',
     color: 'from-purple/40 to-navy/30',
-    link: '#'
+    link: 'https://www.facebook.com/share/p/182shByRE7/?mibextid=WC7FNe'
   },
   { 
     icon: '🌟', 
@@ -46,7 +46,7 @@ const ACHIEVEMENTS = [
     stat: T('Multiple Awards', '多項大獎'),
     image: '/brand/competition-champion.jpeg',
     color: 'from-amber/40 to-orange/30',
-    link: '#'
+    link: 'https://www.facebook.com/share/p/19z9qGodFS/?mibextid=WC7FNe'
   },
   { 
     icon: '🚣', 
@@ -55,13 +55,13 @@ const ACHIEVEMENTS = [
     stat: T('6 Week Training', '六週訓練'),
     image: '/brand/dragonboat.jpeg',
     color: 'from-cyan/40 to-blue/30',
-    link: '#'
+    link: 'https://www.facebook.com/share/p/1BhrqFgJtQ/?mibextid=WC7FNe'
   },
 ]
 
 const MILESTONES = [
   { year: '2017', title: T('A simple question starts a movement.', '一個簡單問題，開啟一場行動。'), body: T('Love 21 Foundation is founded by Jeff Rotmeyer, alongside our sister charity ImpactHK.', 'Jeff Rotmeyer 創立 Love 21 基金會，並與姊妹慈善機構 ImpactHK 同行。'), image: '/brand/love21.jpeg' },
-  { year: '2021', title: T('Wellbeing becomes a whole-family journey.', '健康成為全家人的旅程。'), body: T('We launch comprehensive one-on-one nutrition support alongside our sports classes.', '我們在運動課程以外推出全面的一對一營養支援。'), image: '/brand/nutrition.jpeg' },
+  { year: '2021', title: T('Wellbeing becomes a whole-family journey.', '健康成為全家人的旅程。'), body: T('We launch comprehensive one-on-one nutrition support alongside our sports classes.', '我們在運動課程以外推出全面的一對一營養支援。'), image: '/brand/nutritionprog.jpeg' },
   { year: '2023', title: T('Our community helps us rebuild.', '社群攜手協助我們重建。'), body: T('After a fire damages our original San Po Kong centre, Hong Kong comes together. We reopen in October with expanded capacity.', '新蒲崗原有中心因火災受損後，香港社群攜手支持我們。我們於十月重新開幕，服務容量大幅提升。'), image: '/brand/fire.jpeg' },
   { year: '2025', title: T('Growing to meet the need.', '成長以回應需要。'), body: T('Our first-ever Charity Raffle launches to meet growing demand for our services.', '我們首次推出慈善抽獎活動，以回應日益增加的服務需求。'), image: '/brand/charityraffle.jpeg' },
   { year: '2026', title: T('Beyond limits, together.', '攜手超越界限。'), body: T('On 12 June, our Beyond Limits Banquet at Lippo Chiuchow Restaurant brought supporters together for member dance and magic performances, with Nathan Leung co-hosting alongside our founder — raising funds for fitness, ABA therapy, and counselling sessions.', '6 月 12 日，我們的 Beyond Limits 晚宴假力寶潮州酒樓舉行，支持者共聚一堂，欣賞會員舞蹈及魔術表演，並由 Nathan Leung 與創辦人聯合主持，為健身、應用行為分析治療及輔導服務籌款。'), image: '/brand/beyondlimit.jpeg' },
@@ -90,11 +90,13 @@ const PROGRAMMES = [
 ]
 
 const GALLERY = [
-  '/brand/activity.jpg',
-  '/brand/class.jpg',
-  '/brand/csr.jpg',
-  '/brand/family.jpg',
-  '/brand/nutrition.jpeg',
+  '/brand/dragonboat.jpeg',
+  '/brand/music2.jpeg',
+  '/brand/beyond-limit.jpeg',
+  '/brand/karate.jpeg',
+  '/brand/competition-champion.jpeg',
+  '/brand/nutritionprog.jpeg',
+  '/brand/gallery.jpeg',
 ]
 
 const STATS = [
