@@ -9,13 +9,14 @@
 // sessions so those metrics are computed from real rows rather than a stub.
 //
 // SAFETY PROPERTIES, all deliberate:
-//  - INSERT ONLY. No existing row is updated or deleted. The 10 upcoming opportunities
-//    the volunteer track created are untouched.
+//  - Touches ONLY rows it created itself, identified by the "[seed]" title prefix. It
+//    clears those before rewriting, so shrinking the config removes the surplus instead
+//    of stranding it. Nothing the volunteer track created is read, updated or deleted.
 //  - Every seeded opportunity is status='closed', and opportunities.repo.listOpen filters
 //    to ('open','full'), so NONE of this appears on the public /volunteer page.
 //  - Signups reference volunteers that already exist rather than inventing people.
-//  - Idempotent: ids are derived from a fixed namespace by hash, so a re-run upserts the
-//    same rows rather than duplicating them.
+//  - Idempotent: ids are derived from a fixed namespace by hash, and the clear-then-write
+//    step means a re-run leaves the database in exactly the same state.
 
 require("dotenv").config({ quiet: true });
 
@@ -24,12 +25,15 @@ const { getSupabase } = require("../../src/config/supabase");
 
 const NAMESPACE = "love21-volunteer-history-v1";
 
+/** Marks every row this seed owns, so it can clear its own work and nothing else. */
+const TITLE_PREFIX = "[seed]";
+
 /** Uneven on purpose — live data has sports at 19 places against community_education at 3. */
 const PROGRAMMES = [
-  { programme: "sports", count: 18, capacity: [10, 22], title: "Floor curling session" },
-  { programme: "fitness", count: 12, capacity: [6, 14], title: "Zumba fitness class" },
-  { programme: "nutrition", count: 10, capacity: [5, 10], title: "Healthy cooking workshop" },
-  { programme: "community_education", count: 8, capacity: [3, 6], title: "Community talk" },
+  { programme: "sports", count: 10, capacity: [8, 16], title: "Floor curling session" },
+  { programme: "fitness", count: 7, capacity: [5, 11], title: "Zumba fitness class" },
+  { programme: "nutrition", count: 6, capacity: [4, 9], title: "Healthy cooking workshop" },
+  { programme: "community_education", count: 4, capacity: [3, 6], title: "Community talk" },
 ];
 
 const ATTENDANCE_RATE = 0.75;
@@ -66,10 +70,21 @@ function hashToInt(value) {
   return h >>> 0;
 }
 
-/** Midday UTC on the 10th, `months` back — always safely in the past. */
+/**
+ * A date `months` back that is always in the past.
+ *
+ * The 10th normally, but the current month's 10th is a future date for the first nine
+ * days of every month — and a session dated ahead of now would have the range filter
+ * report attendance in a window that has not happened. Falls back a month when that
+ * would occur.
+ */
 function pastDate(months) {
   const now = new Date();
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - months, 10, 4)).toISOString();
+  let at = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - months, 10, 4));
+  if (at > now) {
+    at = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - months - 1, 10, 4));
+  }
+  return at.toISOString();
 }
 
 function buildOpportunities() {
@@ -80,13 +95,14 @@ function buildOpportunities() {
       const key = `${spec.programme}-${i}`;
       const random = makeRandom(hashToInt(key));
       const [min, max] = spec.capacity;
-      // 1..12 months back, never 0 — a session in the current month may not have run yet.
-      const monthsBack = 1 + (i % 12);
+      // 0..11 months back. Month 0 is included so narrow ranges have something to show;
+      // pastDate() guarantees it still lands in the past.
+      const monthsBack = i % 12;
       const startsAt = pastDate(monthsBack);
 
       rows.push({
         id: stableUuid(key),
-        title_en: `${spec.title} · ${startsAt.slice(0, 10)}`,
+        title_en: `${TITLE_PREFIX} ${spec.title} · ${startsAt.slice(0, 10)}`,
         title_zh: null,
         programme: spec.programme,
         capacity: min + Math.floor(random() * (max - min + 1)),
@@ -113,6 +129,23 @@ async function main() {
   if (volError) throw new Error(`Reading volunteers failed: ${volError.message}`);
   if (!volunteers?.length) throw new Error("No volunteers exist to attach signups to");
 
+  // Remove anything a previous run created before writing. Without this, shrinking the
+  // config above strands the extra rows in the database forever — ids are derived, so a
+  // smaller run simply stops addressing them rather than removing them.
+  const { data: stale, error: staleError } = await supabase
+    .from("volunteer_opportunities")
+    .select("id")
+    .like("title_en", `${TITLE_PREFIX}%`);
+
+  if (staleError) throw new Error(`Reading previous seed failed: ${staleError.message}`);
+
+  if (stale?.length) {
+    const ids = stale.map((row) => row.id);
+    await supabase.from("volunteer_signups").delete().in("opportunity_id", ids);
+    await supabase.from("volunteer_opportunities").delete().in("id", ids);
+    console.log(`Cleared ${ids.length} opportunities from a previous run`);
+  }
+
   const opportunities = buildOpportunities();
 
   const { error: oppError } = await supabase
@@ -125,7 +158,7 @@ async function main() {
 
   for (const opportunity of opportunities) {
     const random = makeRandom(hashToInt(`signups-${opportunity.id}`));
-    const count = Math.max(1, Math.round(opportunity.capacity * (0.5 + random() * 0.4)));
+    const count = Math.max(1, Math.round(opportunity.capacity * (0.3 + random() * 0.3)));
 
     // Walk the roster from a per-opportunity offset instead of picking at random.
     // `one_signup_per_volunteer_per_opportunity` is a UNIQUE constraint, and random
