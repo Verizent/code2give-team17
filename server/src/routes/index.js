@@ -36,8 +36,8 @@ const router = express.Router();
 // an absent role and defaulting.
 //
 // Both are NAMED exports of the real auth layer. The admin track shipped stubs at these
-// same two paths that default-exported and set `req.user = { role: "admin" }` for every
-// caller; taking them would have opened every route below to the world with admin
+// same two paths which default-exported and stamped a fake admin identity onto every
+// request; taking them would have opened every route below to the world with admin
 // rights. tests/routes/admin-mount.test.js asserts the named-import form for that reason.
 const adminGuard = [requireAuth, requireRole("admin")];
 
