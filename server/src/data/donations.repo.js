@@ -26,8 +26,12 @@ async function insertDonation(row) {
 async function findByStripeSession(sessionId) {
   const { data, error } = await getSupabase()
     .from("donations")
+    // `campaign_id` is load-bearing here, not decorative: the webhook credits a fundraiser's
+    // raised_hkd off this row. Leaving it out does not fail — `donation.campaign_id` is just
+    // `undefined`, the credit is skipped, and the fundraiser silently stays at zero while the
+    // money really is in Stripe. Unit tests cannot catch that, because they stub this repo.
     .select(
-      "id, donor_id, amount_hkd, frequency, status, events_credited, cost_per_event_at_donation, tracking_opt_in, created_at",
+      "id, donor_id, amount_hkd, frequency, status, events_credited, cost_per_event_at_donation, tracking_opt_in, campaign_id, created_at",
     )
     .eq("stripe_session_id", sessionId)
     .maybeSingle();
