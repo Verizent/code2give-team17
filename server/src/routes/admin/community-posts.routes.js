@@ -1,5 +1,3 @@
-// DEMO-ONLY: no auth on admin routes — real version needs requireRole('admin')
-//            middleware once auth is built (BE1 owns profiles, §30).
 const express = require("express");
 const { validate } = require("../../middleware/validate");
 const { listQuerySchema, idParamSchema, moderateSchema } = require("../../schemas/query.schema");

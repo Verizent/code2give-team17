@@ -1,0 +1,51 @@
+Granting the admin role
+=======================
+
+DEMO-ONLY. There is no invite flow and no role-management screen — real version needs
+both, plus an audit_log entry per grant (§16, §19).
+
+Deliberately a .txt file, NOT .sql. The documented schema replay is
+
+    cat src/schema/*/*.sql | psql "$DATABASE_URL"
+
+which matches ANY file ending .sql, including one named *.example.sql. A placeholder
+uuid piped into psql would fail the whole replay. The extension is the guard.
+
+Steps
+-----
+
+1. Supabase dashboard -> Authentication -> Users -> Add user.
+   Tick "Auto Confirm User" so the demo never depends on reaching an inbox
+   (§17: Resend only delivers to our own verified addresses until DNS is verified,
+   and Supabase's default SMTP is rate-limited to a handful of mails an hour).
+
+2. Sign in as that user and make any authenticated API call. The profile row is
+   created just-in-time by services/auth/authenticate.js, as role='volunteer'.
+
+   Confirm it exists:
+
+       select id, role, full_name from public.profiles;
+
+3. Promote, substituting the uuid from step 1:
+
+       update public.profiles
+          set role = 'admin'
+        where id = '00000000-0000-0000-0000-000000000000';
+
+   Never commit a real user id into this file.
+
+4. Verify the grant took effect. The role is read live on every request — no restart
+   is needed, and no cache holds it:
+
+       curl -i -H "Authorization: Bearer <jwt>" \
+         localhost:3000/api/admin/community-posts
+
+   401 = no or bad token. 403 = authenticated, still a volunteer. 200 = admin.
+
+Revoking
+--------
+
+    update public.profiles set role = 'volunteer' where id = '<uuid>';
+
+Takes effect on the next request. Only the token->user lookup is cached (60s), never
+the role — precisely so a grant or revoke is visible immediately while rehearsing.

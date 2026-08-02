@@ -125,3 +125,66 @@ test("moderateVoice throws 404 when the id does not exist", async (t) => {
     },
   );
 });
+
+test("submitVoice attributes submitted_by to actor.userId when signed in", async (t) => {
+  const createFn = mock.fn(async () => ({ id: approvedRow.id, submitted_at: approvedRow.submitted_at }));
+  mock.method(communityPostsRepo, "create", createFn);
+  t.after(() => mock.restoreAll());
+
+  await submitVoice(
+    {
+      author_name: "Rachel L.",
+      relationship: "volunteer",
+      story: "A story long enough to pass the minimum length check.",
+      consent_given: true,
+    },
+    { userId: "11111111-1111-1111-1111-111111111111", role: "volunteer" },
+  );
+
+  const passedData = createFn.mock.calls[0].arguments[0];
+  assert.equal(
+    passedData.submitted_by,
+    "11111111-1111-1111-1111-111111111111",
+    "signed-in submissions must record the submitting profile id",
+  );
+});
+
+test("submitVoice writes submitted_by = null when actor is absent", async (t) => {
+  const createFn = mock.fn(async () => ({ id: approvedRow.id, submitted_at: approvedRow.submitted_at }));
+  mock.method(communityPostsRepo, "create", createFn);
+  t.after(() => mock.restoreAll());
+
+  await submitVoice({
+    author_name: "Rachel L.",
+    relationship: "volunteer",
+    story: "A story long enough to pass the minimum length check.",
+    consent_given: true,
+  });
+
+  const passedData = createFn.mock.calls[0].arguments[0];
+  assert.equal(
+    passedData.submitted_by,
+    null,
+    "anonymous submissions must record submitted_by as null, not undefined",
+  );
+});
+
+test("submitVoice honeypot short-circuit ignores the actor argument", async (t) => {
+  const createFn = mock.fn(async () => approvedRow);
+  mock.method(communityPostsRepo, "create", createFn);
+  t.after(() => mock.restoreAll());
+
+  const result = await submitVoice(
+    {
+      author_name: "Bot",
+      relationship: "other",
+      story: "A".repeat(40),
+      consent_given: true,
+      website: "https://spam.example.com",
+    },
+    { userId: "22222222-2222-2222-2222-222222222222", role: "admin" },
+  );
+
+  assert.equal(createFn.mock.calls.length, 0, "honeypot must skip the DB even for signed-in callers");
+  assert.equal(result.id, null);
+});
