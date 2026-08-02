@@ -10,7 +10,7 @@ import { InstagramCard } from '@/components/community/instagram-card'
 import { listVoices, listInstagram } from '@/features/content/api'
 import { mapVoice } from '@/features/content/map-voice'
 
-/** Stories shown before "Show more"; also the size of each subsequent reveal. */
+/** Stories per page of the wall. */
 const PAGE_SIZE = 10
 /**
  * An embed with display_order N lands after story N × this. Spreading them out beats
@@ -65,7 +65,7 @@ function MomentsCounter() {
   )
 }
 
-function buildFeed(filter, voices, embeds, limit) {
+function buildFeed(filter, voices, embeds, page) {
   const curated =
     filter === 'all' ? stories : stories.filter((s) => s.type === filter)
 
@@ -78,36 +78,45 @@ function buildFeed(filter, voices, embeds, limit) {
         )
       : curated
 
-  // The limit counts stories, not cards: knowledge and Instagram cards are furniture
-  // between them, so counting those would make "show more" reveal fewer stories the
-  // further down you got.
-  const filtered = ordered.slice(0, limit)
+  // A page counts stories, not cards: knowledge and Instagram cards are furniture
+  // between them, so counting those would make later pages hold fewer actual stories.
+  const start = page * PAGE_SIZE
+  const visible = ordered.slice(start, start + PAGE_SIZE)
 
   const entries = []
-  let storyCount = 0
 
-  for (const story of filtered) {
+  visible.forEach((story, index) => {
     entries.push({ key: `story-${story.id}`, kind: 'story', story })
-    storyCount += 1
+
+    // Position is measured against the story's place in the whole wall, not its place
+    // on this page. Counting per page would repeat the same three embeds on every
+    // page; counted absolutely, each one appears once, on the page it falls in.
+    const position = start + index + 1
 
     // Knowledge cards only in the full feed — they educate the whole community
     if (filter === 'all') {
       for (const k of knowledgeStats) {
-        if (k.afterStoryCount === storyCount) {
+        if (k.afterStoryCount === position) {
           entries.push({ key: `know-${k.id}`, kind: 'knowledge', knowledge: k })
         }
       }
       // display_order is the admin's intent for placement, so it drives position here
       // rather than being sorted by date like a story — an embed has no post date.
       for (const embed of embeds) {
-        if (embed.display_order * EMBED_SPACING === storyCount) {
+        if (embed.display_order * EMBED_SPACING === position) {
           entries.push({ key: `ig-${embed.id}`, kind: 'instagram', embed })
         }
       }
     }
-  }
+  })
 
-  return { entries, total: ordered.length, shown: filtered.length }
+  return {
+    entries,
+    total: ordered.length,
+    from: visible.length === 0 ? 0 : start + 1,
+    to: start + visible.length,
+    pageCount: Math.max(1, Math.ceil(ordered.length / PAGE_SIZE)),
+  }
 }
 
 export function StoryFeed() {
@@ -115,7 +124,8 @@ export function StoryFeed() {
   const [filter, setFilter] = useState('all')
   const [voices, setVoices] = useState([])
   const [embeds, setEmbeds] = useState([])
-  const [limit, setLimit] = useState(PAGE_SIZE)
+  const [page, setPage] = useState(0)
+  const feedTopRef = useRef(null)
 
   // Curated stories render immediately; approved submissions fold in when they land,
   // so a slow API delays nothing the visitor is already looking at.
@@ -139,13 +149,20 @@ export function StoryFeed() {
     }
   }, [locale])
 
-  const { entries: feed, total, shown } = buildFeed(filter, voices, embeds, limit)
+  const { entries: feed, total, from, to, pageCount } = buildFeed(filter, voices, embeds, page)
 
   function changeFilter(id) {
     setFilter(id)
-    // Without this, switching to a tab with three stories keeps a limit of forty and
-    // the "show more" state reads as though the visitor had already expanded it.
-    setLimit(PAGE_SIZE)
+    // Without this, switching to a tab with three stories while on page 3 shows an
+    // empty wall and no obvious way back.
+    setPage(0)
+  }
+
+  function goToPage(next) {
+    setPage(next)
+    // Paging without this leaves the visitor at the bottom of the previous page,
+    // looking at the controls rather than at the new cards.
+    feedTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
   const tabs = [
@@ -154,7 +171,7 @@ export function StoryFeed() {
   ]
 
   return (
-    <section aria-labelledby="feed-title" className="mt-14">
+    <section ref={feedTopRef} aria-labelledby="feed-title" className="scroll-mt-28 mt-14">
       <h2 id="feed-title" className="sr-only">
         Story feed
       </h2>
@@ -210,21 +227,38 @@ export function StoryFeed() {
         </div>
       )}
 
-      {shown < total && (
-        <div className="mt-10 flex flex-col items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setLimit((n) => n + PAGE_SIZE)}
-            className="inline-flex min-h-[48px] items-center justify-center rounded-xl border border-navy/20 bg-card px-6 text-base font-semibold text-navy transition-colors hover:bg-muted"
-          >
-            {t.community.showMore}
-          </button>
-          {/* aria-live so a screen reader hears the count change after each reveal,
-              which is otherwise silent — the new cards are appended off-screen. */}
+      {total > PAGE_SIZE && (
+        <nav
+          aria-label={t.community.momentsLabel}
+          className="mt-10 flex flex-col items-center gap-3"
+        >
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => goToPage(page - 1)}
+              disabled={page === 0}
+              className="inline-flex min-h-[48px] items-center justify-center rounded-xl border border-navy/20 bg-card px-6 text-base font-semibold text-navy transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {t.community.pagePrev}
+            </button>
+            <button
+              type="button"
+              onClick={() => goToPage(page + 1)}
+              disabled={page >= pageCount - 1}
+              className="inline-flex min-h-[48px] items-center justify-center rounded-xl border border-navy/20 bg-card px-6 text-base font-semibold text-navy transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {t.community.pageNext}
+            </button>
+          </div>
+          {/* aria-live because the cards swap out silently — without it a screen
+              reader user gets no confirmation the page actually changed. */}
           <p aria-live="polite" className="text-sm text-navy/55">
-            {t.community.showingCount.replace('{n}', shown).replace('{total}', total)}
+            {t.community.showingRange
+              .replace('{from}', from)
+              .replace('{to}', to)
+              .replace('{total}', total)}
           </p>
-        </div>
+        </nav>
       )}
     </section>
   )
