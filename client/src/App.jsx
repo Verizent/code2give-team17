@@ -22,6 +22,7 @@ import { DonorTrackPage } from '@/pages/DonorTrackPage'
 import { SupportPage } from '@/pages/SupportPage'
 import { ArticlePage } from '@/pages/ArticlePage'
 import { AdminInstagramPage } from '@/pages/AdminInstagramPage'
+import { AdminWishlistPage } from '@/pages/AdminWishlistPage'
 
 export default function App() {
   return (
@@ -50,6 +51,7 @@ export default function App() {
         <Route path="campaigns" element={<AdminCampaignsPage />} />
         <Route path="moderation" element={<AdminModerationPage />} />
         <Route path="instagram" element={<AdminInstagramPage />} />
+        <Route path="wishlist" element={<AdminWishlistPage />} />
         {/* Story desk and Class roll were removed; their old links, and the ones that
             used to redirect into Story desk, now land on the hub. */}
         <Route path="analytics" element={<Navigate to="/admin" replace />} />

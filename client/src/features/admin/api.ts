@@ -216,6 +216,73 @@ export async function unpublishAdminArticle(id: string): Promise<AdminArticle> {
   return data
 }
 
+export type AdminWishlistItem = {
+  id: string
+  title_en: string
+  title_zh: string
+  why_en: string
+  why_zh: string
+  needed: number
+  /** Derived from wishlist_pledges by the pledge RPC — never sent on a write. */
+  pledged: number
+  image_url: string
+  is_active: boolean
+  created_at?: string
+  updated_at?: string
+}
+
+/** `id` is the slug and is settable on create only; a rename would move the public URL. */
+export type WishlistCreatePayload = {
+  id: string
+  title_en: string
+  title_zh: string
+  why_en: string
+  why_zh: string
+  needed: number
+  image_url: string
+  is_active?: boolean
+}
+
+export type WishlistUpdatePayload = Partial<Omit<WishlistCreatePayload, 'id'>>
+
+export async function fetchAdminWishlist(): Promise<AdminWishlistItem[]> {
+  const res = await apiClient<Envelope<AdminWishlistItem[]>>('/api/admin/wishlist?limit=50')
+  return res.data ?? []
+}
+
+export async function fetchAdminWishlistItem(id: string): Promise<AdminWishlistItem> {
+  const { data } = await apiData<AdminWishlistItem>(
+    `/api/admin/wishlist/${encodeURIComponent(id)}`,
+  )
+  return data
+}
+
+export async function createAdminWishlistItem(
+  payload: WishlistCreatePayload,
+): Promise<AdminWishlistItem> {
+  const { data } = await apiData<AdminWishlistItem>('/api/admin/wishlist', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+  return data
+}
+
+export async function updateAdminWishlistItem(
+  id: string,
+  payload: WishlistUpdatePayload,
+): Promise<AdminWishlistItem> {
+  const { data } = await apiData<AdminWishlistItem>(
+    `/api/admin/wishlist/${encodeURIComponent(id)}`,
+    { method: 'PATCH', body: JSON.stringify(payload) },
+  )
+  return data
+}
+
+/** Server answers 204 with no body, so there is nothing to unwrap. */
+export async function deleteAdminWishlistItem(id: string): Promise<void> {
+  await apiClient(`/api/admin/wishlist/${encodeURIComponent(id)}`, { method: 'DELETE' })
+}
+
 export type AdminInstagramEmbed = {
   id: string
   url: string
