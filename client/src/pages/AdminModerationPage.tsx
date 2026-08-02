@@ -1,11 +1,15 @@
 import { useEffect, useState } from 'react'
 import {
+  deleteCommunityPost,
   fetchCommunityPosts,
   moderateCommunityPost,
   type CommunityPost,
 } from '@/features/admin/api'
 import { useSite } from '@/components/site-provider'
 import { ApiError } from '@/lib/apiClient'
+
+const TABS = ['pending', 'approved', 'rejected'] as const
+type Tab = (typeof TABS)[number]
 
 export function AdminModerationPage() {
   const { t } = useSite()
@@ -14,10 +18,13 @@ export function AdminModerationPage() {
   const [available, setAvailable] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
+  const [tab, setTab] = useState<Tab>('pending')
+  // Delete here is a hard delete with no undo, so it asks twice before firing.
+  const [confirmingDelete, setConfirmingDelete] = useState<string | null>(null)
 
-  async function load() {
+  async function load(status: Tab) {
     try {
-      const result = await fetchCommunityPosts('pending')
+      const result = await fetchCommunityPosts(status)
       setPosts(result.items)
       setAvailable(result.available)
       setError(null)
@@ -31,16 +38,29 @@ export function AdminModerationPage() {
   }
 
   useEffect(() => {
-    void load()
-  }, [])
+    void load(tab)
+  }, [tab])
 
   async function decide(id: string, status: 'approved' | 'rejected') {
     setBusyId(id)
     try {
       await moderateCommunityPost(id, status)
-      await load()
+      await load(tab)
     } catch {
       setError('Could not update post status.')
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  async function remove(id: string) {
+    setBusyId(id)
+    try {
+      await deleteCommunityPost(id)
+      setConfirmingDelete(null)
+      await load(tab)
+    } catch {
+      setError('Could not delete this post.')
     } finally {
       setBusyId(null)
     }
@@ -57,6 +77,29 @@ export function AdminModerationPage() {
         </p>
       )}
 
+      <div className="mt-6 flex flex-wrap gap-1" role="tablist" aria-label="Voices status">
+        {TABS.map((name) => (
+          <button
+            key={name}
+            type="button"
+            role="tab"
+            aria-selected={tab === name}
+            onClick={() => {
+              setTab(name)
+              setConfirmingDelete(null)
+            }}
+            className={[
+              'min-h-11 rounded-md px-4 text-sm font-semibold capitalize',
+              tab === name
+                ? 'bg-navy text-white'
+                : 'border border-navy/20 text-navy hover:bg-navy/5',
+            ].join(' ')}
+          >
+            {name}
+          </button>
+        ))}
+      </div>
+
       {!available ? (
         <p className="mt-8 max-w-xl text-navy/70">
           Voices moderation is not available yet — the <code className="text-sm">community_posts</code>{' '}
@@ -64,7 +107,11 @@ export function AdminModerationPage() {
           site; this queue will light up once that migration lands.
         </p>
       ) : posts.length === 0 ? (
-        <p className="mt-8 text-navy/70">No Voices waiting for review.</p>
+        <p className="mt-8 text-navy/70">
+          {tab === 'pending'
+            ? 'No Voices waiting for review.'
+            : `No ${tab} Voices.`}
+        </p>
       ) : (
         <ul className="mt-8 space-y-6">
           {posts.map((post) => (
@@ -81,23 +128,56 @@ export function AdminModerationPage() {
                   className="mt-3 max-h-72 rounded-lg border border-navy/10 object-contain"
                 />
               )}
-              <div className="mt-4 flex gap-2">
-                <button
-                  type="button"
-                  disabled={busyId === post.id}
-                  onClick={() => void decide(post.id, 'approved')}
-                  className="min-h-11 rounded-md bg-teal px-4 text-sm font-semibold text-white disabled:opacity-60"
-                >
-                  Approve
-                </button>
-                <button
-                  type="button"
-                  disabled={busyId === post.id}
-                  onClick={() => void decide(post.id, 'rejected')}
-                  className="min-h-11 rounded-md border border-navy/20 px-4 text-sm font-semibold text-navy disabled:opacity-60"
-                >
-                  Reject
-                </button>
+              <div className="mt-4 flex flex-wrap gap-2">
+                {post.status !== 'approved' && (
+                  <button
+                    type="button"
+                    disabled={busyId === post.id}
+                    onClick={() => void decide(post.id, 'approved')}
+                    className="min-h-11 rounded-md bg-teal px-4 text-sm font-semibold text-white disabled:opacity-60"
+                  >
+                    Approve
+                  </button>
+                )}
+                {post.status !== 'rejected' && (
+                  <button
+                    type="button"
+                    disabled={busyId === post.id}
+                    onClick={() => void decide(post.id, 'rejected')}
+                    className="min-h-11 rounded-md border border-navy/20 px-4 text-sm font-semibold text-navy disabled:opacity-60"
+                  >
+                    Reject
+                  </button>
+                )}
+                {confirmingDelete === post.id ? (
+                  <>
+                    <button
+                      type="button"
+                      disabled={busyId === post.id}
+                      onClick={() => void remove(post.id)}
+                      className="min-h-11 rounded-md bg-red px-4 text-sm font-semibold text-white disabled:opacity-60"
+                    >
+                      Confirm delete
+                    </button>
+                    <button
+                      type="button"
+                      disabled={busyId === post.id}
+                      onClick={() => setConfirmingDelete(null)}
+                      className="min-h-11 rounded-md border border-navy/20 px-4 text-sm font-semibold text-navy disabled:opacity-60"
+                    >
+                      Cancel
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={busyId === post.id}
+                    onClick={() => setConfirmingDelete(post.id)}
+                    className="min-h-11 rounded-md border border-red/30 px-4 text-sm font-semibold text-red disabled:opacity-60"
+                  >
+                    Delete
+                  </button>
+                )}
               </div>
             </li>
           ))}

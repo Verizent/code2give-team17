@@ -47,17 +47,20 @@ async function listApproved({ from, to }) {
 }
 
 /**
- * Pending posts for the admin moderation queue, oldest first (first-in, first-reviewed).
+ * Posts in one moderation state, for the admin queue.
  *
- * @param {{ from: number, to: number }} options
+ * Pending sorts oldest first — first in, first reviewed. Decided posts sort newest
+ * first, because there the row worth seeing is the one just acted on, not the oldest.
+ *
+ * @param {{ status: 'pending'|'approved'|'rejected', from: number, to: number }} options
  * @returns {Promise<{ rows: object[], total: number }>}
  */
-async function listPending({ from, to }) {
+async function listByStatus({ status, from, to }) {
   const { data, error, count } = await getSupabase()
     .from("community_posts")
     .select(ADMIN_COLUMNS, { count: "exact" })
-    .eq("status", "pending")
-    .order("submitted_at", { ascending: true })
+    .eq("status", status)
+    .order("submitted_at", { ascending: status === "pending" })
     .range(from, to);
 
   assertOk(error);
@@ -132,12 +135,37 @@ async function moderate(id, { status, moderation_note }) {
   return data ?? null;
 }
 
+/**
+ * Permanently removes a post. Returns the deleted row, or `null` if the id was not there.
+ *
+ * A hard delete, unlike an article's archive: `community_posts.status` is constrained to
+ * pending/approved/rejected, so there is no archived state to move a row into without a
+ * migration on the shared project. Rejecting already hides a post — delete exists for the
+ * case where the row itself must go, such as a supporter withdrawing consent.
+ *
+ * @param {string} id
+ * @returns {Promise<{ id: string } | null>}
+ */
+async function remove(id) {
+  const { data, error } = await getSupabase()
+    .from("community_posts")
+    .delete()
+    .eq("id", id)
+    .select("id")
+    .maybeSingle();
+
+  assertOk(error);
+
+  return data ?? null;
+}
+
 module.exports = {
   listApproved,
-  listPending,
+  listByStatus,
   countByStatus,
   create,
   moderate,
+  remove,
   PUBLIC_COLUMNS,
   ADMIN_COLUMNS,
 };

@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import {
   createAdminArticle,
+  deleteAdminArticle,
   uploadCoverImage,
   fetchAdminArticle,
   fetchAdminArticles,
@@ -87,6 +88,9 @@ export function AdminArticlesPage() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [form, setForm] = useState<FormState>(EMPTY_FORM)
   const [showForm, setShowForm] = useState(false)
+  // Holds the id awaiting a second click. Delete is the one irreversible-looking action
+  // on this page, so it asks twice in place rather than firing on the first click.
+  const [confirmingDelete, setConfirmingDelete] = useState<string | null>(null)
 
   async function load() {
     try {
@@ -180,6 +184,27 @@ export function AdminArticlesPage() {
     try {
       await unpublishAdminArticle(id)
       setMsg(a.articlesUnpublished)
+      await load()
+    } catch {
+      setError(a.articlesSaveError)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function onDelete(id: string) {
+    setBusy(true)
+    try {
+      await deleteAdminArticle(id)
+      setMsg(a.articlesDeleted)
+      setConfirmingDelete(null)
+      // Leaving the editor open on a row that no longer exists would let the next Save
+      // silently resurrect it as a new draft.
+      if (editingId === id) {
+        setEditingId(null)
+        setForm(EMPTY_FORM)
+        setShowForm(false)
+      }
       await load()
     } catch {
       setError(a.articlesSaveError)
@@ -447,6 +472,35 @@ export function AdminArticlesPage() {
                     className="inline-flex min-h-11 items-center rounded-md border border-navy/20 px-3 text-sm font-semibold text-navy disabled:opacity-60"
                   >
                     {a.articlesUnpublish}
+                  </button>
+                )}
+                {confirmingDelete === article.id ? (
+                  <>
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => void onDelete(article.id)}
+                      className="inline-flex min-h-11 items-center rounded-md bg-red px-3 text-sm font-semibold text-white disabled:opacity-60"
+                    >
+                      {a.articlesConfirmDelete}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => setConfirmingDelete(null)}
+                      className="inline-flex min-h-11 items-center rounded-md border border-navy/20 px-3 text-sm font-semibold text-navy disabled:opacity-60"
+                    >
+                      {a.articlesCancel}
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => setConfirmingDelete(article.id)}
+                    className="inline-flex min-h-11 items-center rounded-md border border-red/30 px-3 text-sm font-semibold text-red disabled:opacity-60"
+                  >
+                    {a.articlesDelete}
                   </button>
                 )}
               </div>

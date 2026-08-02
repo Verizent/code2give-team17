@@ -113,6 +113,16 @@ export async function moderateCommunityPost(
   return data
 }
 
+/**
+ * Permanently removes a submission. Unlike an article, this is a hard delete — there is
+ * no archived state on community_posts, so the row is gone and there is no undo.
+ */
+export async function deleteCommunityPost(id: string): Promise<void> {
+  await apiClient(`/api/admin/community-posts/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+  })
+}
+
 export type AdminArticle = {
   id: string
   slug: string
@@ -214,6 +224,16 @@ export async function unpublishAdminArticle(id: string): Promise<AdminArticle> {
     { method: 'POST', body: '{}' },
   )
   return data
+}
+
+/**
+ * Removes an article from the CMS and the public site.
+ *
+ * The server archives rather than dropping the row, so a mis-click is recoverable from
+ * the database — but there is no restore UI, so to the operator this is a delete.
+ */
+export async function deleteAdminArticle(id: string): Promise<void> {
+  await apiClient(`/api/admin/articles/${encodeURIComponent(id)}`, { method: 'DELETE' })
 }
 
 export type AdminInstagramEmbed = {
