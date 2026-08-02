@@ -8,6 +8,7 @@
     "dev": "node --watch index.js",
     "seed": "node db/seed/seed.js",
     "seed:admin": "node db/seed/admin.seed.js",
+    "seed:analytics": "node db/seed/analytics.seed.js",
     "test": "node --test --test-concurrency=1",
     "test:coverage": "node --test --experimental-test-coverage",
     "test:schema": "node --test --test-concurrency=1 \"test/schema/**/*.test.js\""
