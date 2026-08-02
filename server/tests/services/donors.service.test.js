@@ -230,7 +230,7 @@ test("buildTrackView.period.events carry PLAN.md §C1 fields — kind, title, st
       { id: "s1", title_en: "Floor curling", title_zh: "地壺球",
         starts_at: "2026-08-20T10:00:00Z",
         location_en: "San Po Kong", location_zh: "新蒲崗",
-        status: "scheduled", attendance_count: null, photo_url: null },
+        status: "scheduled", capacity: 12, attendance_count: null, photo_url: null },
     ],
   });
 
@@ -245,9 +245,10 @@ test("buildTrackView.period.events carry PLAN.md §C1 fields — kind, title, st
   assert.equal(event.status, "scheduled", "session's own status — NOT allocation status");
   assert.equal(event.attendance_count, null, "null renders 'headcount pending', never 0");
   assert.equal(event.photo_url, null);
-  // expected_participants: column doesn't exist yet — safe null (PLAN.md flags as future work)
-  assert.ok("expected_participants" in event, "field present with null default");
-  assert.equal(event.expected_participants, null);
+  // `sessions.capacity` stands in for expected_participants — the admin track owns that
+  // table and is not adding a column for us. Planned headcount, distinct from
+  // attendance_count above, which is who actually came.
+  assert.equal(event.expected_participants, 12, "mapped from sessions.capacity");
   // Under PLAN.md there is no per-event `status: pending|planned` — do not leak it
   assert.equal(event.cost_at_allocation, undefined, "cost is internal, not exposed");
 });

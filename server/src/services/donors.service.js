@@ -201,8 +201,12 @@ function toEvent(session, locale) {
     location: resolved.location ?? null,
     // Session's own status per PLAN.md §Phase B — never the allocation's status.
     status: session.status ?? "scheduled",
-    // Column doesn't exist on sessions yet (PLAN.md flags as future work) — safe null.
-    expected_participants: session.expected_participants ?? null,
+    // `sessions` has no `expected_participants` column and is not getting one — it belongs
+    // to the admin track. `capacity` stands in by team decision: it is the planned headcount
+    // for a scheduled session, which is what the donor page needs before the event runs.
+    // Distinct from `attendance_count` below, which is who actually came. Never collapse the
+    // two — a completed event's headcount must stay a fact, not silently become a plan.
+    expected_participants: session.capacity ?? null,
     attendance_count: session.attendance_count ?? null,
     photo_url: session.photo_url ?? null,
   };

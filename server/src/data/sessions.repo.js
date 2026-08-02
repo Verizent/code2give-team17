@@ -38,7 +38,7 @@ async function findById(id) {
   const { data, error } = await getSupabase()
     .from("sessions")
     .select(
-      "id, title_en, title_zh, programme, starts_at, ends_at, location_en, location_zh, status, attendance_count, photo_url, note_en, note_zh, completed_at",
+      "id, title_en, title_zh, programme, starts_at, ends_at, location_en, location_zh, status, capacity, attendance_count, photo_url, note_en, note_zh, completed_at",
     )
     .eq("id", id)
     .maybeSingle();
@@ -58,7 +58,7 @@ async function listByIds(ids) {
   const { data, error } = await getSupabase()
     .from("sessions")
     .select(
-      "id, title_en, title_zh, programme, starts_at, ends_at, location_en, location_zh, status, attendance_count, photo_url, note_en, note_zh, completed_at",
+      "id, title_en, title_zh, programme, starts_at, ends_at, location_en, location_zh, status, capacity, attendance_count, photo_url, note_en, note_zh, completed_at",
     )
     .in("id", ids);
 
