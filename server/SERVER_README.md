@@ -675,6 +675,46 @@ fail badly**, so it is not a detail to leave to chance:
 Set `TRUST_PROXY=1` for a single proxy hop; leave it empty when the server is directly reachable.
 It defaults to empty, which is what this app has always done.
 
+### Demo day
+
+The limits are a **rate over a fixed 15-minute window, not a concurrency cap** — spreading requests
+out does not help unless they cross the window boundary. At a venue everyone is usually behind one
+NAT, so the server sees a single IP for a whole room and they share one budget. That works out to
+**10 volunteer actions between all of them** per 15 minutes.
+
+Only one question decides what to set: *do the audience's browsers hit the server directly?*
+
+| Situation | Set | Why |
+|---|---|---|
+| You drive the demo yourself | **nothing** | One client. The budgets are unreachable. |
+| Audience browses on their own devices | `RATE_LIMIT_DISABLED=true` | They share a NAT IP, and 10 actions between them is too tight to gamble a demo on. |
+| Deployed behind your own reverse proxy, limits kept on | `TRUST_PROXY=1` | Otherwise every visitor collapses into the proxy's IP. |
+
+**`TRUST_PROXY` does not solve the shared-audience problem.** It recovers the real client IP from
+behind *your* proxy — but if a room genuinely shares one NAT address, that *is* their real IP and
+they still share a bucket. Only `RATE_LIMIT_DISABLED` removes that.
+
+The donation flow is safe either way: `referral-status` fails open, so even a 429 leaves the form
+working and the gift going through. It is the volunteer routes that stop.
+
+Both variables need a **restart**. `RATE_LIMIT_DISABLED` is read per request, but `process.env` is
+only populated at boot, so editing `server/.env` mid-run changes nothing until the server bounces.
+`TRUST_PROXY` is read once at startup.
+
+Verify the flag is actually doing something — with it set, this should be 15 × `201` rather than
+`201` ×10 then `429`:
+
+```bash
+for i in $(seq 1 15); do
+  curl -s -o /dev/null -w "%{http_code} " \
+    -X POST http://localhost:3000/api/email-verifications \
+    -H "Content-Type: application/json" -d "{\"email\":\"probe$i@example.com\"}"
+done
+```
+
+If a 429 shows up mid-demo, that one line in `server/.env` plus a restart is the whole fix. No data
+is affected and nothing else needs reverting.
+
 ### Known limits
 
 Both deliberate, and both worth fixing before this faces real traffic:
