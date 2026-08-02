@@ -604,6 +604,131 @@ Error codes (the `code` field clients branch on):
 
 ---
 
+## Rate limiting
+
+`middleware/rate-limit.js` is a fixed-window limiter held in the process's own memory. It was a
+no-op stub until recently — three routes mounted it and looked protected while being wide open.
+
+Mount it with a budget:
+
+```js
+const rateLimit = require("../middleware/rate-limit");
+
+router.post("/thing", rateLimit({ key: "thing", limit: 10 }), handler);
+```
+
+Each call to `rateLimit()` closes over its **own** `Map`, so routes cannot throttle or evict one
+another, and a test gets a clean store just by building new middleware.
+
+### Current budgets
+
+All windows are 15 minutes.
+
+| Route | Limit | Keyed on | Why |
+|---|---|---|---|
+| `GET /api/donations/referral-status` | 30 | IP | Unauthenticated, so it can be used to test whether an address is a known donor. The donate form calls it from a debounced `onChange`, so one honest donor makes a handful — 30 still makes enumeration useless. |
+| `POST /api/email-verifications` | 5 per address **+** 10 per IP | address, IP | Sends real mail. Capping IP alone still lets a spread of hosts bury one person's inbox; capping the address alone punishes a shared office NAT. Two limiters, two budgets. |
+| `POST /api/opportunities/:id/interest` | 10 | IP | Unauthenticated write. |
+
+`MAX_ATTEMPTS` in `email-verification.service.js` is **not** related — it caps guesses against an
+existing code, not how many codes we send.
+
+### Limiting on more than one axis
+
+`identify(request)` may return several identities. The request is refused when **any** of them is
+exhausted, and every one is charged only if the request is allowed through:
+
+```js
+rateLimit({
+  key: "email-verification-address",
+  limit: 5,
+  identify: (request) =>
+    typeof request.body?.email === "string" ? request.body.email.trim() : null,
+});
+```
+
+`identify` runs **before** `validate()`, so `request.body` is parsed but not yet trusted — check
+types rather than assuming a string is there. Returning nothing lets the request through: an
+unidentifiable caller fails open rather than blocking the route for everyone.
+
+### What a refusal looks like
+
+Standard §29 envelope, plus a `Retry-After` header in whole seconds:
+
+```
+HTTP/1.1 429 Too Many Requests
+Retry-After: 871
+
+{"error":"Too Many Requests","code":"RATE_LIMITED","message":"Too many requests. Try again in 871s."}
+```
+
+### `TRUST_PROXY` — read this before deploying
+
+The limiters key on `request.ip`, and what that means depends on this setting. **Both directions
+fail badly**, so it is not a detail to leave to chance:
+
+| Situation | Result |
+|---|---|
+| Unset, behind a reverse proxy | Every visitor collapses into the proxy's single IP and they throttle each other. The 31st honest donor in the window gets a 429. |
+| Set, but reachable directly | `X-Forwarded-For` is caller-supplied, so anyone can forge a fresh bucket per request and skip the limits entirely. |
+
+Set `TRUST_PROXY=1` for a single proxy hop; leave it empty when the server is directly reachable.
+It defaults to empty, which is what this app has always done.
+
+### Demo day
+
+The limits are a **rate over a fixed 15-minute window, not a concurrency cap** — spreading requests
+out does not help unless they cross the window boundary. At a venue everyone is usually behind one
+NAT, so the server sees a single IP for a whole room and they share one budget. That works out to
+**10 volunteer actions between all of them** per 15 minutes.
+
+Only one question decides what to set: *do the audience's browsers hit the server directly?*
+
+| Situation | Set | Why |
+|---|---|---|
+| You drive the demo yourself | **nothing** | One client. The budgets are unreachable. |
+| Audience browses on their own devices | `RATE_LIMIT_DISABLED=true` | They share a NAT IP, and 10 actions between them is too tight to gamble a demo on. |
+| Deployed behind your own reverse proxy, limits kept on | `TRUST_PROXY=1` | Otherwise every visitor collapses into the proxy's IP. |
+
+**`TRUST_PROXY` does not solve the shared-audience problem.** It recovers the real client IP from
+behind *your* proxy — but if a room genuinely shares one NAT address, that *is* their real IP and
+they still share a bucket. Only `RATE_LIMIT_DISABLED` removes that.
+
+The donation flow is safe either way: `referral-status` fails open, so even a 429 leaves the form
+working and the gift going through. It is the volunteer routes that stop.
+
+Both variables need a **restart**. `RATE_LIMIT_DISABLED` is read per request, but `process.env` is
+only populated at boot, so editing `server/.env` mid-run changes nothing until the server bounces.
+`TRUST_PROXY` is read once at startup.
+
+Verify the flag is actually doing something — with it set, this should be 15 × `201` rather than
+`201` ×10 then `429`:
+
+```bash
+for i in $(seq 1 15); do
+  curl -s -o /dev/null -w "%{http_code} " \
+    -X POST http://localhost:3000/api/email-verifications \
+    -H "Content-Type: application/json" -d "{\"email\":\"probe$i@example.com\"}"
+done
+```
+
+If a 429 shows up mid-demo, that one line in `server/.env` plus a restart is the whole fix. No data
+is affected and nothing else needs reverting.
+
+### Known limits
+
+Both deliberate, and both worth fixing before this faces real traffic:
+
+- **Per process.** Counters reset on restart and do not coordinate across instances — a second
+  instance doubles every limit. A shared store (Postgres or Redis) is the fix.
+- **In-memory only.** Bucket count is capped at `MAX_TRACKED_KEYS` (10,000) with expired entries
+  swept on an interval, so a spray of distinct identities cannot grow the Map without bound.
+
+`RATE_LIMIT_DISABLED=true` bypasses every limiter. It exists so a demo cannot be interrupted by
+its own throttling — never set it anywhere the public can reach.
+
+---
+
 ## Migrations
 
 Two separate SQL homes — both are correct, neither supersedes the other:

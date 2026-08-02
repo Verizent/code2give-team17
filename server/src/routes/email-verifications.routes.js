@@ -13,7 +13,23 @@ const router = express.Router();
 
 router.post(
   "/",
-  rateLimit({ key: "email-verification" }),
+  // This endpoint sends real mail, so the address being mailed is the axis that matters most:
+  // capping per IP alone still lets a spread of hosts bury one person's inbox. The two axes
+  // deserve different budgets, so they are two limiters rather than one — a shared office NAT
+  // legitimately produces more requests than any single address should receive.
+  //
+  // MAX_ATTEMPTS in email-verification.service.js does NOT cover this: that caps guesses
+  // against an existing code, not how many codes we send.
+  //
+  // Both run before validate(), so request.body is parsed but not yet trusted — hence the
+  // typeof check rather than assuming a string is there.
+  rateLimit({
+    key: "email-verification-address",
+    limit: 5,
+    identify: (request) =>
+      typeof request.body?.email === "string" ? request.body.email.trim() : null,
+  }),
+  rateLimit({ key: "email-verification-ip", limit: 10 }),
   validate({ body: startEmailVerificationBodySchema }),
   async (request, response, next) => {
     try {

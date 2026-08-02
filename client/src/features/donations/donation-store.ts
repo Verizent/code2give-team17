@@ -9,7 +9,15 @@ export type StoredDonation = {
   id: string
   amount_hkd: number
   frequency: GiftFrequency
-  programme: DonateProgramme
+  /**
+   * Optional since the donate form stopped asking. Every gift is unrestricted — the column
+   * was dropped from `donations` on 1 Aug and the checkout endpoint never accepted it — so
+   * the chips were choosing something nothing downstream honoured.
+   *
+   * Kept on the type rather than deleted because gifts saved before the change still carry
+   * it, and gift-journey-tree already falls back to "where needed most" when it is absent.
+   */
+  programme?: DonateProgramme
   email: string
   /** Name printed on the Section 88 receipt */
   receipt_name: string
@@ -83,7 +91,7 @@ export function getDonation(donationId: string): StoredDonation | undefined {
 export function saveDonation(input: {
   amount_hkd: number
   frequency: GiftFrequency
-  programme: DonateProgramme
+  programme?: DonateProgramme
   email: string
   receipt_name: string
   receipt_for_other?: boolean

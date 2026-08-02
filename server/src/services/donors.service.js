@@ -17,6 +17,34 @@ function newAccessToken() {
   return crypto.randomBytes(32).toString("hex");
 }
 
+/** Mirrors donors_referral_sources_check. Keep the two in step. */
+const REFERRAL_SOURCES = [
+  "friend_family",
+  "social",
+  "edm",
+  "company",
+  "event",
+  "press",
+  "search",
+  "other",
+];
+
+/**
+ * Drops unknown values and duplicates rather than letting them reach the CHECK constraint.
+ *
+ * These arrive via Stripe session metadata, which is a round trip through a third party we
+ * do not control — so what comes back is treated as untrusted input, not as the array we
+ * sent. A rejected write here would fail the webhook and un-succeed a donation that was
+ * genuinely paid, which is far worse than dropping an unrecognised tag.
+ *
+ * @param {unknown} value
+ * @returns {string[]}
+ */
+function sanitiseReferralSources(value) {
+  if (!Array.isArray(value)) return [];
+  return [...new Set(value.filter((entry) => REFERRAL_SOURCES.includes(entry)))];
+}
+
 /**
  * Upserts a donor keyed on normalised email (CONTEXT.md §15).
  * A returning email resolves to the existing row and token — never split history.
@@ -24,12 +52,30 @@ function newAccessToken() {
  * @param {{ email: string, fullName?: string, locale?: string, trackingOptIn?: boolean }} opts
  * @returns {Promise<{ id: string, email: string, access_token: string, full_name: string|null }>}
  */
-async function upsertDonor({ email, fullName, locale = "en", trackingOptIn = true }) {
+async function upsertDonor({
+  email,
+  fullName,
+  locale = "en",
+  trackingOptIn = true,
+  referralSources,
+  referralSourceOther,
+}) {
   const normalized = normalizeEmail(email);
   const existing = await donorsRepo.findByEmail(normalized);
+  const sources = sanitiseReferralSources(referralSources);
 
   if (existing) {
     const updates = {};
+    // Asked once per donor, never re-asked and never rewritten. The donate form hides the
+    // question once an answer exists, but that is only a UI courtesy — this is the rule.
+    // Without it a later gift would overwrite the original answer, and because the payer
+    // email comes from Stripe rather than from us, so could anyone paying on that address.
+    if (sources.length > 0 && !(existing.referral_sources?.length > 0)) {
+      updates.referral_sources = sources;
+      if (sources.includes("other") && referralSourceOther) {
+        updates.referral_source_other = String(referralSourceOther).slice(0, 200);
+      }
+    }
     // `tracking_opt_in` is deliberately NOT updated for an existing donor. Consent is not
     // a side effect of somebody else donating: POST /api/donations and the wishlist pledge
     // form are both unauthenticated and take an arbitrary email, so this previously let a
@@ -49,6 +95,11 @@ async function upsertDonor({ email, fullName, locale = "en", trackingOptIn = tru
     locale,
     access_token: newAccessToken(),
     tracking_opt_in: trackingOptIn,
+    referral_sources: sources,
+    referral_source_other:
+      sources.includes("other") && referralSourceOther
+        ? String(referralSourceOther).slice(0, 200)
+        : null,
   });
 }
 
@@ -310,4 +361,11 @@ function selectPeriod(periods, requestedId) {
   return open ?? periods[0];
 }
 
-module.exports = { upsertDonor, findDonorByToken, newAccessToken, buildTrackView };
+module.exports = {
+  upsertDonor,
+  findDonorByToken,
+  newAccessToken,
+  buildTrackView,
+  sanitiseReferralSources,
+  REFERRAL_SOURCES,
+};
