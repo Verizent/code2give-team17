@@ -1,5 +1,8 @@
 const { creditFor, COST_PER_EVENT_HKD } = require("../../lib/donation-credit");
 const { normalizeEmail } = require("../../lib/normalize");
+// Imported as a module object rather than destructured, so `mock.method` in the tests
+// replaces the property this file actually reads.
+const campaignsRepo = require("../../data/campaigns.repo");
 const donationsRepo = require("../../data/donations.repo");
 const stripeEventsRepo = require("../../data/stripe-events.repo");
 const donorsService = require("../donors.service");
@@ -86,6 +89,33 @@ async function handleCheckoutCompleted(session) {
     status: "succeeded",
   });
 
+  // Credit the fundraiser this gift was earmarked for. Placed after the status flip so it
+  // sits behind both idempotency gates: the event ledger in `handleEvent`, and the
+  // already-succeeded early return above. A double credit raises no error and produces no
+  // bad row — the total is simply wrong, which is why it is guarded twice.
+  //
+  // DEMO-ONLY: `addRaised` is a read-then-write, so two donations to the same campaign
+  // landing together can lose one update — real version needs an atomic SQL increment
+  // (`raised_hkd = raised_hkd + $1`, via an RPC or a migration). Harmless at demo volume,
+  // wrong under real traffic (§19).
+  let campaignOutcome = null;
+  if (donation.campaign_id) {
+    // Same try/catch reasoning as allocation and email below: anything thrown here becomes a
+    // non-2xx, and Stripe then retries the whole handler forever.
+    try {
+      await campaignsRepo.addRaised(donation.campaign_id, donation.amount_hkd);
+      campaignOutcome = {
+        campaign_id: donation.campaign_id,
+        credited_hkd: donation.amount_hkd,
+      };
+    } catch (campaignError) {
+      console.error(
+        `donation ${donation.id}: fundraiser credit failed — ${campaignError.message}`,
+      );
+      campaignOutcome = { campaign_id: donation.campaign_id, error: campaignError.message };
+    }
+  }
+
   // Attach to real sessions (§15). Runs synchronously in the webhook path so a demo-day
   // walk sees allocations by the time the thanks page loads — a background job would be
   // nicer under load but this is small work and blocks nothing else Stripe cares about.
@@ -135,6 +165,7 @@ async function handleCheckoutCompleted(session) {
     donation_id: donation.id,
     donor_id: donor.id,
     events_credited: eventsCredited,
+    campaign: campaignOutcome,
     allocation: allocationOutcome,
     email: emailOutcome,
   };
