@@ -192,6 +192,25 @@ async function sumByMonth() {
   return [...totals].map(([month, amount_hkd]) => ({ month, amount_hkd }));
 }
 
+/**
+ * How many donations point at a fundraiser, in **any** status.
+ *
+ * Deliberately not filtered to `succeeded`: a `pending` row is a checkout someone may still
+ * be completing, and deleting the campaign under it would strip the link before the webhook
+ * ever arrives. `head: true` asks Postgres for the count without shipping the rows.
+ *
+ * @param {string} campaignId
+ * @returns {Promise<number>}
+ */
+async function countByCampaign(campaignId) {
+  const { count, error } = await getSupabase()
+    .from("donations")
+    .select("id", { count: "exact", head: true })
+    .eq("campaign_id", campaignId);
+  assertOk(error);
+  return count ?? 0;
+}
+
 module.exports = {
   insertDonation,
   insertPendingDonation,
@@ -203,4 +222,5 @@ module.exports = {
   listRecent,
   sumAmounts,
   sumByMonth,
+  countByCampaign,
 };
