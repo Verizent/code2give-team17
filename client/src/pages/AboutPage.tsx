@@ -9,9 +9,9 @@ import { cn } from '@/lib/utils'
 const T = (en: string, zh: string) => ({ en, zh })
 
 const HERO_IMAGES = [
-  '/brand/story.jpg',
-  '/brand/sports.jpeg',
-  '/brand/activity.jpg',
+  '/brand/music.jpeg',
+  '/brand/beyond-limit.jpeg',
+  '/brand/dragonboat.jpeg',
 ]
 
 const HERO_STATS = [
@@ -21,10 +21,42 @@ const HERO_STATS = [
 ]
 
 const ACHIEVEMENTS = [
-  { icon: '🏅', title: T('Asian Para-Karate Championships', '亞洲殘疾人空手道錦標賽'), body: T('Medals won by our members on the regional stage.', '會員在區域賽事中奪得獎牌。') },
-  { icon: '🏢', title: T('Nearly 30 Members', '近 30 位會員'), body: T('Employed and trained through our employment-readiness programme, with many going on to work at outside companies.', '透過就業準備計劃獲聘及培訓，當中不少人其後於機構任職。') },
-  { icon: '🔥', title: T('Phoenix Year', '鳳凰之年'), body: T('Rebuilt and reopened with expanded capacity after the January 2023 San Po Kong fire, thanks to more than 50 partner companies.', '在 2023 年 1 月新蒲崗火災後，於逾 50 間合作企業支持下重建，並以更大容量重新開幕。') },
-  { icon: '🚣', title: T('Dragon Boat Debut', '龍舟首秀'), body: T('Members completed a six-week training programme before racing together in open water for the first time.', '會員完成六週訓練課程後，首次於公開水域一同參賽。') },
+  { 
+    icon: '🏅', 
+    title: T('Asian Para-Karate Championships', '亞洲殘疾人空手道錦標賽'), 
+    body: T('Medals won by our members on the regional stage.', '會員在區域賽事中奪得獎牌。'),
+    stat: T('5 Medals Won', '奪得 5 面獎牌'),
+    image: '/brand/karate.jpeg',
+    color: 'from-yellow/40 to-red/30',
+    link: '#'
+  },
+  { 
+    icon: '🍽️', 
+    title: T('Beyond Limits Charity Banquet', '「Beyond Limits」慈善晚宴'), 
+    body: T('From radiant smiles to breathtaking performances, every moment captured the true power of inclusion. Thank you to all our sponsors, donors, and guests for an unforgettable night.', '從自信笑容到震撼表演，每一刻都展現了共融的力量。衷心感謝所有贊助商、善長和嘉賓，共度難忘一夜。'),
+    stat: T('Sold Out Event', '全場爆滿'),
+    image: '/brand/beyond-limit.jpeg',
+    color: 'from-purple/40 to-navy/30',
+    link: '#'
+  },
+  { 
+    icon: '🌟', 
+    title: T('Special Ability Competition Champions', '特殊展能比賽橫掃獎項'), 
+    body: T('Our stars shone bright, bringing home a long list of awards. Their courage to step up and give their all makes them true champions.', '成員才華大爆發，橫掃多個獎項。他們勇於嘗試、挑戰自己的精神，才是真正的冠軍。'),
+    stat: T('Multiple Awards', '多項大獎'),
+    image: '/brand/competition-champion.jpeg',
+    color: 'from-amber/40 to-orange/30',
+    link: '#'
+  },
+  { 
+    icon: '🚣', 
+    title: T('Dragon Boat Debut', '龍舟首秀'), 
+    body: T('Members completed a six-week training programme before racing together in open water for the first time.', '會員完成六週訓練課程後，首次於公開水域一同參賽。'),
+    stat: T('6 Week Training', '六週訓練'),
+    image: '/brand/dragonboat.jpeg',
+    color: 'from-cyan/40 to-blue/30',
+    link: '#'
+  },
 ]
 
 const MILESTONES = [
@@ -53,7 +85,7 @@ const BOARD = [
 const PROGRAMMES = [
   { id: 'sports', icon: '✦', eyebrow: T('Programme 01', '活動 01'), title: T('Sports', '運動'), body: T('Our sports programme is designed without limitations — a comprehensive range of activities, from football and basketball to surfing and trampoline, alongside strength training, coordination, and mental health support. We run 8+ weekly classes and 50+ activities in total.', '我們的運動計劃不設界限，提供足球、籃球、衝浪、彈床，以及力量、協調和心理健康支援等多元活動。'), action: T('Explore programme', '探索活動'), href: '/programmes/sports', image: '/brand/sports.jpeg' },
   { id: 'nutrition', icon: '●', eyebrow: T('Programme 02', '活動 02'), title: T('Nutrition', '營養'), body: T('Sport alone is not enough to meaningfully extend life expectancy. Our nutrition programme pairs one-on-one guidance with regular cooking and food-prep lessons, so families can build lasting, healthy habits together.', '單靠運動不足以顯著延長預期壽命。我們的營養計劃結合一對一指導、烹飪及食材準備課堂，讓家庭建立長久健康習慣。'), action: T('Explore programme', '探索活動'), href: '/programmes/nutrition', image: '/brand/nutrition.jpeg' },
-  { id: 'family', icon: '♥', eyebrow: T('Programme 03', '活動 03'), title: T('Family', '家庭'), body: T('Family is central to everything we do. Parents play a huge role in our classes, and we offer specialty sessions just for them, alongside plenty of chances to join their children’s activities.', '家庭是我們所有工作的核心。家長在課堂中擔當重要角色，我們亦提供專為他們而設的課堂及參與子女活動的機會。'), action: T('Explore programme', '探索活動'), href: '/programmes/family', image: '/brand/family.jpg' },
+  { id: 'family', icon: '♥', eyebrow: T('Programme 03', '活動 03'), title: T('Family', '家庭'), body: T('Family is central to everything we do. Parents play a huge role in our classes, and we offer specialty sessions just for them, alongside plenty of chances to join their children\'s activities.', '家庭是我們所有工作的核心。家長在課堂中擔當重要角色，我們亦提供專為他們而設的課堂及參與子女活動的機會。'), action: T('Explore programme', '探索活動'), href: '/programmes/family', image: '/brand/family.jpg' },
   { id: 'csr', icon: '◎', eyebrow: T('Programme 04', '活動 04'), title: T('Corporate Social Responsibility', '企業社會責任'), body: T('Our beneficiaries are rarely seen and often misunderstood. Our CSR programme brings your team into a circuit-training session alongside our members — an afternoon that shows just how much ability this community has.', '我們的服務對象鮮有被看見，也常被誤解。我們的企業社會責任計劃讓團隊與會員一起參與循環訓練，親身感受這個社群的無限能力。'), action: T('Partner with us', '與我們合作'), href: 'mailto:jeff@love21foundation.com?subject=CSR%20programme', image: '/brand/csr.jpg' },
 ]
 
@@ -73,8 +105,8 @@ const STATS = [
 ]
 
 const QUOTES = [
-  { quote: T('“Everybody deserves the opportunity to reach their full potential.”', '「每個人都應有機會發揮全部潛能。」'), by: T('Love 21 Foundation', 'Love 21 基金會') },
-  { quote: T('“There’s a whole community that has come together. I’m very proud to be part of that community.”', '「整個社群都凝聚起來。我非常自豪能成為其中一員。」'), by: T('Carmel Armstrong, Chief Operating Officer', 'Carmel Armstrong，營運總監') },
+  { quote: T('"Everybody deserves the opportunity to reach their full potential."', '「每個人都應有機會發揮全部潛能。」'), by: T('Love 21 Foundation', 'Love 21 基金會') },
+  { quote: T('"There\'s a whole community that has come together. I\'m very proud to be part of that community."', '「整個社群都凝聚起來。我非常自豪能成為其中一員。」'), by: T('Carmel Armstrong, Chief Operating Officer', 'Carmel Armstrong，營運總監') },
 ]
 
 const PARTNERS = ['JEB', 'Bluestone Management', 'Team Build Events', 'Argyll Scott', 'Nakama Global']
@@ -96,9 +128,9 @@ function CountUp({ stat }: { stat: (typeof STATS)[number] }) {
 export function AboutPage() {
   const { locale } = useSite(); const tx = useText(locale)
   const [hero, setHero] = useState(0); const [activeProgramme, setActiveProgramme] = useState(0); const [activeSection, setActiveSection] = useState(0); const [quote, setQuote] = useState(0); const [lightbox, setLightbox] = useState<number | null>(null); const [progress, setProgress] = useState(0)
+  const [activeAchievement, setActiveAchievement] = useState(0)
   const programmeRefs = useRef<(HTMLElement | null)[]>([]); const pageRefs = useRef<(HTMLElement | null)[]>([])
-  // Nav is ordered by visitor priority (what is this → why care → how to help), not by page position.
-  const pageNav = useMemo(() => [T('Impact', '影響力'), T('Stories', '故事'), T('Programmes', '活動'), T('Leadership', '領導團隊'), T('Gallery', '相片'), T('Support', '支持我們')], [])
+  const nav = useMemo(() => [T('Impact', '影響力'), T('Stories', '故事'), T('Programmes', '活動'), T('Leadership', '領導團隊'), T('Gallery', '相片'), T('Support', '支持我們')], [])
 
   useEffect(() => {
     const timer = window.setInterval(() => setHero((i) => (i + 1) % HERO_IMAGES.length), 5200); const quoteTimer = window.setInterval(() => setQuote((i) => (i + 1) % QUOTES.length), 6500)
@@ -127,7 +159,7 @@ export function AboutPage() {
       </div>
     </section>
 
-    {/* IMPACT BAR — sits right under the cover, spans full width */}
+    {/* IMPACT BAR */}
     <div className="border-b border-navy/10 bg-navy px-5 py-5 sm:px-10 lg:px-16">
       <div className="mx-auto flex max-w-[1120px] flex-wrap items-center justify-center gap-x-10 gap-y-3 text-white/90 sm:justify-between">
         <div className="flex flex-wrap items-center justify-center gap-x-10 gap-y-3">
@@ -137,7 +169,7 @@ export function AboutPage() {
       </div>
     </div>
 
-    <nav aria-label={tx(T('Page sections', '頁面部分'))} className="sticky top-14 z-30 border-y border-navy/10 bg-white/95 backdrop-blur sm:top-[72px]"><div className="no-scrollbar mx-auto flex max-w-[1120px] gap-2 overflow-x-auto px-4 py-3 sm:px-8">{pageNav.map((item, index) => <button key={item.en} type="button" onClick={() => scrollTo(index)} className={cn('min-h-11 shrink-0 rounded-full px-5 text-sm font-bold', activeSection === index ? 'bg-navy text-white' : 'text-navy hover:bg-yellow/30')}>0{index + 1} {tx(item)}</button>)}</div></nav>
+    <nav aria-label={tx(T('Page sections', '頁面部分'))} className="sticky top-14 z-30 border-y border-navy/10 bg-white/95 backdrop-blur sm:top-[72px]"><div className="no-scrollbar mx-auto flex max-w-[1120px] gap-2 overflow-x-auto px-4 py-3 sm:px-8">{nav.map((item, index) => <button key={item.en} type="button" onClick={() => scrollTo(index)} className={cn('min-h-11 shrink-0 rounded-full px-5 text-sm font-bold', activeSection === index ? 'bg-navy text-white' : 'text-navy hover:bg-yellow/30')}>0{index + 1} {tx(item)}</button>)}</div></nav>
 
     {/* IMPACT NUMBERS */}
     <section ref={(el) => { pageRefs.current[0] = el }} className="px-5 py-16 sm:px-10 sm:py-24 lg:px-16">
@@ -153,17 +185,91 @@ export function AboutPage() {
     </section>
 
     {/* COMMUNITY ACHIEVEMENTS */}
-    <section className="bg-navy px-5 py-16 sm:px-10 sm:py-24 lg:px-16">
+    <section className="bg-navy px-5 py-16 sm:px-10 sm:py-24 lg:px-16 overflow-hidden">
       <div className="mx-auto max-w-[1120px]">
         <p className="kicker text-yellow">{tx(T('Community achievements', '社群成就'))}</p>
         <h2 className="mt-3 font-display text-4xl font-semibold text-white sm:text-6xl">{tx(T('Milestones our members are proud of.', '會員引以為傲的里程碑。'))}</h2>
-        <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {ACHIEVEMENTS.map((item) => (
-            <div key={item.title.en} className="rounded-md border border-white/15 bg-white/5 p-6">
-              <span className="text-3xl">{item.icon}</span>
-              <h3 className="mt-4 font-display text-xl font-semibold text-white">{tx(item.title)}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-white/75">{tx(item.body)}</p>
+        
+        {/* Featured Large Card */}
+        <div className="mt-10 relative overflow-hidden rounded-xl border border-white/15 group">
+          {ACHIEVEMENTS.map((achievement, index) => (
+            <div
+              key={achievement.title.en}
+              className={cn(
+                'absolute inset-0 bg-cover bg-center transition-all duration-700',
+                index === activeAchievement ? 'opacity-100 scale-105' : 'opacity-0 scale-100'
+              )}
+              style={{ backgroundImage: `url('${achievement.image}')` }}
+            />
+          ))}
+          <div className={cn(
+            'absolute inset-0 transition-all duration-700',
+            ACHIEVEMENTS[activeAchievement].color
+          )} />
+          <div className="absolute inset-0 bg-gradient-to-t from-navy/90 via-navy/50 to-navy/20" />
+          
+          <div className="relative p-8 sm:p-12 lg:p-16 min-h-[400px] sm:min-h-[500px] flex flex-col justify-end">
+            <div className="mb-6">
+              <span className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-yellow/90 text-3xl backdrop-blur-sm">
+                {ACHIEVEMENTS[activeAchievement].icon}
+              </span>
             </div>
+            <h3 className="font-display text-3xl sm:text-5xl font-semibold text-white max-w-3xl animate-fade-in">
+              {tx(ACHIEVEMENTS[activeAchievement].title)}
+            </h3>
+            <p className="mt-4 text-lg leading-relaxed text-white/85 max-w-2xl animate-slide-up">
+              {tx(ACHIEVEMENTS[activeAchievement].body)}
+            </p>
+            <div className="mt-6 flex flex-wrap items-center gap-4">
+              <span className="inline-flex items-center gap-2 rounded-full bg-yellow px-5 py-2.5 text-sm font-bold text-navy">
+                <span>✦</span>
+                {tx(ACHIEVEMENTS[activeAchievement].stat)}
+              </span>
+              <a 
+                href={ACHIEVEMENTS[activeAchievement].link} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-sm font-bold uppercase tracking-[0.12em] text-white/80 hover:text-yellow transition-colors border-b-2 border-transparent hover:border-yellow pb-1"
+              >
+                {tx(T('View Story', '查看故事'))} →
+              </a>
+            </div>
+          </div>
+        </div>
+
+        {/* Thumbnail Selector */}
+        <div className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-4">
+          {ACHIEVEMENTS.map((achievement, index) => (
+            <button
+              key={achievement.title.en}
+              type="button"
+              onClick={() => setActiveAchievement(index)}
+              className={cn(
+                'group relative overflow-hidden rounded-lg border-2 transition-all duration-300 text-left p-4 sm:p-5',
+                index === activeAchievement
+                  ? 'border-yellow bg-white/10 scale-[1.02] shadow-lg shadow-yellow/10'
+                  : 'border-white/15 bg-white/5 hover:bg-white/10 hover:border-white/30'
+              )}
+            >
+              <div className="absolute inset-0 opacity-0 group-hover:opacity-15 transition-opacity duration-300">
+                <img src={achievement.image} alt="" className="h-full w-full object-cover" />
+              </div>
+              <span className={cn(
+                'text-2xl transition-transform duration-300',
+                index === activeAchievement ? 'scale-110' : 'group-hover:scale-110'
+              )}>
+                {achievement.icon}
+              </span>
+              <h4 className={cn(
+                'mt-3 font-bold text-sm transition-colors duration-300',
+                index === activeAchievement ? 'text-yellow' : 'text-white group-hover:text-yellow'
+              )}>
+                {tx(achievement.title)}
+              </h4>
+              {index === activeAchievement && (
+                <div className="mt-2 h-1 w-8 rounded-full bg-yellow animate-pulse" />
+              )}
+            </button>
           ))}
         </div>
       </div>
@@ -174,9 +280,9 @@ export function AboutPage() {
       <div className="mx-auto grid max-w-[1120px] gap-6 lg:grid-cols-2">
         <div className="rounded-md border border-navy/10 bg-white p-7 sm:p-10">
           <p className="kicker text-navy/60">{tx(T('What our partners say', '合作夥伴分享'))}</p>
-          <blockquote className="mt-5 text-lg italic leading-relaxed text-navy/85">{tx(T('“Our experience with Love 21 has been amazing. Jeff and Carmel walked us through the challenges this community faces, then we joined a circuit-training session alongside members — an experience that will stay with us for a long time.”', '「我們在 Love 21 的體驗非常難忘。Jeff 和 Carmel 讓我們了解社群面對的挑戰，其後我們與會員一起參與循環訓練，這是一段令我們長久難忘的經歷。」'))}</blockquote>
+          <blockquote className="mt-5 text-lg italic leading-relaxed text-navy/85">{tx(T('"Our experience with Love 21 has been amazing. Jeff and Carmel walked us through the challenges this community faces, then we joined a circuit-training session alongside members — an experience that will stay with us for a long time."', '「我們在 Love 21 的體驗非常難忘。Jeff 和 Carmel 讓我們了解社群面對的挑戰，其後我們與會員一起參與循環訓練，這是一段令我們長久難忘的經歷。」'))}</blockquote>
           <p className="mt-4 text-sm font-bold text-navy/60">Chaim — Argyll Scott</p>
-          <blockquote className="mt-7 text-lg italic leading-relaxed text-navy/85">{tx(T('“Volunteering at Love 21 was an eye-opening experience, with some delightful members and a really cool space! We loved being part of such an amazing community.”', '「在 Love 21 做義工令人大開眼界；會員令人喜愛，空間亦十分出色！我們很高興成為這個美好社群的一分子。」'))}</blockquote>
+          <blockquote className="mt-7 text-lg italic leading-relaxed text-navy/85">{tx(T('"Volunteering at Love 21 was an eye-opening experience, with some delightful members and a really cool space! We loved being part of such an amazing community."', '「在 Love 21 做義工令人大開眼界；會員令人喜愛，空間亦十分出色！我們很高興成為這個美好社群的一分子。」'))}</blockquote>
           <p className="mt-4 text-sm font-bold text-navy/60">Laura — Nakama Global</p>
         </div>
         <div className="rounded-md bg-yellow p-7 sm:p-10">
@@ -252,7 +358,7 @@ export function AboutPage() {
     <section className="relative overflow-hidden bg-navy px-5 py-20 text-center sm:px-10 sm:py-28 lg:px-16">
       <div className="absolute inset-0 bg-cover bg-center opacity-20" style={{ backgroundImage: `url('${GALLERY[0]}')` }} />
       <div className="relative mx-auto max-w-4xl">
-        <p className="text-6xl text-yellow">“</p>
+        <p className="text-6xl text-yellow">"</p>
         <blockquote className="mt-3 font-display text-[clamp(2.5rem,6vw,5.5rem)] font-semibold leading-[0.96] text-white">{tx(QUOTES[quote].quote)}</blockquote>
         <p className="mt-6 text-sm font-bold uppercase tracking-[0.14em] text-yellow">{tx(QUOTES[quote].by)}</p>
         <div className="mt-7 flex justify-center gap-2">{QUOTES.map((item, index) => <button key={item.by.en} type="button" onClick={() => setQuote(index)} className={cn('h-2 rounded-full', quote === index ? 'w-8 bg-yellow' : 'w-2 bg-white/40')} />)}</div>
