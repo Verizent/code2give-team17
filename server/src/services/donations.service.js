@@ -43,10 +43,23 @@ async function createDonation(input) {
     status: "succeeded",
   });
 
+  // `access_token` is deliberately absent. It is a bearer capability reaching the donor's
+  // tracking page — gift history, amounts, name — and this endpoint is unauthenticated and
+  // takes an arbitrary email. Because `upsertDonor` resolves a returning address to the
+  // EXISTING row, returning it here handed anyone who knew a supporter's email address
+  // their live token. schema/README.md states the same rule for the volunteer equivalent.
+  //
+  // Returning it only for newly-created donors would not fix it: an attacker can seed an
+  // address before its real owner ever donates, then wait.
+  //
+  // Legitimate delivery is unchanged — the §15 recovery email, and
+  // GET /api/donations/session/:id, which is keyed on an unguessable Stripe session id and
+  // gated on the donation having succeeded with tracking opted in.
+  //
+  // `email` is the caller's own input echoed back, so it discloses nothing.
   return {
     ...donation,
     email: donor.email,
-    access_token: donor.access_token,
   };
 }
 

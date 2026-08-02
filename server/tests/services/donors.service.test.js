@@ -28,6 +28,25 @@ test("upsertDonor normalises the email before lookup and storage", async (t) => 
   assert.equal(calledWith, "alice@example.com", "lookup uses normalised email");
 });
 
+test("upsertDonor never re-opts-in a donor who opted out", async (t) => {
+  // Consent is not a side effect of somebody else donating. POST /api/donations is
+  // unauthenticated and takes an arbitrary email, so a third party could previously flip
+  // an opted-out supporter back to opted-in just by submitting their address. Opting back
+  // in is a deliberate act that belongs to the donor, not to whoever posts a form.
+  const optedOut = { ...stubDonor, tracking_opt_in: false };
+  mock.method(donorsRepo, "findByEmail", async () => optedOut);
+  const updateDonor = mock.method(donorsRepo, "updateDonor", async () => optedOut);
+  t.after(() => mock.restoreAll());
+
+  const result = await upsertDonor({ email: "alice@example.com", trackingOptIn: true });
+
+  assert.equal(result.tracking_opt_in, false, "must stay opted out");
+  const flipped = updateDonor.mock.calls.some(
+    (call) => call.arguments[1]?.tracking_opt_in === true,
+  );
+  assert.equal(flipped, false, "must not write tracking_opt_in back to true");
+});
+
 test("upsertDonor returns the existing donor without creating a new one", async (t) => {
   mock.method(donorsRepo, "findByEmail", async () => stubDonor);
   const createDonor = mock.method(donorsRepo, "createDonor", async () => {

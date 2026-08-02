@@ -26,7 +26,12 @@ async function upsertDonor({ email, fullName, locale = "en", trackingOptIn = tru
 
   if (existing) {
     const updates = {};
-    if (trackingOptIn && !existing.tracking_opt_in) updates.tracking_opt_in = true;
+    // `tracking_opt_in` is deliberately NOT updated for an existing donor. Consent is not
+    // a side effect of somebody else donating: POST /api/donations and the wishlist pledge
+    // form are both unauthenticated and take an arbitrary email, so this previously let a
+    // third party flip an opted-out supporter back to opted-in by submitting their address.
+    // Opting back in is a deliberate act belonging to the donor. `trackingOptIn` therefore
+    // only applies on the create path below.
     if (fullName && !existing.full_name) updates.full_name = fullName;
     if (Object.keys(updates).length > 0) {
       await donorsRepo.updateDonor(existing.id, updates);

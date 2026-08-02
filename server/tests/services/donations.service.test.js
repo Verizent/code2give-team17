@@ -65,10 +65,43 @@ test("createDonation normalises email before passing to upsertDonor", async (t) 
   assert.equal(calledEmail, "donor@example.com");
 });
 
-test("createDonation returns access_token from the donor record", async (t) => {
+/**
+ * `donors.access_token` is a bearer capability: whoever holds it can read that donor's
+ * tracking page — their gift history, amounts and name. schema/README.md §77 states the
+ * rule for the volunteer equivalent ("never log it, never put it in an error message")
+ * and tests/services/auth/me.test.js enforces it there. These are the donations-side
+ * counterpart.
+ *
+ * The endpoint that reaches this service, POST /api/donations, is unauthenticated and
+ * takes an arbitrary email. `upsertDonor` resolves a returning address to the EXISTING
+ * row, so returning the token meant anyone who knew a supporter's email address could
+ * ask for it and receive their live tracking token. It previously did exactly that, and
+ * the test asserting so is what these replace.
+ */
+
+test("createDonation never returns a donor access_token", async (t) => {
   mockDeps(t);
+
   const result = await createDonation({ email: "donor@example.com", amount_hkd: 500 });
-  assert.equal(result.access_token, stubDonor.access_token);
+
+  assert.equal("access_token" in result, false);
+  assert.equal(
+    JSON.stringify(result).includes(stubDonor.access_token),
+    false,
+    "the token must not appear anywhere in the response, under any key",
+  );
+});
+
+test("createDonation on a returning email discloses nothing about the existing donor", async (t) => {
+  // The pre-registration shape of the same bug: an attacker seeds the address first, or
+  // simply guesses one already in the table. Either way the response must not carry the
+  // capability that reaches that person's tracking page.
+  mockDeps(t);
+
+  const result = await createDonation({ email: "donor@example.com", amount_hkd: 1 });
+
+  assert.equal(result.access_token, undefined);
+  assert.equal(result.tracking_token, undefined);
 });
 
 /**
