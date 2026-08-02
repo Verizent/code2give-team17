@@ -4,7 +4,14 @@ const { slugify, uniqueSlug } = require("../../lib/slug");
 const campaignsRepo = require("../../data/campaigns.repo");
 const donationsRepo = require("../../data/donations.repo");
 
-/** Shared by create and update: a fundraiser may not close in the past. */
+/**
+ * Shared by create and update: a fundraiser may not close in the past.
+ *
+ * "Today" is UTC on both sides of the comparison, so late evening in Hong Kong (UTC+8) has
+ * already rolled over and an `end_date` of the local today is refused. Accepted rather than
+ * corrected: the alternative is picking a timezone for the whole product, which is a §29
+ * decision and not one to make inside a date guard.
+ */
 function assertEndDateNotPast(endDate) {
   const end = new Date(`${endDate}T00:00:00Z`);
   const today = new Date();
@@ -114,6 +121,9 @@ async function moderateCampaign(id, status) {
  * `slug`, `status` and `raised_hkd` are absent from `updateCampaignSchema`, so a client
  * that sends one gets a 400 rather than having it silently dropped (§29).
  *
+ * Throws 404 for an unknown id, and **400 for an empty patch** — a write that changed
+ * nothing reported as success is the reading that costs someone an afternoon.
+ *
  * @param {string} id
  * @param {{ title?: string, story?: string, goal_hkd?: number,
  *   cover_image_url?: string, end_date?: string }} patch
@@ -157,9 +167,8 @@ async function deleteCampaign(id) {
 
   const donationCount = await donationsRepo.countByCampaign(id);
   if (donationCount > 0) {
-    throw new ApiError(
-      409,
-      `Cannot delete a fundraiser with ${donationCount} donation(s) — rejecting it keeps the record intact`,
+    throw ApiError.conflict(
+      `Cannot delete a fundraiser with ${donationCount} donation(s) — reject it instead, which keeps the record intact`,
     );
   }
 

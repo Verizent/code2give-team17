@@ -1,8 +1,9 @@
 const express = require("express");
 const { validate } = require("../../middleware/validate");
-const { listQuerySchema, idParamSchema } = require("../../schemas/query.schema");
+const { idParamSchema } = require("../../schemas/query.schema");
 const {
   updateCampaignSchema,
+  adminCampaignListQuerySchema,
   moderateCampaignSchema,
 } = require("../../schemas/campaign.schema");
 const { envelope } = require("../../lib/envelope");
@@ -19,12 +20,9 @@ const router = express.Router();
  * matched it.
  */
 
-router.get("/", validate({ query: listQuerySchema }), async (req, res, next) => {
+router.get("/", validate({ query: adminCampaignListQuerySchema }), async (req, res, next) => {
   try {
-    const { items, meta } = await campaignsService.listForAdmin({
-      ...req.validatedQuery,
-      status: req.query.status,
-    });
+    const { items, meta } = await campaignsService.listForAdmin(req.validatedQuery);
     res.json(envelope(items, meta));
   } catch (e) { next(e); }
 });
