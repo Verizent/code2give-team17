@@ -10,6 +10,19 @@ const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || "http://localhost:5173";
 
 app.disable("x-powered-by");
 
+// Off by default, which is what this has always done — but the rate limiters key on
+// `request.ip`, and without this that is the socket address. Behind a reverse proxy every
+// visitor collapses into the proxy's single IP, which turns an IP-keyed limit from a defence
+// into an outage: the 31st honest donor in the window gets a 429.
+//
+// Set TRUST_PROXY when deploying behind one (`1` for a single hop, or a subnet expression).
+// Never set it when the server is directly reachable — X-Forwarded-For is caller-controlled,
+// so trusting it there lets anyone mint a fresh bucket per request and skip the limits.
+if (process.env.TRUST_PROXY) {
+  const hops = Number.parseInt(process.env.TRUST_PROXY, 10);
+  app.set("trust proxy", Number.isNaN(hops) ? process.env.TRUST_PROXY : hops);
+}
+
 // MUST stay above express.json(). Stripe signs the exact bytes it sent, so a body that has
 // been parsed and re-stringified fails verification on a perfectly valid signature
 // (CONTEXT.md §17). The route mounts express.raw() itself; this line is what stops the JSON

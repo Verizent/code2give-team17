@@ -105,7 +105,10 @@ router.get(
  */
 router.get(
   "/referral-status",
-  rateLimit({ key: "referral-status" }),
+  // Generous because the donate form calls this from a debounced onChange while an email is
+  // typed, so one honest donor makes a handful. 30 per 15 minutes still leaves enumeration
+  // useless — probing a meaningful list of addresses would take days.
+  rateLimit({ key: "referral-status", limit: 30 }),
   validate({ query: referralStatusQuerySchema }),
   async (request, response, next) => {
     try {
