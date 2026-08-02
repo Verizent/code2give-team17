@@ -96,6 +96,9 @@ export const STRINGS = {
       subhead: 'Our activities run in neighbourhoods all over the city.',
     },
     paths: {
+      seekingTitle: 'Looking for support for yourself or your family?',
+      seekingBody: 'Membership is free. Tell us a little about you and the team will be in touch.',
+      seekingCta: 'Get support',
       title: 'Ready to make a difference?',
       subhead: 'Pick where you want to start.',
       witness: {
@@ -946,6 +949,9 @@ export const STRINGS = {
       subhead: '我們的活動遍佈全港各區。',
     },
     paths: {
+      seekingTitle: '正在為自己或家人尋找支援？',
+      seekingBody: '會籍免費。告訴我們一些關於你的資料，團隊會與你聯絡。',
+      seekingCta: '尋求支援',
       title: '準備好帶來改變嗎？',
       subhead: '選擇你想開始的地方。',
       witness: {
@@ -1747,6 +1753,9 @@ export const STRINGS = {
       subhead: '我们的活动遍布全港各区。',
     },
     paths: {
+      seekingTitle: '正在为自己或家人寻找支援？',
+      seekingBody: '会籍免费。告诉我们一些关于你的资料，团队会与你联络。',
+      seekingCta: '寻求支援',
       title: '准备好带来改变吗？',
       subhead: '选择你想开始的地方。',
       witness: {
