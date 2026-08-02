@@ -87,8 +87,11 @@ const createInterestBodySchema = z.object({
   locale: localeSchema.optional(),
 });
 
+// The no-opportunity_id path also backs the organisation enquiry panel, which is the only
+// form that carries a company name.
 const createProgrammeInterestBodySchema = createInterestBodySchema.extend({
   opportunity_id: z.string().uuid().optional().nullable(),
+  organisation: z.string().trim().max(200).optional().nullable(),
 });
 
 module.exports = {

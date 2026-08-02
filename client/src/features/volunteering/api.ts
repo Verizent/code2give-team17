@@ -180,6 +180,8 @@ export async function submitInterest(input: {
   email: string
   phone?: string
   message?: string
+  /** Organisation enquiries only. Ignored on the per-opportunity path. */
+  organisation?: string
 }): Promise<{ ok: true; interestId: string | null } | { ok: false; reason: 'duplicate' | 'error' }> {
   if (!isRealApiMode()) {
     return { ok: true, interestId: null }
@@ -212,6 +214,7 @@ export async function submitInterest(input: {
           email: input.email,
           phone: input.phone ?? null,
           message: input.message ?? null,
+          organisation: input.organisation ?? null,
         }),
       },
     )
