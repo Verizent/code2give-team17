@@ -3,12 +3,20 @@ const { requireAuth } = require("../middleware/require-auth");
 const { requireRole } = require("../middleware/require-role");
 // One line per domain, kept alphabetical: routes/index.js is where all six tracks
 // collide, and an alphabetical list merges more cleanly than an ad-hoc one.
+const adminAttendanceRoutes = require("./admin/attendance.routes");
 const adminCommunityPostsRoutes = require("./admin/community-posts.routes");
+const adminHandsonRoutes = require("./admin/handson.routes");
+const adminPostingsRoutes = require("./admin/postings.routes");
 const articlesRoutes = require("./articles.routes");
 const communityPostsRoutes = require("./community-posts.routes");
+const emailVerificationsRoutes = require("./email-verifications.routes");
 const healthRoutes = require("./health.routes");
 const impactRoutes = require("./impact.routes");
 const meRoutes = require("./me.routes");
+const opportunitiesRoutes = require("./opportunities.routes");
+const volunteerRoutes = require("./volunteer.routes");
+const volunteerSignupsRoutes = require("./volunteer-signups.routes");
+const volunteersRoutes = require("./volunteers.routes");
 
 const router = express.Router();
 
@@ -27,11 +35,19 @@ router.get("/api", (request, response) => {
   });
 });
 
+router.use("/api/admin/attendance", adminGuard, adminAttendanceRoutes);
 router.use("/api/admin/community-posts", adminGuard, adminCommunityPostsRoutes);
+router.use("/api/admin/handson", adminGuard, adminHandsonRoutes);
+router.use("/api/admin/postings", adminGuard, adminPostingsRoutes);
 router.use("/api/articles", articlesRoutes);
 router.use("/api/community-posts", communityPostsRoutes);
+router.use("/api/email-verifications", emailVerificationsRoutes);
 router.use("/api/health", healthRoutes);
 router.use("/api/impact", impactRoutes);
 router.use("/api/me", meRoutes);
+router.use("/api/opportunities", opportunitiesRoutes);
+router.use("/api/volunteer", volunteerRoutes);
+router.use("/api/volunteer-signups", volunteerSignupsRoutes);
+router.use("/api/volunteers", volunteersRoutes);
 
 module.exports = router;

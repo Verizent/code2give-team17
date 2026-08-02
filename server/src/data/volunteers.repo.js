@@ -1,0 +1,124 @@
+const { getServiceClient } = require("../config/supabase");
+const { throwIfDbError } = require("./supabase-error");
+const { normalizeEmail } = require("../lib/normalize-email");
+const { generateAccessToken } = require("../lib/tokens");
+
+async function findByEmail(email) {
+  const db = getServiceClient();
+  const { data, error } = await db
+    .from("volunteers")
+    .select("*")
+    .eq("email", normalizeEmail(email))
+    .maybeSingle();
+
+  throwIfDbError(error);
+  return data;
+}
+
+async function findByAccessToken(accessToken) {
+  const db = getServiceClient();
+  const { data, error } = await db
+    .from("volunteers")
+    .select("*")
+    .eq("access_token", accessToken)
+    .maybeSingle();
+
+  throwIfDbError(error);
+  return data;
+}
+
+async function findByProfileId(profileId) {
+  const db = getServiceClient();
+  const { data, error } = await db
+    .from("volunteers")
+    .select("*")
+    .eq("profile_id", profileId)
+    .maybeSingle();
+
+  throwIfDbError(error);
+  return data;
+}
+
+/**
+ * @param {object} values
+ */
+async function createVolunteer(values) {
+  const db = getServiceClient();
+  const { data, error } = await db.from("volunteers").insert(values).select().single();
+
+  throwIfDbError(error, { conflictMessage: "A volunteer with this email already exists" });
+  return data;
+}
+
+/**
+ * @param {{ email: string, full_name: string, phone?: string | null, locale?: string, profile_id?: string | null }} input
+ */
+async function insert(input) {
+  const profileId = input.profile_id ?? null;
+  return createVolunteer({
+    email: normalizeEmail(input.email),
+    full_name: input.full_name,
+    phone: input.phone ?? null,
+    locale: input.locale === "zh-Hant" ? "zh-Hant" : "en",
+    access_token: generateAccessToken(),
+    profile_id: profileId,
+    claimed_at: profileId ? new Date().toISOString() : null,
+  });
+}
+
+/**
+ * @param {string} volunteerId
+ * @param {string} profileId
+ */
+async function claim(volunteerId, profileId) {
+  const db = getServiceClient();
+  const { data, error } = await db
+    .from("volunteers")
+    .update({
+      profile_id: profileId,
+      claimed_at: new Date().toISOString(),
+    })
+    .eq("id", volunteerId)
+    .is("profile_id", null)
+    .select()
+    .single();
+
+  throwIfDbError(error);
+  return data;
+}
+
+/**
+ * @param {string} id
+ * @param {object} patch
+ */
+async function updateVolunteer(id, patch) {
+  const db = getServiceClient();
+  const { data, error } = await db
+    .from("volunteers")
+    .update(patch)
+    .eq("id", id)
+    .select()
+    .single();
+
+  throwIfDbError(error);
+  return data;
+}
+
+/**
+ * @param {string} volunteerId
+ * @param {{ full_name?: string, phone?: string | null }} patch
+ */
+async function updateBasics(volunteerId, patch) {
+  return updateVolunteer(volunteerId, patch);
+}
+
+module.exports = {
+  findByEmail,
+  findByAccessToken,
+  findByProfileId,
+  createVolunteer,
+  insert,
+  claim,
+  updateVolunteer,
+  updateBasics,
+};

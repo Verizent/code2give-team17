@@ -14,4 +14,7 @@ function assertOk(error) {
   }
 }
 
-module.exports = { assertOk };
+// `throwIfDbError` is the volunteer-track name for the same helper — kept as an alias
+// so volunteer repos merged in from feature/volunteers-backend/... keep working
+// without renaming every call site.
+module.exports = { assertOk, throwIfDbError: assertOk };

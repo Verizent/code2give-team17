@@ -13,8 +13,10 @@ require("dotenv").config({ quiet: true });
 
 const { getSupabase } = require("../../src/config/supabase");
 const { articles } = require("./articles.seed");
+const { badges } = require("./badges.seed");
 const { communityPosts } = require("./community-posts.seed");
 const { impactPeriods } = require("./impact.seed");
+const { opportunities } = require("./volunteer-opportunities.seed");
 
 async function upsert(table, rows, onConflict) {
   const { data, error } = await getSupabase()
@@ -58,16 +60,40 @@ async function seedCommunityPosts() {
   console.log(`  community_posts   ${communityPosts.length} inserted`);
 }
 
+async function safeSeed(label, fn) {
+  try {
+    await fn();
+  } catch (error) {
+    console.error(`  ${label.padEnd(18)}FAILED — ${error.message}`);
+  }
+}
+
 async function main() {
   console.log("Seeding Love 21 content (upsert only, nothing is deleted)\n");
 
-  const articleCount = await upsert("articles", articles, "slug");
-  console.log(`  articles          ${articleCount} upserted`);
+  // Volunteer track first so opportunities + badges land even if a later step
+  // hits schema drift (§26 demo-first — a partial seed is better than none).
+  await safeSeed("volunteer_opps", async () => {
+    const n = await upsert("volunteer_opportunities", opportunities, "id");
+    console.log(`  volunteer_opps    ${n} upserted`);
+  });
 
-  const impactCount = await upsert("impact_periods", impactPeriods, "period_start,period_end");
-  console.log(`  impact_periods    ${impactCount} upserted`);
+  await safeSeed("badges", async () => {
+    const n = await upsert("badges", badges, "code");
+    console.log(`  badges            ${n} upserted`);
+  });
 
-  await seedCommunityPosts();
+  await safeSeed("articles", async () => {
+    const n = await upsert("articles", articles, "slug");
+    console.log(`  articles          ${n} upserted`);
+  });
+
+  await safeSeed("impact_periods", async () => {
+    const n = await upsert("impact_periods", impactPeriods, "period_start,period_end");
+    console.log(`  impact_periods    ${n} upserted`);
+  });
+
+  await safeSeed("community_posts", seedCommunityPosts);
 
   console.log("\nDone.");
 }
