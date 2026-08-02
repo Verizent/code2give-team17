@@ -77,6 +77,39 @@ export async function fetchAdminFunnel(): Promise<FunnelPayload> {
   return data
 }
 
+/** `null` means the denominator was empty — render "not enough data", never 0%. */
+export type AnalyticsPayload = {
+  donor_retention: {
+    rate: number | null
+    retained: number
+    prior_donors: number
+    current_donors: number
+  }
+  repeat_gift: { rate: number | null; repeat_donors: number; total_donors: number }
+  capacity_fill: { rate: number | null; attended: number; capacity: number }
+  satisfaction: {
+    average_rating: number | null
+    would_return_rate: number | null
+    responses: number
+  }
+  programmes: Array<{
+    programme: string
+    capacity: number
+    attendance_count: number
+    fill_rate: number | null
+  }>
+  acquisition: {
+    donors: Array<{ source: string; count: number }>
+    volunteers: Array<{ source: string; count: number }>
+    available: boolean
+  }
+}
+
+export async function fetchAdminAnalytics(): Promise<AnalyticsPayload> {
+  const { data } = await apiData<AnalyticsPayload>('/api/admin/analytics')
+  return data
+}
+
 export async function fetchCommunityPosts(status = 'pending'): Promise<{
   items: CommunityPost[]
   available: boolean
