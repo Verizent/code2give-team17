@@ -284,6 +284,15 @@ export const corporatePartnerNames = corporatePartnersWall.map((p) => p.name)
  * titles, dates, and urls match the original articles. Photos are our own
  * brand photography (not screenshots of the press pages) for visual quality.
  */
+/**
+ * External media coverage.
+ *
+ * `externalOnly` marks the items we cannot republish: those two pages are a headline
+ * and a thumbnail pointing at an RTHK episode and a newspaper column — there is no
+ * body text to bring across, so linking out is the honest option. Everything else in
+ * this list now has a full article in our own `articles` table, and the Articles page
+ * links to those internally rather than bouncing the visitor off the site.
+ */
 export const mediaItems = [
   {
     id: 'beyond-limits-banquet-2026',
@@ -309,6 +318,7 @@ export const mediaItems = [
   },
   {
     id: 'around-the-ward-2022',
+    externalOnly: true,
     title: {
       en: 'Around the Ward: protecting children with special needs through the pandemic',
       'zh-Hant': '【繞場一週】守護特殊兒童對抗疫境',
@@ -320,6 +330,7 @@ export const mediaItems = [
   },
   {
     id: 'love-simply-interview-2021',
+    externalOnly: true,
     title: {
       en: 'Health feature interview: Love, simply',
       'zh-Hant': '精靈一點 健康人物專訪 — 愛．很簡單',
