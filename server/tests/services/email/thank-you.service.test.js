@@ -1,6 +1,7 @@
-const { test } = require("node:test");
+const { test, mock } = require("node:test");
 const assert = require("node:assert/strict");
 
+const emailLib = require("../../../src/lib/email");
 const thankYou = require("../../../src/services/email/thank-you.service");
 
 const VOLUNTEER = {
@@ -38,8 +39,9 @@ const RECOMMENDATIONS = [
   },
 ];
 
-test("console mode returns a rendered payload with volunteer, hours, and recommendations", async () => {
-  process.env.EMAIL_MODE = "console";
+test("returns the rendered payload with volunteer, hours, and recommendations", async (t) => {
+  mock.method(emailLib, "sendEmail", async () => ({ mode: "log", delivered: true }));
+  t.after(() => mock.restoreAll());
   const result = await thankYou.sendThankYou({
     volunteer: VOLUNTEER,
     signup: SIGNUP,
@@ -47,7 +49,6 @@ test("console mode returns a rendered payload with volunteer, hours, and recomme
     recommendations: RECOMMENDATIONS,
   });
 
-  assert.equal(result.demo_preview, true, "console mode flags demo_preview:true");
   assert.equal(result.to, VOLUNTEER.email);
   assert.ok(result.subject.length > 0);
   assert.ok(result.text.includes("Alex Chan"));
@@ -64,8 +65,9 @@ test("console mode returns a rendered payload with volunteer, hours, and recomme
   assert.equal(result.recommendations.length, 2);
 });
 
-test("respects the volunteer's locale — zh-Hant picks the Chinese title", async () => {
-  process.env.EMAIL_MODE = "console";
+test("respects the volunteer's locale — zh-Hant picks the Chinese title", async (t) => {
+  mock.method(emailLib, "sendEmail", async () => ({ mode: "log", delivered: true }));
+  t.after(() => mock.restoreAll());
   const result = await thankYou.sendThankYou({
     volunteer: { ...VOLUNTEER, locale: "zh-Hant" },
     signup: SIGNUP,
@@ -77,8 +79,9 @@ test("respects the volunteer's locale — zh-Hant picks the Chinese title", asyn
   assert.ok(!result.text.includes("Weekend Class Assistant"), "English title omitted");
 });
 
-test("falls back to English when the zh-Hant title is empty", async () => {
-  process.env.EMAIL_MODE = "console";
+test("falls back to English when the zh-Hant title is empty", async (t) => {
+  mock.method(emailLib, "sendEmail", async () => ({ mode: "log", delivered: true }));
+  t.after(() => mock.restoreAll());
   const result = await thankYou.sendThankYou({
     volunteer: { ...VOLUNTEER, locale: "zh-Hant" },
     signup: SIGNUP,
@@ -89,8 +92,44 @@ test("falls back to English when the zh-Hant title is empty", async () => {
   assert.ok(result.text.includes("Weekend Class Assistant"), "falls back per field");
 });
 
-test("live mode throws — real integration is not implemented", async () => {
-  process.env.EMAIL_MODE = "live";
+/**
+ * This service used to carry its own private EMAIL_MODE switch: `live` threw, `console`
+ * logged, and everything else silently returned a payload without sending. server/.env
+ * carries EMAIL_MODE=smtp, which matched neither branch — so the one email a volunteer is
+ * actually promised was rendered and dropped on the floor, and nothing failed to say so.
+ * It now goes through lib/email like every other send.
+ */
+test("hands the rendered email to the shared sender", async (t) => {
+  const sendEmail = mock.fn(async () => ({ mode: "smtp", delivered: true, id: "<m>" }));
+  mock.method(emailLib, "sendEmail", sendEmail);
+  t.after(() => mock.restoreAll());
+
+  const result = await thankYou.sendThankYou({
+    volunteer: VOLUNTEER,
+    signup: SIGNUP,
+    opportunity: OPPORTUNITY,
+    recommendations: RECOMMENDATIONS,
+  });
+
+  assert.equal(sendEmail.mock.callCount(), 1);
+  const [message] = sendEmail.mock.calls[0].arguments;
+  assert.equal(message.to, VOLUNTEER.email);
+  assert.ok(message.subject.length > 0);
+  assert.ok(message.text.includes("Alex Chan"));
+  assert.equal(result.delivered, true);
+});
+
+/**
+ * The attendance write and the badge award have already happened by this point, and
+ * markAttendance only stamps thank_you_email_sent_at on success — so a failure must
+ * surface rather than be reported as sent, or the retry never happens.
+ */
+test("propagates a send failure instead of reporting the email as sent", async (t) => {
+  mock.method(emailLib, "sendEmail", async () => {
+    throw new Error("535 auth failed");
+  });
+  t.after(() => mock.restoreAll());
+
   await assert.rejects(
     () =>
       thankYou.sendThankYou({
@@ -99,16 +138,11 @@ test("live mode throws — real integration is not implemented", async () => {
         opportunity: OPPORTUNITY,
         recommendations: [],
       }),
-    (error) => {
-      assert.equal(error.status, 400);
-      return true;
-    },
+    /535/,
   );
-  process.env.EMAIL_MODE = "console";
 });
 
 test("400s when the volunteer has no email address", async () => {
-  process.env.EMAIL_MODE = "console";
   await assert.rejects(
     () =>
       thankYou.sendThankYou({
