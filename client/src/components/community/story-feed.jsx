@@ -115,6 +115,42 @@ function buildFeed(filter, voices, embeds, page) {
   }
 }
 
+/**
+ * Flex-column masonry — NOT CSS `columns`.
+ *
+ * CSS multi-column layout under-counts height when children use transforms,
+ * percentage widths, or replaced content with intrinsic portrait sizes. That
+ * packs a short column box while the huddle carousel still paints at full
+ * 768×1024 — floating over ArticlesCta / Stay close. Flex columns use normal
+ * block flow, so card height always reserves space for following sections.
+ */
+function useMasonryColumnCount() {
+  const [count, setCount] = useState(1)
+
+  useEffect(() => {
+    const sm = window.matchMedia('(min-width: 640px)')
+    const lg = window.matchMedia('(min-width: 1024px)')
+    const sync = () => setCount(lg.matches ? 3 : sm.matches ? 2 : 1)
+    sync()
+    sm.addEventListener('change', sync)
+    lg.addEventListener('change', sync)
+    return () => {
+      sm.removeEventListener('change', sync)
+      lg.removeEventListener('change', sync)
+    }
+  }, [])
+
+  return count
+}
+
+function splitIntoColumns(items, columnCount) {
+  const columns = Array.from({ length: columnCount }, () => [])
+  items.forEach((item, index) => {
+    columns[index % columnCount].push({ item, index })
+  })
+  return columns
+}
+
 export function StoryFeed() {
   const { locale, t } = useSite()
   const [filter, setFilter] = useState('all')
@@ -167,6 +203,12 @@ export function StoryFeed() {
     feedTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
+  // Flex-column masonry rather than CSS `columns` — see useMasonryColumnCount for why.
+  // It takes the already-paginated entries, so paging and the layout fix compose
+  // instead of competing.
+  const columnCount = useMasonryColumnCount()
+  const columns = splitIntoColumns(feed, columnCount)
+
   const tabs = [
     { id: 'all', label: t.community.filterAll },
     ...ACTIVITY_TYPES.map((id) => ({ id, label: t.community.filters[id] })),
@@ -210,21 +252,21 @@ export function StoryFeed() {
       {feed.length === 0 ? (
         <p className="mt-10 text-lg text-ink/70">{t.community.emptyFilter}</p>
       ) : (
-        <div className="mt-8 columns-1 gap-5 sm:columns-2 lg:columns-3">
-          {feed.map((entry, i) => (
-            <FadeRise
-              key={entry.key}
-              delayMs={(i % 6) * 60}
-              className="mb-5"
-            >
-              {entry.kind === 'story' ? (
-                <StoryCard story={entry.story} />
-              ) : entry.kind === 'instagram' ? (
-                <InstagramCard embed={entry.embed} />
-              ) : (
-                <KnowledgeCard item={entry.knowledge} />
-              )}
-            </FadeRise>
+        <div className="mt-8 flex items-start gap-5">
+          {columns.map((column, columnIndex) => (
+            <div key={columnIndex} className="flex min-w-0 flex-1 flex-col gap-5">
+              {column.map(({ item: entry, index: i }) => (
+                <FadeRise key={entry.key} delayMs={(i % 6) * 60}>
+                  {entry.kind === 'story' ? (
+                    <StoryCard story={entry.story} />
+                  ) : entry.kind === 'instagram' ? (
+                    <InstagramCard embed={entry.embed} />
+                  ) : (
+                    <KnowledgeCard item={entry.knowledge} />
+                  )}
+                </FadeRise>
+              ))}
+            </div>
           ))}
         </div>
       )}

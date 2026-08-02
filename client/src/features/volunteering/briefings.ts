@@ -1,4 +1,5 @@
 import type { Localized } from '@/lib/mock'
+import type { VolunteerOpportunity } from '@/features/volunteering/fixtures'
 
 /** Short, class-specific pre-session pack — unlocked after signup. */
 export type ClassBriefing = {
@@ -196,6 +197,78 @@ const BRIEFING_ALIASES: Record<string, string> = {
   'nutrition-plating': 'a4444444-4444-4444-8444-444444444444',
 }
 
-export function getBriefing(opportunityId: string): ClassBriefing | undefined {
-  return BRIEFINGS[opportunityId] ?? BRIEFINGS[BRIEFING_ALIASES[opportunityId]]
+function arriveByFromStart(startsAt?: string): Localized {
+  if (!startsAt) {
+    return {
+      en: 'Arrive 15 minutes before the session start time.',
+      'zh-Hant': '請於課堂開始前 15 分鐘到達。',
+      'zh-Hans': '请于课堂开始前 15 分钟到达。',
+    }
+  }
+  const start = new Date(startsAt)
+  const arrive = new Date(start.getTime() - 15 * 60_000)
+  const fmt = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Hong_Kong',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  })
+  const arriveTime = fmt.format(arrive)
+  const startTime = fmt.format(start)
+  return {
+    en: `Arrive by ${arriveTime} for a ${startTime} start.`,
+    'zh-Hant': `請於 ${arriveTime} 前到達（${startTime} 開始）。`,
+    'zh-Hans': `请于 ${arriveTime} 前到达（${startTime} 开始）。`,
+  }
+}
+
+/** Fallback briefing for any Supabase opportunity without a hand-written pack. */
+export function briefingFromOpportunity(opportunity: VolunteerOpportunity): ClassBriefing {
+  const place = opportunity.place
+  const description = opportunity.description
+  const whatYouDo: Localized[] = description.en
+    ? [description]
+    : [
+        {
+          en: 'Show up ready to take part — coaches will brief you on the day.',
+          'zh-Hant': '請準備好參與——教練當日會說明細節。',
+          'zh-Hans': '请准备好参与——教练当日会说明细节。',
+        },
+      ]
+
+  return {
+    arrive_by: arriveByFromStart(opportunity.starts_at),
+    meeting_point: {
+      en: place.en || 'Love 21 will confirm the meeting point before the session.',
+      'zh-Hant': place['zh-Hant'] || 'Love 21 會在課堂前確認集合點。',
+      'zh-Hans': place['zh-Hans'] || 'Love 21 会在课堂前确认集合点。',
+    },
+    wear_bring: {
+      en: 'Comfortable clothes suited to the activity, water bottle, and a positive attitude. Coaches will confirm anything else before the day.',
+      'zh-Hant': '適合活動的舒適服裝、水壺，以及積極態度。其他細節教練會在當日前確認。',
+      'zh-Hans': '适合活动的舒适服装、水壶，以及积极态度。其他细节教练会在当日前确认。',
+    },
+    what_you_do: whatYouDo,
+    emergency: {
+      en: 'In an emergency dial 999. Tell on-site coaches or Love 21 staff immediately.',
+      'zh-Hant': '緊急情況請打 999，並立即告知現場教練或 Love 21 職員。',
+      'zh-Hans': '紧急情况请打 999，并立即告知现场教练或 Love 21 职员。',
+    },
+    if_cannot_come: {
+      en: 'Email Love 21 as soon as you know you cannot come so they can cover your spot.',
+      'zh-Hant': '若不能出席請盡早電郵 Love 21，以便安排頂替。',
+      'zh-Hans': '若不能出席请尽早电邮 Love 21，以便安排顶替。',
+    },
+  }
+}
+
+export function getBriefing(
+  opportunityId: string,
+  opportunity?: VolunteerOpportunity | null,
+): ClassBriefing | undefined {
+  const specific =
+    BRIEFINGS[opportunityId] ?? BRIEFINGS[BRIEFING_ALIASES[opportunityId]]
+  if (specific) return specific
+  if (opportunity) return briefingFromOpportunity(opportunity)
+  return undefined
 }

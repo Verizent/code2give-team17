@@ -107,110 +107,116 @@ export function MyImpactPage() {
 
       if (isRealApiMode()) {
         try {
+          type MeSignupRow = {
+            id: string
+            opportunity_id: string
+            status: string
+            hours_logged: number | null
+            created_at: string
+            experience_rating?: number | null
+            would_return?: boolean | null
+            improvement_note?: string | null
+            feedback_submitted_at?: string | null
+            volunteer_opportunities: {
+              id: string
+              title_en: string
+              title_zh: string | null
+              starts_at: string | null
+              ends_at: string | null
+              programme: string
+            } | null
+          }
+
           const { data } = await apiData<{
-            volunteer: { full_name: string | null; email: string } | null
-            signups: Array<{
-              id: string
-              hours: number
-              opportunity: {
-                id: string
-                title_en: string
-                title_zh: string | null
-                starts_at: string | null
-                ends_at: string | null
-                programme: string
-              } | null
-            }>
-            interests: Array<{
-              id: string
-              message: string | null
-              created_at: string
-              opportunity: {
-                id: string
-                title_en: string
-                title_zh: string | null
-                starts_at: string | null
-              } | null
-            }>
-            stats: {
-              session_count: number
-              hours_total: number
-              programme_count: number
-              interest_count: number
-            }
+            id: string
+            email: string
+            full_name: string | null
+            total_hours: number
+            signups: MeSignupRow[]
           }>('/api/volunteer/me')
 
-          if (data.volunteer || data.signups.length || data.interests?.length) {
+          const signups = data.signups ?? []
+          if (data.email || signups.length > 0) {
             const local = await loadVolunteerProfile(email)
+            const programmes = new Set(
+              signups
+                .map((s) => s.volunteer_opportunities?.programme)
+                .filter((p): p is string => Boolean(p)),
+            )
+            const hoursTotal =
+              typeof data.total_hours === 'number'
+                ? data.total_hours
+                : Math.round(
+                    signups.reduce((sum, s) => sum + (s.hours_logged ?? 0), 0) * 10,
+                  ) / 10
+
             enriched = {
               ...local,
-              name: data.volunteer?.full_name ?? local.name,
-              email: data.volunteer?.email ?? email,
+              name: data.full_name ?? local.name,
+              email: data.email ?? email,
               skills: local.skills,
-              session_count: data.stats.session_count,
-              hours_total: data.stats.hours_total,
-              programme_count: data.stats.programme_count,
+              session_count: signups.length,
+              hours_total: hoursTotal,
+              programme_count: programmes.size,
               sessions:
-                data.signups.length > 0
-                  ? data.signups.map((s) => ({
-                      signup: {
-                        id: s.id,
-                        opportunity_id: s.opportunity?.id ?? '',
-                        name: data.volunteer?.full_name ?? '',
-                        email: data.volunteer?.email ?? email ?? '',
-                        age_group: 'age19_29' as const,
-                        status: 'confirmed' as const,
-                        created_at: new Date().toISOString(),
-                      },
-                      title: {
-                        en: s.opportunity?.title_en ?? 'Session',
-                        'zh-Hant':
-                          s.opportunity?.title_zh ?? s.opportunity?.title_en ?? '課堂',
-                        'zh-Hans':
-                          s.opportunity?.title_zh ?? s.opportunity?.title_en ?? '课堂',
-                      },
-                      when: {
-                        en: s.opportunity?.starts_at
-                          ? new Date(s.opportunity.starts_at).toLocaleString()
-                          : 'Date TBC',
-                        'zh-Hant': '日期待定',
-                        'zh-Hans': '日期待定',
-                      },
-                      hours: s.hours,
-                    }))
+                signups.length > 0
+                  ? signups.map((s) => {
+                      const opp = s.volunteer_opportunities
+                      const starts = opp?.starts_at
+                        ? new Date(opp.starts_at).toLocaleString()
+                        : null
+                      return {
+                        signup: {
+                          id: s.id,
+                          opportunity_id: s.opportunity_id ?? opp?.id ?? '',
+                          name: data.full_name ?? '',
+                          email: data.email ?? email ?? '',
+                          age_group: 'age19_29' as const,
+                          status: (s.status as
+                            | 'applied'
+                            | 'confirmed'
+                            | 'attended'
+                            | 'cancelled'
+                            | 'no_show') || 'confirmed',
+                          created_at: s.created_at,
+                          experience_rating: s.experience_rating ?? null,
+                          would_return: s.would_return ?? null,
+                          improvement_note: s.improvement_note ?? null,
+                          feedback_submitted_at: s.feedback_submitted_at ?? null,
+                        },
+                        title: {
+                          en: opp?.title_en ?? 'Session',
+                          'zh-Hant': opp?.title_zh ?? opp?.title_en ?? '課堂',
+                          'zh-Hans': opp?.title_zh ?? opp?.title_en ?? '课堂',
+                        },
+                        when: {
+                          en: starts ?? 'Date TBC',
+                          'zh-Hant': starts ?? '日期待定',
+                          'zh-Hans': starts ?? '日期待定',
+                        },
+                        hours: s.hours_logged ?? 0,
+                      }
+                    })
                   : local.sessions,
-              interests: (data.interests ?? []).map((row) => ({
-                id: row.id,
-                message: row.message,
-                title: {
-                  en: row.opportunity?.title_en ?? 'Session',
-                  'zh-Hant':
-                    row.opportunity?.title_zh ?? row.opportunity?.title_en ?? '課堂',
-                  'zh-Hans':
-                    row.opportunity?.title_zh ?? row.opportunity?.title_en ?? '课堂',
-                },
-                when: {
-                  en: row.opportunity?.starts_at
-                    ? new Date(row.opportunity.starts_at).toLocaleString()
-                    : 'Date TBC',
-                  'zh-Hant': '日期待定',
-                  'zh-Hans': '日期待定',
-                },
-              })),
+              interests: local.interests,
             }
 
-            // Fold live hours into garden and recompute 1–5 growth.
             nextImpact.garden = enrichGardenWithLocal(
               {
                 ...nextImpact.garden,
-                hours_total: data.stats.hours_total,
-                session_count: data.stats.session_count,
+                hours_total: hoursTotal,
+                session_count: signups.length,
               },
               listDonations().filter((d) => !email || d.email === email),
             )
             nextImpact.volunteer = {
-              stats: data.stats,
-              session_count: data.stats.session_count,
+              stats: {
+                session_count: signups.length,
+                hours_total: hoursTotal,
+                programme_count: programmes.size,
+                interest_count: local.interests.length,
+              },
+              session_count: signups.length,
             }
           }
         } catch {
@@ -361,6 +367,25 @@ export function MyImpactPage() {
                     profile={profile}
                     onSkillsSaved={(skills) =>
                       setProfile((prev) => (prev ? { ...prev, skills } : prev))
+                    }
+                    onSessionFeedback={(signupId, patch) =>
+                      setProfile((prev) => {
+                        if (!prev) return prev
+                        return {
+                          ...prev,
+                          sessions: prev.sessions.map((session) =>
+                            session.signup.id === signupId
+                              ? {
+                                  ...session,
+                                  signup: {
+                                    ...session.signup,
+                                    ...patch,
+                                  },
+                                }
+                              : session,
+                          ),
+                        }
+                      })
                     }
                   />
                 ))}

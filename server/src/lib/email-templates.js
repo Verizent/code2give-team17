@@ -14,29 +14,41 @@ function pickLocale(row, base, locale) {
   return row[`${base}_en`];
 }
 
+function clientOrigin() {
+  return (process.env.CLIENT_ORIGIN || "http://localhost:5173").replace(/\/$/, "");
+}
+
+function feedbackUrl(signupId) {
+  if (!signupId) return `${clientOrigin()}/me?tab=volunteer`;
+  return `${clientOrigin()}/me?tab=volunteer&feedback=${encodeURIComponent(signupId)}`;
+}
+
 /**
  * @param {{ full_name: string, locale?: string }} volunteer
  * @param {{ title_en: string, title_zh?: string|null, programme: string }} opportunity
- * @param {{ hours_logged: number }} signup
+ * @param {{ id?: string, hours_logged: number }} signup
  * @param {{ id: string, title_en: string, title_zh?: string|null, starts_at: string }[]} recommendations
  */
 function renderThankYou(volunteer, opportunity, signup, recommendations) {
   const locale = volunteer.locale === "zh-Hant" ? "zh-Hant" : "en";
   const title = pickLocale(opportunity, "title", locale);
   const hours = Number(signup.hours_logged || 0);
+  const feedbackLink = feedbackUrl(signup.id);
 
   if (locale === "zh-Hant") {
-    return renderChinese(volunteer, title, hours, recommendations);
+    return renderChinese(volunteer, title, hours, recommendations, feedbackLink);
   }
-  return renderEnglish(volunteer, title, hours, recommendations);
+  return renderEnglish(volunteer, title, hours, recommendations, feedbackLink);
 }
 
-function renderEnglish(volunteer, title, hours, recs) {
+function renderEnglish(volunteer, title, hours, recs, feedbackLink) {
   const subject = `Thank you for volunteering with Love 21`;
   const lines = [
     `Hi ${volunteer.full_name},`,
     ``,
     `Thank you for volunteering at "${title}". We logged ${hours} hour${hours === 1 ? "" : "s"} for you.`,
+    ``,
+    `Share a quick reflection (optional): ${feedbackLink}`,
     ``,
   ];
 
@@ -48,7 +60,7 @@ function renderEnglish(volunteer, title, hours, recs) {
       lines.push(`  • ${recTitle} — ${formatDate(rec.starts_at)}`);
     }
     lines.push(``);
-    lines.push(`Book at: https://love21foundation.local/volunteer`);
+    lines.push(`Book at: ${clientOrigin()}/volunteer`);
     lines.push(``);
   }
 
@@ -59,12 +71,14 @@ function renderEnglish(volunteer, title, hours, recs) {
   return { subject, text, html: `<pre>${escapeHtml(text)}</pre>` };
 }
 
-function renderChinese(volunteer, title, hours, recs) {
+function renderChinese(volunteer, title, hours, recs, feedbackLink) {
   const subject = `感謝您成為Love 21的義工`;
   const lines = [
     `${volunteer.full_name} 您好,`,
     ``,
     `感謝您參與「${title}」義工活動。我們為您記錄了 ${hours} 小時服務時間。`,
+    ``,
+    `歡迎分享簡短感受（可選）:${feedbackLink}`,
     ``,
   ];
 
@@ -76,7 +90,7 @@ function renderChinese(volunteer, title, hours, recs) {
       lines.push(`  • ${recTitle} — ${formatDate(rec.starts_at)}`);
     }
     lines.push(``);
-    lines.push(`報名網址:https://love21foundation.local/volunteer`);
+    lines.push(`報名網址:${clientOrigin()}/volunteer`);
     lines.push(``);
   }
 

@@ -4,12 +4,12 @@ import { SiteHeader } from '@/components/site-header'
 import { SiteFooter } from '@/components/site-footer'
 import { SkipLink } from '@/components/skip-link'
 import { useSite } from '@/components/site-provider'
+import { MEMBER_LOGIN_URL } from '@/lib/member-portal'
 
-// Real love21foundation.com URLs — form is their live family/registration intake,
-// login is the real member portal where classes/schedules live.
+// Real love21foundation.com URLs — form is their live family/registration intake;
+// MEMBER_LOGIN_URL is the real family portal where classes/schedules live.
 const SUPPORT_FORM_URL =
   'https://docs.google.com/forms/d/e/1FAIpQLScxXfbxdMlHBDphqwJhMZS1YuUuF9anGC8Mb_ncgpwiEes-Pw/viewform'
-const MEMBER_LOGIN_URL = 'https://love21foundation.com/login/'
 const SUPPORT_EMAIL = 'info@love21foundation.com'
 
 export function SupportPage() {

@@ -28,18 +28,21 @@ function ImageCarousel({ images, alt }) {
 
   function goTo(i) {
     const track = trackRef.current
-    const target = track?.children[i]
-    if (target instanceof HTMLElement) {
-      target.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' })
-    }
+    if (!track) return
+    // scrollLeft only — scrollIntoView can scroll page ancestors.
+    track.scrollTo({ left: i * track.clientWidth, behavior: 'smooth' })
     setActive(i)
   }
 
+  // Safari: an aspect-ratio box whose ONLY children are position:absolute often
+  // collapses (or fails to clip), so portrait JPEGs paint at intrinsic 768×1024
+  // over ArticlesCta. Keep an in-flow sizer for height; fill with an absolute track.
   return (
-    <div className="relative">
+    <div className="relative w-full overflow-hidden [contain:layout_paint]">
+      <div className="aspect-[4/5] w-full" aria-hidden="true" />
       <div
         ref={trackRef}
-        className="no-scrollbar flex snap-x snap-mandatory overflow-x-auto"
+        className="no-scrollbar absolute inset-0 flex snap-x snap-mandatory overflow-x-auto overflow-y-hidden"
         onScroll={(e) => {
           const el = e.currentTarget
           const idx = Math.round(el.scrollLeft / Math.max(el.clientWidth, 1))
@@ -47,16 +50,21 @@ function ImageCarousel({ images, alt }) {
         }}
       >
         {images.map((src, i) => (
-          <img
+          <div
             key={src}
-            src={src}
-            alt={i === 0 ? alt : ''}
-            className="aspect-[4/5] w-full shrink-0 snap-center object-cover"
-          />
+            className="relative h-full min-w-full shrink-0 snap-center overflow-hidden"
+          >
+            <img
+              src={src}
+              alt={i === 0 ? alt : ''}
+              draggable={false}
+              className="pointer-events-none h-full w-full object-cover"
+            />
+          </div>
         ))}
       </div>
       {images.length > 1 && (
-        <div className="absolute inset-x-0 bottom-3 flex justify-center gap-1.5">
+        <div className="pointer-events-none absolute inset-x-0 bottom-3 z-10 flex justify-center gap-1.5">
           {images.map((_, i) => (
             <button
               key={i}
@@ -65,7 +73,7 @@ function ImageCarousel({ images, alt }) {
               aria-current={i === active}
               onClick={() => goTo(i)}
               className={cn(
-                'h-1.5 rounded-full bg-white/50 transition-all',
+                'pointer-events-auto h-1.5 rounded-full bg-white/50 transition-all',
                 i === active ? 'w-4 bg-white' : 'w-1.5',
               )}
             />
@@ -161,7 +169,7 @@ export function StoryCard({ story }) {
       : null
 
   return (
-    <article className="break-inside-avoid overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+    <article className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm [contain:layout_paint]">
       <div className="flex items-start justify-between gap-3 px-4 pt-4 pb-3">
         <div className="flex items-center gap-3">
           <span

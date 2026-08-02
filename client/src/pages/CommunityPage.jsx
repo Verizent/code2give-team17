@@ -4,7 +4,7 @@ import { SiteFooter } from '@/components/site-footer'
 import { SkipLink } from '@/components/skip-link'
 import { useSite } from '@/components/site-provider'
 import { ShareMomentButton } from '@/components/community/share-moment'
-import { MediaCarousel } from '@/components/community/media-carousel'
+import { ArticlesCta } from '@/components/community/articles-cta'
 import { StoryFeed } from '@/components/community/story-feed'
 import { StayClose } from '@/components/community/stay-close'
 
@@ -32,10 +32,10 @@ export function CommunityPage() {
         </LovePatternBg>
 
         <div className="mx-auto max-w-[1120px] px-4 py-10 sm:px-8 sm:py-16">
-          <MediaCarousel />
           <StoryFeed />
         </div>
 
+        <ArticlesCta />
         <StayClose />
       </main>
       <SiteFooter />
