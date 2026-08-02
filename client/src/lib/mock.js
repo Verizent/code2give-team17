@@ -222,24 +222,62 @@ export const corporatePartners = [
 
 /**
  * Real supporters named in Love 21's 2024–25 annual report "Acknowledgement"
- * page plus verified CSR/pro-bono partners — org names only (no logos; see
- * AchievementsBand for why). Kept as plain strings, not translated: these
- * are proper nouns and read the same in all three locales.
+ * page plus verified CSR/pro-bono partners. Logos live in
+ * `/brand/partners/{id}.png` (or `.svg`). Names are proper nouns — not translated.
  */
-export const corporatePartnerNames = [
-  'Morgan Stanley',
-  'HSBC',
-  'Ashurst',
-  'UBS',
-  'BlackRock',
-  'Bloomberg',
-  'Clifford Chance',
-  'Slaughter and May',
-  'The Hong Kong Jockey Club Charities Trust',
-  'The Royal Hong Kong Yacht Club Charity Foundation',
-  'The Community Chest of Hong Kong',
-  'HandsOn Hong Kong',
+export const corporatePartnersWall = [
+  {
+    id: 'morgan-stanley',
+    name: 'Morgan Stanley',
+    logo: '/brand/partners/morgan-stanley.png',
+  },
+  { id: 'hsbc', name: 'HSBC', logo: '/brand/partners/hsbc.png' },
+  { id: 'ashurst', name: 'Ashurst', logo: '/brand/partners/ashurst.png' },
+  { id: 'ubs', name: 'UBS', logo: '/brand/partners/ubs.png' },
+  {
+    id: 'blackrock',
+    name: 'BlackRock',
+    logo: '/brand/partners/blackrock.png',
+  },
+  {
+    id: 'bloomberg',
+    name: 'Bloomberg',
+    logo: '/brand/partners/bloomberg.png',
+  },
+  {
+    id: 'clifford-chance',
+    name: 'Clifford Chance',
+    logo: '/brand/partners/clifford-chance.png',
+  },
+  {
+    id: 'slaughter-and-may',
+    name: 'Slaughter and May',
+    logo: '/brand/partners/slaughter-and-may.png',
+  },
+  {
+    id: 'hk-jockey-club',
+    name: 'The Hong Kong Jockey Club Charities Trust',
+    logo: '/brand/partners/hk-jockey-club.png',
+  },
+  {
+    id: 'rhkyc',
+    name: 'The Royal Hong Kong Yacht Club Charity Foundation',
+    logo: '/brand/partners/rhkyc.png',
+  },
+  {
+    id: 'community-chest',
+    name: 'The Community Chest of Hong Kong',
+    logo: '/brand/partners/community-chest.png',
+  },
+  {
+    id: 'handson-hk',
+    name: 'HandsOn Hong Kong',
+    logo: '/brand/partners/handson-hk.png',
+  },
 ]
+
+/** @deprecated use corporatePartnersWall — kept for any leftover imports */
+export const corporatePartnerNames = corporatePartnersWall.map((p) => p.name)
 
 /**
  * Real media & press coverage, sourced from love21foundation.com/media —
