@@ -258,7 +258,7 @@ export const STRINGS = {
       detailSafeguard:
         'Safeguarding: coaches are on site. We may ask for a brief introduction before your first session — we are still finalising the full process with Love 21.',
       handsonCapacity:
-        'HandsOn: {filled}/{capacity} booked · {interested} interested here',
+        '{handson} booked on HandsOn · {web} booked here · {left} of {capacity} left',
       registerInterest: 'Register interest',
       completeHandson: 'Also book on HandsOn (optional)',
       joinSession: 'Join session',
@@ -1099,7 +1099,7 @@ export const STRINGS = {
       detailSafeguard:
         '保護措施：教練會在場。首次課堂前我們可能請你簡單自我介紹——完整流程仍與 Love 21 敲定中。',
       handsonCapacity:
-        'HandsOn：已訂 {filled}/{capacity} · 此處有興趣 {interested} 人',
+        'HandsOn 已訂 {handson} 人 · 此處已訂 {web} 人 · 尚餘 {left}／{capacity}',
       registerInterest: '登記興趣',
       completeHandson: '亦可在 HandsOn 報名（可選）',
       joinSession: '加入課堂',
@@ -1891,7 +1891,7 @@ export const STRINGS = {
       detailSafeguard:
         '保护措施：教练会在场。首次课堂前我们可能请你简单自我介绍——完整流程仍与 Love 21 敲定中。',
       handsonCapacity:
-        'HandsOn：已订 {filled}/{capacity} · 此处有兴趣 {interested} 人',
+        'HandsOn 已订 {handson} 人 · 此处已订 {web} 人 · 尚余 {left}／{capacity}',
       registerInterest: '登记兴趣',
       completeHandson: '亦可在 HandsOn 报名（可选）',
       joinSession: '加入课堂',

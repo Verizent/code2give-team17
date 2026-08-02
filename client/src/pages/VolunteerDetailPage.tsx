@@ -140,9 +140,10 @@ export function VolunteerDetailPage() {
             {opportunity.source === 'handson' ? (
               <p className="text-sm font-bold text-navy">
                 {format(v.handsonCapacity, {
-                  filled: opportunity.spots_filled,
+                  handson: opportunity.spots_filled_handson,
+                  web: opportunity.local_signups_count,
+                  left: Math.max(0, opportunity.capacity - opportunity.spots_filled),
                   capacity: opportunity.capacity,
-                  interested: opportunity.interested_count,
                 })}
               </p>
             ) : (
@@ -157,14 +158,17 @@ export function VolunteerDetailPage() {
             {showForm ? (
               <div className="mt-6">
                 {/*
-                  Interest, not signup, whenever there is no seat to claim: a handson
-                  listing (registration happens on their site) or a full one. A full
-                  internal session used to offer nothing at all — the button simply
-                  disabled — which is the exact moment a waitlist is most useful. The
-                  server already accepts interest on a full opportunity; only the UI
-                  refused to offer it.
+                  A seat to claim means a signup; nothing to claim means interest. Source
+                  decides neither — it records where a listing came from, not whether it
+                  can be booked.
+
+                  A handson listing is one where registration is open on BOTH their site
+                  and ours, which is the whole reason spots_filled_handson and our own
+                  signups are counted separately and summed. Sending every handson listing
+                  to the interest form made its free seats unbookable here, and contradicted
+                  the "Also book on HandsOn (optional)" link rendered directly below.
                 */}
-                {opportunity.source === 'handson' || full ? (
+                {full ? (
                   <InterestForm
                     opportunityId={opportunity.id}
                     onCancel={() => setShowForm(false)}
@@ -193,9 +197,7 @@ export function VolunteerDetailPage() {
                 onClick={() => setShowForm(true)}
                 className="mt-6 inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-red px-5 font-bold text-white"
               >
-                {opportunity.source === 'handson' || full
-                  ? v.registerInterest
-                  : v.joinSession}
+                {full ? v.registerInterest : v.joinSession}
               </button>
             )}
 

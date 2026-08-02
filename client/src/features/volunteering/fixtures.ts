@@ -34,7 +34,12 @@ export type VolunteerOpportunity = {
   placeHiddenUntilSignup: boolean
   source: OpportunitySource
   capacity: number
+  /** Both channels combined. */
   spots_filled: number
+  /** Booked on HandsOn's site. Always 0 for an internal listing. */
+  spots_filled_handson: number
+  /** Booked here. */
+  local_signups_count: number
   interested_count: number
   skills: VolunteerSkill[]
   recruiting: boolean
