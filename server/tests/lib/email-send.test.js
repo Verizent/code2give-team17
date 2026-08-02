@@ -2,7 +2,7 @@ const { test, mock } = require("node:test");
 const assert = require("node:assert/strict");
 const nodemailer = require("nodemailer");
 
-const { sendEmail, __resetTransport } = require("../../src/lib/email");
+const { sendEmail } = require("../../src/lib/email");
 
 /**
  * EMAIL_MODE was previously a two-way switch: `send` threw, and literally every other
@@ -12,15 +12,18 @@ const { sendEmail, __resetTransport } = require("../../src/lib/email");
  * These tests pin the smtp mode down so that cannot recur.
  */
 
+/**
+ * No transport reset needed: getTransport caches against the config that produced it, so
+ * changing SMTP_* in the environment rebuilds it on the next send. That is the behaviour
+ * these tests rely on when they switch ports between cases.
+ */
 function withEnv(t, values) {
   const saved = { ...process.env };
   Object.assign(process.env, values);
   t.after(() => {
     process.env = saved;
-    __resetTransport();
     mock.restoreAll();
   });
-  __resetTransport();
 }
 
 const SMTP_ENV = {
@@ -92,7 +95,9 @@ test("smtp mode throws on missing config rather than quietly logging", async (t)
 });
 
 test("smtp mode surfaces a transport failure instead of reporting delivered", async (t) => {
-  withEnv(t, SMTP_ENV);
+  // Distinct host so this gets its own transport: getTransport caches by config, so reusing
+  // SMTP_ENV here would hand back the working transport an earlier test already built.
+  withEnv(t, { ...SMTP_ENV, SMTP_HOST: "smtp.failing.test" });
   mock.method(nodemailer, "createTransport", () => ({
     sendMail: async () => {
       throw new Error("535 auth failed");
@@ -119,11 +124,16 @@ test("an unset EMAIL_MODE still defaults to log", async (t) => {
   assert.equal((await sendEmail({ to: "a@b.test", subject: "s", text: "t" })).mode, "log");
 });
 
-test("send mode still throws — Resend remains unwired", async (t) => {
+/**
+ * `send` was the Resend path and was never built. It stays a hard error rather than being
+ * aliased to smtp, so a config still asking for it gets corrected instead of quietly
+ * redirected somewhere it did not ask to go.
+ */
+test("send mode still throws rather than aliasing to smtp", async (t) => {
   withEnv(t, { EMAIL_MODE: "send" });
 
   await assert.rejects(
     () => sendEmail({ to: "a@b.test", subject: "s", text: "t" }),
-    /not implemented/,
+    /EMAIL_MODE=send/,
   );
 });

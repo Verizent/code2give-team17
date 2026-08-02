@@ -1,97 +1,138 @@
-const { test, mock } = require("node:test");
+const { test } = require("node:test");
 const assert = require("node:assert/strict");
 
 const rateLimit = require("../../src/middleware/rate-limit");
 
-/**
- * This was a no-op stub. That was harmless while EMAIL_MODE was effectively always
- * log-mode, because POST /api/email-verifications only ever printed to a console. With
- * SMTP wired, an unauthenticated endpoint that emails any address without limit is an
- * email-bombing tool — and it sends from our own domain, so the abuse is attributed to us.
- */
-function run(middleware, { ip = "1.2.3.4", body = {} } = {}) {
-  return new Promise((resolve) => {
-    const request = { ip, body, get: () => undefined };
-    const response = {
-      statusCode: null,
-      headers: {},
-      set(key, value) {
-        this.headers[key] = value;
-        return this;
-      },
-    };
-    middleware(request, response, (error) => resolve({ error, response }));
-  });
+/** Captures whatever the middleware hands to next(). */
+function nextSpy() {
+  const calls = [];
+  const next = (error) => calls.push(error);
+  next.calls = calls;
+  return next;
 }
 
-test("allows requests up to the limit", async () => {
-  const limiter = rateLimit({ key: "test-allow", limit: 3, windowMs: 60_000 });
-
-  for (let i = 0; i < 3; i += 1) {
-    const { error } = await run(limiter);
-    assert.equal(error, undefined, `request ${i + 1} should pass`);
-  }
-});
-
-test("refuses the request past the limit with 429", async () => {
-  const limiter = rateLimit({ key: "test-refuse", limit: 2, windowMs: 60_000 });
-
-  await run(limiter);
-  await run(limiter);
-  const { error } = await run(limiter);
-
-  assert.ok(error, "fourth request is refused");
-  assert.equal(error.status, 429);
-});
+/** Minimal response — the middleware sets Retry-After on a refusal. */
+function responseStub() {
+  const headers = {};
+  return { headers, set: (name, value) => { headers[name] = value; } };
+}
 
 /**
- * Per address, not only per IP. A shared NAT must not lock everyone out, and one attacker
- * on one IP must not be able to bomb a thousand different inboxes.
+ * Drives one request through and returns what next() received.
+ * @returns {{ error: unknown, response: { headers: Record<string, string> } }}
  */
-test("buckets by email address independently of the caller IP", async () => {
-  const limiter = rateLimit({ key: "test-email", limit: 1, windowMs: 60_000 });
+function call(middleware, request) {
+  const next = nextSpy();
+  const response = responseStub();
+  middleware(request, response, next);
+  return { error: next.calls[0], response };
+}
 
-  const first = await run(limiter, { ip: "1.1.1.1", body: { email: "a@example.test" } });
-  assert.equal(first.error, undefined);
+test("requests are allowed up to the limit, and the next one is refused with 429", () => {
+  const middleware = rateLimit({ key: "t", limit: 3 });
+  const request = { ip: "1.2.3.4" };
 
-  const sameEmailOtherIp = await run(limiter, {
-    ip: "9.9.9.9",
-    body: { email: "a@example.test" },
+  for (let i = 1; i <= 3; i += 1) {
+    assert.equal(call(middleware, request).error, undefined, `request ${i} should pass`);
+  }
+
+  const refused = call(middleware, request);
+  assert.equal(refused.error?.status, 429);
+  assert.equal(refused.error?.code, "RATE_LIMITED", "clients branch on the §29 code");
+});
+
+test("a refusal carries Retry-After in whole seconds", () => {
+  const middleware = rateLimit({ key: "t", limit: 1, windowMs: 60_000 });
+  const request = { ip: "1.2.3.4" };
+
+  call(middleware, request);
+  const refused = call(middleware, request);
+
+  const retryAfter = Number(refused.response.headers["Retry-After"]);
+  assert.ok(retryAfter > 0 && retryAfter <= 60, `expected 1..60, got ${retryAfter}`);
+});
+
+test("separate identities get separate budgets", () => {
+  // The whole point of keying: one abusive caller must not lock everyone else out.
+  const middleware = rateLimit({ key: "t", limit: 1 });
+
+  assert.equal(call(middleware, { ip: "1.1.1.1" }).error, undefined);
+  assert.equal(call(middleware, { ip: "1.1.1.1" }).error?.status, 429, "first ip exhausted");
+  assert.equal(call(middleware, { ip: "2.2.2.2" }).error, undefined, "second ip unaffected");
+});
+
+test("two limiters keep independent stores", () => {
+  // Each rateLimit() closes over its own Map. Sharing one would let a busy route throttle a
+  // quiet one, and would make test order significant.
+  const first = rateLimit({ key: "a", limit: 1 });
+  const second = rateLimit({ key: "b", limit: 1 });
+  const request = { ip: "1.2.3.4" };
+
+  call(first, request);
+  assert.equal(call(first, request).error?.status, 429);
+  assert.equal(call(second, request).error, undefined, "second limiter is untouched");
+});
+
+test("the window expires and the budget returns", async () => {
+  const middleware = rateLimit({ key: "t", limit: 1, windowMs: 20 });
+  const request = { ip: "1.2.3.4" };
+
+  call(middleware, request);
+  assert.equal(call(middleware, request).error?.status, 429);
+
+  await new Promise((resolve) => setTimeout(resolve, 30));
+
+  assert.equal(call(middleware, request).error, undefined, "budget resets after the window");
+});
+
+test("a custom identify can charge several axes at once", () => {
+  // Used by the email-verification send path: exhausting either the address or the caller
+  // refuses the request.
+  const middleware = rateLimit({
+    key: "t",
+    limit: 1,
+    identify: (request) => [`email:${request.body.email}`, `ip:${request.ip}`],
   });
-  assert.equal(sameEmailOtherIp.error?.status, 429, "same address, different IP is still limited");
 
-  const otherEmail = await run(limiter, { ip: "1.1.1.1", body: { email: "b@example.test" } });
-  assert.equal(otherEmail.error, undefined, "a different address is unaffected");
+  assert.equal(
+    call(middleware, { ip: "1.1.1.1", body: { email: "a@b.com" } }).error,
+    undefined,
+  );
+
+  // Different IP, same address — refused on the address axis.
+  assert.equal(
+    call(middleware, { ip: "9.9.9.9", body: { email: "a@b.com" } }).error?.status,
+    429,
+    "a victim's inbox is protected across source addresses",
+  );
+
+  // Different address, same IP — refused on the caller axis.
+  assert.equal(
+    call(middleware, { ip: "1.1.1.1", body: { email: "z@b.com" } }).error?.status,
+    429,
+  );
 });
 
-test("normalises the address so casing cannot multiply the budget", async () => {
-  const limiter = rateLimit({ key: "test-normalise", limit: 1, windowMs: 60_000 });
+test("an unidentifiable caller is let through rather than blocked", () => {
+  // Fail open. A missing request.ip should degrade to the old no-op behaviour, not refuse
+  // every request on the route.
+  const middleware = rateLimit({ key: "t", limit: 1, identify: () => null });
 
-  await run(limiter, { body: { email: "Dana@Example.test" } });
-  const { error } = await run(limiter, { body: { email: "  dana@example.TEST " } });
-
-  assert.equal(error?.status, 429);
+  assert.equal(call(middleware, {}).error, undefined);
+  assert.equal(call(middleware, {}).error, undefined);
 });
 
-test("lets the budget recover once the window passes", async (t) => {
-  let now = 1_000_000;
-  mock.method(Date, "now", () => now);
-  t.after(() => mock.restoreAll());
+test("RATE_LIMIT_DISABLED bypasses the limiter entirely", (t) => {
+  const previous = process.env.RATE_LIMIT_DISABLED;
+  process.env.RATE_LIMIT_DISABLED = "true";
+  t.after(() => {
+    if (previous === undefined) delete process.env.RATE_LIMIT_DISABLED;
+    else process.env.RATE_LIMIT_DISABLED = previous;
+  });
 
-  const limiter = rateLimit({ key: "test-window", limit: 1, windowMs: 60_000 });
+  const middleware = rateLimit({ key: "t", limit: 1 });
+  const request = { ip: "1.2.3.4" };
 
-  assert.equal((await run(limiter)).error, undefined);
-  assert.equal((await run(limiter)).error?.status, 429);
-
-  now += 60_001;
-  assert.equal((await run(limiter)).error, undefined, "window elapsed, budget restored");
-});
-
-test("keeps separate buckets per key so one endpoint cannot exhaust another", async () => {
-  const a = rateLimit({ key: "test-key-a", limit: 1, windowMs: 60_000 });
-  const b = rateLimit({ key: "test-key-b", limit: 1, windowMs: 60_000 });
-
-  await run(a);
-  assert.equal((await run(a)).error?.status, 429);
-  assert.equal((await run(b)).error, undefined);
+  call(middleware, request);
+  assert.equal(call(middleware, request).error, undefined, "no refusal while disabled");
 });

@@ -1,7 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
+import { Check } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { BrandPatternBand } from '@/components/brand-pattern'
 import { useSite } from '@/components/site-provider'
+
+const TOAST_MS = 4000
 
 export function StayClose() {
   const { t } = useSite()
@@ -9,10 +13,21 @@ export function StayClose() {
   const [email, setEmail] = useState('')
   const [sent, setSent] = useState(false)
 
+  // The form is at the very bottom of a long page, so an inline confirmation can land
+  // below the fold on a phone. A toast is visible wherever the viewport happens to be.
+  useEffect(() => {
+    if (!sent) return undefined
+    const id = window.setTimeout(() => setSent(false), TOAST_MS)
+    return () => window.clearTimeout(id)
+  }, [sent])
+
   function onSubmit(event) {
     event.preventDefault()
-    // DEMO-ONLY: no newsletter API yet — acknowledge locally only.
+    // DEMO-ONLY: no newsletter API and no list to join — nothing is stored and no
+    // email is ever sent. Real version needs a subscribe endpoint and a confirmation
+    // step before anyone counts as subscribed.
     setSent(true)
+    setEmail('')
   }
 
   return (
@@ -39,11 +54,9 @@ export function StayClose() {
           </div>
 
           <div>
-            {sent ? (
-              <p role="status" className="min-h-12 text-base font-semibold text-yellow">
-                {copy.subscribed}
-              </p>
-            ) : (
+            {/* The form stays put rather than being replaced, so the layout does not
+                jump and a second address can be entered. */}
+            {(
               <form onSubmit={onSubmit} className="flex flex-col gap-3 sm:flex-row">
                 <label className="flex-1">
                   <span className="sr-only">{copy.emailLabel}</span>
@@ -64,6 +77,24 @@ export function StayClose() {
                 </button>
               </form>
             )}
+
+            {sent &&
+              createPortal(
+                <div
+                  role="status"
+                  aria-live="polite"
+                  className="fixed inset-x-4 bottom-4 z-[90] mx-auto flex max-w-sm items-center gap-3 rounded-xl bg-navy px-5 py-4 text-white shadow-xl ring-1 ring-white/15 sm:inset-x-auto sm:right-6 sm:bottom-6"
+                >
+                  <span
+                    aria-hidden="true"
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-yellow text-navy"
+                  >
+                    <Check className="h-4 w-4" />
+                  </span>
+                  <p className="text-sm font-semibold">{copy.subscribed}</p>
+                </div>,
+                document.body,
+              )}
 
             <div className="mt-7 flex flex-wrap gap-3">
               <Link

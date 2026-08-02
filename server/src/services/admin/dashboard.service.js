@@ -7,19 +7,35 @@ const communityPostsRepo = require("../../data/community-posts.repo");
 const impactRepo = require("../../data/impact.repo");
 
 /**
+ * Last `count` calendar month keys ending at `now` (UTC), oldest first.
+ *
+ * `Date.UTC` is given a negative month index rather than the month being decremented in
+ * place — that is what rolls the year back correctly at a January boundary.
+ *
+ * @param {number} count
+ * @param {Date} [now]
+ * @returns {string[]}
+ */
+function lastNMonths(count, now = new Date()) {
+  const keys = [];
+  const year = now.getUTCFullYear();
+  const month = now.getUTCMonth();
+
+  for (let i = count - 1; i >= 0; i -= 1) {
+    keys.push(new Date(Date.UTC(year, month - i, 1)).toISOString().slice(0, 7));
+  }
+
+  return keys;
+}
+
+/**
  * Last six calendar month keys ending at `now` (UTC), oldest first.
  *
  * @param {Date} [now]
  * @returns {string[]}
  */
 function lastSixMonths(now = new Date()) {
-  const keys = [];
-  const cursor = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
-  for (let i = 5; i >= 0; i -= 1) {
-    const d = new Date(Date.UTC(cursor.getUTCFullYear(), cursor.getUTCMonth() - i, 1));
-    keys.push(d.toISOString().slice(0, 7));
-  }
-  return keys;
+  return lastNMonths(6, now);
 }
 
 /**
@@ -70,20 +86,6 @@ async function getDashboard() {
     impact_current = false;
   }
 
-  const weekStart = startOfWeek(new Date());
-  const weekEnd = new Date(weekStart);
-  weekEnd.setUTCDate(weekEnd.getUTCDate() + 7);
-  const weekSessions = await opportunitiesRepo.listInRange({
-    fromIso: weekStart.toISOString(),
-    toIso: weekEnd.toISOString(),
-  });
-  const weekIds = weekSessions.map((s) => s.id);
-  const weekSignups = await signupsRepo.listByOpportunityIds(weekIds);
-  const attendanceNeeded = weekSignups.filter(
-    (s) => s.status === "confirmed" || s.status === "applied",
-  ).length;
-  const signupsToConfirm = weekSignups.filter((s) => s.status === "applied").length;
-
   const months = lastSixMonths();
   const liveDonations = await donationsRepo.sumByMonth();
   const liveHours = await signupsRepo.hoursByMonth();
@@ -102,47 +104,9 @@ async function getDashboard() {
   /** @type {Array<{ id: string, title: string, detail: string, count: number | null, href: string }>} */
   const queue = [];
 
-  let pendingProofs = 0;
-  try {
-    const proofsService = require("./proofs.service");
-    pendingProofs = await proofsService.countPending();
-  } catch {
-    pendingProofs = 0;
-  }
-
-  if (pendingProofs > 0) {
-    queue.push({
-      id: "stories",
-      title: "Story desk — photos to approve",
-      detail:
-        "Approve session photos to create a website note plus Instagram/Facebook caption drafts. Faces without consent stay blurred.",
-      count: pendingProofs,
-      href: "/admin/stories",
-    });
-  }
-
-  if (signupsToConfirm > 0) {
-    queue.push({
-      id: "signups",
-      title: "Class roll — signups to confirm",
-      detail: "Volunteers who applied and still need a staff confirm before the session.",
-      count: signupsToConfirm,
-      href: "/admin/attendance",
-    });
-  }
-
-  if (attendanceNeeded > 0 || weekSessions.length > 0) {
-    queue.push({
-      id: "attendance",
-      title: "Class roll — mark attendance",
-      detail:
-        attendanceNeeded > 0
-          ? "Mark who showed up so hours and badges stay accurate."
-          : "Sessions on the calendar — confirm headcount when ready.",
-      count: attendanceNeeded,
-      href: "/admin/attendance",
-    });
-  }
+  // The Story desk and Class roll queue items lived here. Both tabs were removed, so
+  // every one of them pointed at a route that no longer exists — a queue whose first
+  // item 404s is worse than a shorter queue.
 
   if (pendingCampaigns.total > 0) {
     queue.push({
@@ -176,17 +140,6 @@ async function getDashboard() {
     });
   }
 
-  if (pendingProofs === 0) {
-    queue.push({
-      id: "stories-captions",
-      title: "Story desk — caption drafts",
-      detail:
-        "Copy bilingual Instagram/Facebook captions and paste in the apps — no Meta publish from here.",
-      count: null,
-      href: "/admin/stories",
-    });
-  }
-
   return {
     metrics: {
       donations_total_hkd: money.total_hkd,
@@ -197,7 +150,6 @@ async function getDashboard() {
       pending_campaigns: pendingCampaigns.total,
       pending_voices,
       voices_available: voicesAvailable,
-      pending_proofs: pendingProofs,
       impact_current,
     },
     charts: {
@@ -208,21 +160,9 @@ async function getDashboard() {
   };
 }
 
-/**
- * Monday 00:00 UTC of the week containing `date`.
- *
- * @param {Date} date
- */
-function startOfWeek(date) {
-  const d = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
-  const day = d.getUTCDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  d.setUTCDate(d.getUTCDate() + diff);
-  return d;
-}
-
 module.exports = {
   getDashboard,
+  lastNMonths,
   lastSixMonths,
   fillMonthSeries,
 };

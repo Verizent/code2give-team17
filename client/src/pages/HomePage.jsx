@@ -5,6 +5,7 @@ import { Hero } from '@/components/home/hero'
 import { StatsBand } from '@/components/home/stats-band'
 import { AchievementsBand } from '@/components/home/achievements-band'
 import { ThreePaths } from '@/components/home/three-paths'
+import { NewsStrip } from '@/components/home/news-strip'
 import {
   AnnualReportBar,
   CommunityMilestones,
@@ -33,6 +34,9 @@ export function HomePage() {
           <PartnerCsrBand />
           <StoryTimeline />
         </div>
+        {/* Outside the #stories wrapper: it carries its own #news anchor for the
+            section nav, and nesting it would put two anchors in one scroll target. */}
+        <NewsStrip />
         <ProgrammesBand />
         <LeadershipBand />
         <ThreePaths />

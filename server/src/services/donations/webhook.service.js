@@ -1,9 +1,13 @@
 const { creditFor, COST_PER_EVENT_HKD } = require("../../lib/donation-credit");
 const { normalizeEmail } = require("../../lib/normalize");
+// Imported as a module object rather than destructured, so `mock.method` in the tests
+// replaces the property this file actually reads.
+const campaignsRepo = require("../../data/campaigns.repo");
 const donationsRepo = require("../../data/donations.repo");
 const stripeEventsRepo = require("../../data/stripe-events.repo");
 const donorsService = require("../donors.service");
 const allocationService = require("./allocation.service");
+const donorThankYouService = require("./donor-thank-you.service");
 
 /**
  * Stripe webhook handling (CONTEXT.md §15, §17).
@@ -68,10 +72,21 @@ async function handleCheckoutCompleted(session) {
     throw new Error(`checkout.session.completed carried no email (session ${session.id})`);
   }
 
+  // Metadata comes back as strings, and an empty tag would fail the CHECK constraint — so
+  // split, then drop the blanks. upsertDonor sanitises again and only writes these when the
+  // donor has never answered, which is what makes the question once-per-donor rather than
+  // once-per-gift.
+  const referralSources = String(session.metadata?.referral_sources ?? "")
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+
   const donor = await donorsService.upsertDonor({
     email,
     fullName: session.customer_details?.name ?? undefined,
     trackingOptIn: donation.tracking_opt_in ?? true,
+    referralSources,
+    referralSourceOther: session.metadata?.referral_source_other || undefined,
   });
 
   const eventsCredited = creditFor(donation.amount_hkd);
@@ -84,6 +99,33 @@ async function handleCheckoutCompleted(session) {
     cost_per_event_at_donation: COST_PER_EVENT_HKD,
     status: "succeeded",
   });
+
+  // Credit the fundraiser this gift was earmarked for. Placed after the status flip so it
+  // sits behind both idempotency gates: the event ledger in `handleEvent`, and the
+  // already-succeeded early return above. A double credit raises no error and produces no
+  // bad row — the total is simply wrong, which is why it is guarded twice.
+  //
+  // DEMO-ONLY: `addRaised` is a read-then-write, so two donations to the same campaign
+  // landing together can lose one update — real version needs an atomic SQL increment
+  // (`raised_hkd = raised_hkd + $1`, via an RPC or a migration). Harmless at demo volume,
+  // wrong under real traffic (§19).
+  let campaignOutcome = null;
+  if (donation.campaign_id) {
+    // Same try/catch reasoning as allocation and email below: anything thrown here becomes a
+    // non-2xx, and Stripe then retries the whole handler forever.
+    try {
+      await campaignsRepo.addRaised(donation.campaign_id, donation.amount_hkd);
+      campaignOutcome = {
+        campaign_id: donation.campaign_id,
+        credited_hkd: donation.amount_hkd,
+      };
+    } catch (campaignError) {
+      console.error(
+        `donation ${donation.id}: fundraiser credit failed — ${campaignError.message}`,
+      );
+      campaignOutcome = { campaign_id: donation.campaign_id, error: campaignError.message };
+    }
+  }
 
   // Attach to real sessions (§15). Runs synchronously in the webhook path so a demo-day
   // walk sees allocations by the time the thanks page loads — a background job would be
@@ -102,14 +144,41 @@ async function handleCheckoutCompleted(session) {
     });
   } catch (allocationError) {
     // The pending-retry job (§16) will pick this up next tick.
+    console.error(
+      `donation ${donation.id}: allocation failed — ${allocationError.message}`,
+    );
     allocationOutcome = { error: allocationError.message };
+  }
+
+  // The thank-you carries the tracking link, which is the donor's ONLY durable route back to
+  // their giving history — the token is shown once on the thanks page and §15 has no
+  // lookup-by-email. Same try/catch reasoning as allocation above: Stripe retries anything
+  // that is not a 200, so a mail failure must not escape. Logged rather than discarded,
+  // because a thank-you that silently never sent is a donor who lost their history.
+  let emailOutcome = null;
+  try {
+    emailOutcome = await donorThankYouService.sendDonorThankYou({
+      donor: { ...donor, tracking_opt_in: donation.tracking_opt_in ?? true },
+      donation: { ...donation, events_credited: eventsCredited },
+      clientOrigin: process.env.CLIENT_ORIGIN || "http://localhost:5173",
+      // Empty when allocation failed above — the email then falls back to the count rather
+      // than listing sessions that were never attached.
+      sessions: allocationOutcome?.sessions ?? [],
+    });
+  } catch (emailError) {
+    console.error(
+      `donation ${donation.id}: thank-you email failed — ${emailError.message}`,
+    );
+    emailOutcome = { sent: false, error: emailError.message };
   }
 
   return {
     donation_id: donation.id,
     donor_id: donor.id,
     events_credited: eventsCredited,
+    campaign: campaignOutcome,
     allocation: allocationOutcome,
+    email: emailOutcome,
   };
 }
 

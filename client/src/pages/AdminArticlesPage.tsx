@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import {
   createAdminArticle,
+  uploadCoverImage,
   fetchAdminArticle,
   fetchAdminArticles,
   publishAdminArticle,
@@ -82,6 +83,7 @@ export function AdminArticlesPage() {
   const [error, setError] = useState<string | null>(null)
   const [msg, setMsg] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [uploading, setUploading] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [form, setForm] = useState<FormState>(EMPTY_FORM)
   const [showForm, setShowForm] = useState(false)
@@ -322,6 +324,39 @@ export function AdminArticlesPage() {
                 onChange={(e) => setForm((f) => ({ ...f, cover_image_url: e.target.value }))}
                 className="mt-1 w-full rounded-md border border-navy/15 bg-white px-3 py-2"
               />
+              {/* Upload writes the URL back into the field above, so a pasted link and an
+                  uploaded file end up in exactly the same place. */}
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                disabled={uploading}
+                onChange={async (e) => {
+                  const file = e.target.files?.[0]
+                  if (!file) return
+                  setUploading(true)
+                  setError(null)
+                  try {
+                    const url = await uploadCoverImage(file)
+                    setForm((f) => ({ ...f, cover_image_url: url }))
+                  } catch {
+                    setError(a.articlesCoverUploadError)
+                  } finally {
+                    setUploading(false)
+                    e.target.value = ''
+                  }
+                }}
+                className="mt-2 w-full text-sm"
+              />
+              <span className="mt-1 block text-xs text-navy/55">
+                {uploading ? a.articlesCoverUploading : a.articlesCoverHint}
+              </span>
+              {form.cover_image_url && (
+                <img
+                  src={form.cover_image_url}
+                  alt=""
+                  className="mt-2 h-24 w-full rounded-md object-cover"
+                />
+              )}
             </label>
           </div>
           <div className="flex flex-wrap gap-2">

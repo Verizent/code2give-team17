@@ -126,6 +126,46 @@ async function updateStatus(id, patch) {
 }
 
 /**
+ * Patches editable fields. `slug`, `status` and `raised_hkd` are deliberately not
+ * writable here — slug is the public `/c/:slug` URL, status moves through
+ * `updateStatus` (moderation), and `raised_hkd` only ever moves via `addRaised`.
+ *
+ * @param {string} id
+ * @param {{ title?: string, story?: string, goal_hkd?: number,
+ *   cover_image_url?: string, end_date?: string }} patch
+ * @returns {Promise<object>}
+ */
+async function update(id, patch) {
+  const { data, error } = await getSupabase()
+    .from("campaigns")
+    .update(patch)
+    .eq("id", id)
+    .select(COLUMNS)
+    .single();
+  assertOk(error);
+  return data;
+}
+
+/**
+ * Hard delete. Callers must check for referencing donations first —
+ * `donations_campaign_id_fkey` is ON DELETE SET NULL, so Postgres raises nothing and
+ * quietly strips the attribution instead of refusing.
+ *
+ * @param {string} id
+ * @returns {Promise<object | null>}
+ */
+async function remove(id) {
+  const { data, error } = await getSupabase()
+    .from("campaigns")
+    .delete()
+    .eq("id", id)
+    .select(COLUMNS)
+    .maybeSingle();
+  assertOk(error);
+  return data;
+}
+
+/**
  * @param {string} id
  * @param {number} amountHkd
  * @returns {Promise<object | null>}
@@ -149,6 +189,8 @@ module.exports = {
   findById,
   slugExists,
   insert,
+  update,
+  remove,
   updateStatus,
   addRaised,
 };

@@ -1,9 +1,11 @@
 const { test, mock } = require("node:test");
 const assert = require("node:assert/strict");
 
+const campaignsRepo = require("../../../src/data/campaigns.repo");
 const donationsRepo = require("../../../src/data/donations.repo");
 const stripeEventsRepo = require("../../../src/data/stripe-events.repo");
 const donorsService = require("../../../src/services/donors.service");
+const emailLib = require("../../../src/lib/email");
 const {
   handleEvent,
   emailFromSession,
@@ -52,10 +54,17 @@ function mockDeps(t, { firstDelivery = true, donation = pendingDonation } = {}) 
     async () => donation,
   );
   const updateDonation = mock.method(donationsRepo, "updateDonation", async () => {});
+  // Stubbed so the suite does not print an email per test, and so the thank-you can be
+  // asserted on. `sendEmail` is otherwise a real console write even in log-mode.
+  const sendEmail = mock.method(emailLib, "sendEmail", async () => ({ mode: "log", delivered: true }));
+  const addRaised = mock.method(campaignsRepo, "addRaised", async () => ({ id: "c1" }));
   t.after(() => mock.restoreAll());
 
-  return { recordOnce, upsertDonor, findByStripeSession, updateDonation };
+  return { recordOnce, upsertDonor, findByStripeSession, updateDonation, sendEmail, addRaised };
 }
+
+/** A donation earmarked for a fundraiser. */
+const CAMPAIGN_ID = "cccccccc-0000-0000-0000-cccccccccccc";
 
 test("a duplicate delivery is a no-op — the ledger short-circuits before any write", async (t) => {
   // Stripe retries on timeouts and non-2xx. Without this guard a retry creates a second
@@ -79,6 +88,40 @@ test("the event is ledgered before any handler runs", async (t) => {
     id: "evt_test_1",
     type: "checkout.session.completed",
   });
+});
+
+test("a successful payment sends the thank-you carrying the tracking link", async (t) => {
+  const deps = mockDeps(t);
+
+  const outcome = await handleEvent(sessionCompleted());
+
+  assert.equal(deps.sendEmail.mock.callCount(), 1);
+  const message = deps.sendEmail.mock.calls[0].arguments[0];
+  assert.equal(message.to, "donor@example.com");
+  assert.ok(
+    message.text.includes("/give/track/tok_demo"),
+    "the tracking link is the donor's only durable route back to their history",
+  );
+  assert.equal(outcome.result.email.sent, true);
+});
+
+test("a failing thank-you does not fail the webhook", async (t) => {
+  // Stripe retries anything that is not a 200. If a mail outage threw out of the handler we
+  // would get a retry storm that re-runs allocation on every delivery, so this must degrade
+  // to a logged failure and let the 200 through.
+  const deps = mockDeps(t);
+  deps.sendEmail.mock.mockImplementation(async () => {
+    throw new Error("SMTP is on fire");
+  });
+
+  const outcome = await handleEvent(sessionCompleted());
+
+  assert.equal(outcome.handled, true, "Stripe must still get a 200");
+  assert.equal(outcome.result.email.sent, false);
+  assert.match(outcome.result.email.error, /SMTP is on fire/);
+  // The donation still completed — the email is the last step, not a gate on it.
+  assert.equal(outcome.result.events_credited, 5);
+  assert.equal(deps.updateDonation.mock.callCount(), 1);
 });
 
 test("checkout.session.completed normalises the email off the session", async (t) => {
@@ -140,6 +183,61 @@ test("an unhandled event type is ledgered but not acted on", async (t) => {
   assert.equal(outcome.handled, false);
   assert.equal(deps.recordOnce.mock.callCount(), 1, "still ledgered — nothing silently lost");
   assert.equal(deps.updateDonation.mock.callCount(), 0);
+});
+
+test("a donation earmarked for a fundraiser credits its raised total", async (t) => {
+  // The whole point of the campaign_id already carried on the donation. Without this the
+  // fundraiser progress bar reads 0 forever while the money is really in Stripe — wrong in
+  // the one direction nobody checks, because the donation itself looks perfectly fine.
+  const deps = mockDeps(t, {
+    donation: { ...pendingDonation, campaign_id: CAMPAIGN_ID },
+  });
+
+  const outcome = await handleEvent(sessionCompleted());
+
+  assert.equal(deps.addRaised.mock.callCount(), 1);
+  assert.deepEqual(deps.addRaised.mock.calls[0].arguments, [CAMPAIGN_ID, 2500]);
+  assert.equal(outcome.result.campaign.credited_hkd, 2500);
+});
+
+test("an unearmarked donation never touches a fundraiser", async (t) => {
+  const deps = mockDeps(t);
+
+  await handleEvent(sessionCompleted());
+
+  assert.equal(deps.addRaised.mock.callCount(), 0);
+});
+
+test("an already-succeeded fundraiser donation is not credited twice", async (t) => {
+  // Third line of defence for the money: the ledger short-circuits a retry, and this
+  // early-return catches a replay that got past it. A double credit is invisible — the
+  // total is simply wrong, and no error is ever raised.
+  const deps = mockDeps(t, {
+    donation: { ...pendingDonation, status: "succeeded", campaign_id: CAMPAIGN_ID },
+  });
+
+  await handleEvent(sessionCompleted());
+
+  assert.equal(deps.addRaised.mock.callCount(), 0);
+});
+
+test("a failing fundraiser credit does not fail the webhook", async (t) => {
+  // Same reasoning as the thank-you email above: anything that escapes here is a non-2xx,
+  // and Stripe then retries forever, re-running allocation on every delivery.
+  const deps = mockDeps(t, {
+    donation: { ...pendingDonation, campaign_id: CAMPAIGN_ID },
+  });
+  deps.addRaised.mock.mockImplementation(async () => {
+    throw new Error("campaigns table is on fire");
+  });
+
+  const outcome = await handleEvent(sessionCompleted());
+
+  assert.equal(outcome.handled, true, "Stripe must still get a 200");
+  assert.match(outcome.result.campaign.error, /campaigns table is on fire/);
+  // The donation itself still completed — the credit is a follow-on, not a gate.
+  assert.equal(deps.updateDonation.mock.callCount(), 1);
+  assert.equal(outcome.result.events_credited, 5);
 });
 
 test("emailFromSession reads either shape Stripe sends", () => {

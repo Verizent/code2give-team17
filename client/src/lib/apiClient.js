@@ -18,6 +18,14 @@ const BASE = readBase()
 
 export const API_MODE = import.meta.env.VITE_API_MODE ?? 'real'
 
+// DEMO-ONLY: signs every request in as the seeded admin with no login — real version
+// needs a real Supabase session (§19, §26). `import.meta.env.DEV` is a second, harder
+// gate than the flag alone: a production bundle can never send this header, whatever
+// the env file says. The server refuses it unless NODE_ENV=development and
+// DEMO_ADMIN_USER_ID are also set (services/auth/authenticate.js).
+export const ADMIN_AUTH_BYPASS =
+  import.meta.env.DEV && import.meta.env.VITE_ADMIN_AUTH_BYPASS === 'true'
+
 let authTokenGetter = null
 
 /** Register a function that returns the current Supabase access token (or null). */
@@ -77,6 +85,7 @@ export async function apiClient(path, init) {
     headers: {
       'Content-Type': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(ADMIN_AUTH_BYPASS ? { 'X-Demo-Auth': 'admin' } : {}),
       ...(init?.headers ?? {}),
     },
   })

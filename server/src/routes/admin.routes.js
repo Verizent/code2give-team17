@@ -3,15 +3,14 @@ const { z } = require("zod");
 const { validate } = require("../middleware/validate");
 const { envelope } = require("../lib/envelope");
 const { ApiError } = require("../lib/api-error");
-const {
-  listCampaigns,
-  moderateCampaign,
-} = require("../services/campaigns.service");
 const allocationsRepo = require("../data/allocations.repo");
 const donationsRepo = require("../data/donations.repo");
 const donorsRepo = require("../data/donors.repo");
 const sessionsRepo = require("../data/sessions.repo");
 const { closeReadyPeriods } = require("../services/donations/period-close.service");
+const { getDashboard } = require("../services/admin/dashboard.service");
+const { getAnalytics } = require("../services/admin/analytics.service");
+const { analyticsQuerySchema } = require("../schemas/analytics.schema");
 
 const router = express.Router();
 
@@ -19,23 +18,30 @@ const router = express.Router();
 // behind `adminGuard` ([requireAuth, requireRole("admin")]), covering every route in
 // this file. Do not assume a route added here is public — it is not, and it needs no
 // second guard. tests/routes/admin-mount.test.js fails if the mount loses the guard.
-router.get("/campaigns", async (request, response, next) => {
+// The Overview page's two reads. Both services existed unrouted, so /admin rendered
+// its chrome and then failed every metric with a 404.
+router.get("/dashboard", async (request, response, next) => {
   try {
-    const items = await listCampaigns();
-    response.json({ items, meta: { total: items.length } });
+    response.json(envelope(await getDashboard()));
   } catch (error) {
     next(error);
   }
 });
 
-router.post("/campaigns/:slug/moderate", async (request, response, next) => {
-  try {
-    const campaign = await moderateCampaign(request.params.slug, request.body.status);
-    response.json(campaign);
-  } catch (error) {
-    next(error);
-  }
-});
+router.get(
+  "/analytics",
+  validate({ query: analyticsQuerySchema }),
+  async (request, response, next) => {
+    try {
+      response.json(envelope(await getAnalytics(request.validatedQuery.range)));
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+// Campaign routes moved to routes/admin/campaigns.routes.js — they are id-keyed there,
+// enveloped, and Zod-validated.
 
 // ── Allocations admin surface (§16) ────────────────────────────────────────
 

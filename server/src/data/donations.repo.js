@@ -26,8 +26,12 @@ async function insertDonation(row) {
 async function findByStripeSession(sessionId) {
   const { data, error } = await getSupabase()
     .from("donations")
+    // `campaign_id` is load-bearing here, not decorative: the webhook credits a fundraiser's
+    // raised_hkd off this row. Leaving it out does not fail — `donation.campaign_id` is just
+    // `undefined`, the credit is skipped, and the fundraiser silently stays at zero while the
+    // money really is in Stripe. Unit tests cannot catch that, because they stub this repo.
     .select(
-      "id, donor_id, amount_hkd, frequency, status, events_credited, cost_per_event_at_donation, tracking_opt_in, created_at",
+      "id, donor_id, amount_hkd, frequency, status, events_credited, cost_per_event_at_donation, tracking_opt_in, campaign_id, created_at",
     )
     .eq("stripe_session_id", sessionId)
     .maybeSingle();
@@ -141,6 +145,76 @@ async function listRecent({ limit = 50, status } = {}) {
   return data ?? [];
 }
 
+/**
+ * Lifetime totals across settled money only.
+ *
+ * `pending` rows are excluded on purpose: a started-but-abandoned checkout writes one,
+ * so counting them would report money the charity never received.
+ *
+ * @returns {Promise<{ total_hkd: number, count: number }>}
+ */
+async function sumAmounts() {
+  const { data, error } = await getSupabase()
+    .from("donations")
+    .select("amount_hkd")
+    .eq("status", "succeeded");
+
+  assertOk(error);
+
+  const rows = data ?? [];
+  return {
+    total_hkd: rows.reduce((sum, row) => sum + (Number(row.amount_hkd) || 0), 0),
+    count: rows.length,
+  };
+}
+
+/**
+ * Settled donation totals grouped by UTC calendar month.
+ *
+ * Summed here rather than in SQL because PostgREST cannot express `group by` without a
+ * database function, and the dashboard only ever charts the last six months of a table
+ * this demo keeps small. Revisit as an RPC if `donations` ever outgrows one page.
+ *
+ * @returns {Promise<{ month: string, amount_hkd: number }[]>} oldest first
+ */
+async function sumByMonth() {
+  const { data, error } = await getSupabase()
+    .from("donations")
+    .select("amount_hkd, created_at")
+    .eq("status", "succeeded")
+    .order("created_at", { ascending: true });
+
+  assertOk(error);
+
+  const totals = new Map();
+  for (const row of data ?? []) {
+    if (!row.created_at) continue;
+    const month = new Date(row.created_at).toISOString().slice(0, 7);
+    totals.set(month, (totals.get(month) ?? 0) + (Number(row.amount_hkd) || 0));
+  }
+
+  return [...totals].map(([month, amount_hkd]) => ({ month, amount_hkd }));
+}
+
+/**
+ * How many donations point at a fundraiser, in **any** status.
+ *
+ * Deliberately not filtered to `succeeded`: a `pending` row is a checkout someone may still
+ * be completing, and deleting the campaign under it would strip the link before the webhook
+ * ever arrives. `head: true` asks Postgres for the count without shipping the rows.
+ *
+ * @param {string} campaignId
+ * @returns {Promise<number>}
+ */
+async function countByCampaign(campaignId) {
+  const { count, error } = await getSupabase()
+    .from("donations")
+    .select("id", { count: "exact", head: true })
+    .eq("campaign_id", campaignId);
+  assertOk(error);
+  return count ?? 0;
+}
+
 module.exports = {
   insertDonation,
   insertPendingDonation,
@@ -150,4 +224,7 @@ module.exports = {
   updateFeedback,
   listByDonor,
   listRecent,
+  sumAmounts,
+  sumByMonth,
+  countByCampaign,
 };

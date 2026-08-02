@@ -73,6 +73,14 @@ export function AdminModerationPage() {
                 {post.author_name} · {post.relationship}
               </p>
               <p className="mt-2 whitespace-pre-wrap text-navy/85">{post.story}</p>
+              {/* Approving a photo you cannot see is not moderation. */}
+              {post.photo_url && (
+                <img
+                  src={post.photo_url}
+                  alt={`Photo submitted by ${post.author_name}`}
+                  className="mt-3 max-h-72 rounded-lg border border-navy/10 object-contain"
+                />
+              )}
               <div className="mt-4 flex gap-2">
                 <button
                   type="button"

@@ -46,41 +46,76 @@ function normaliseEmail(value) {
 const MODE = () => (process.env.EMAIL_MODE || "log").toLowerCase();
 
 /**
- * Built once and reused: nodemailer pools connections per transport, and rebuilding one
- * per send means a fresh TCP + TLS + AUTH handshake every time.
+ * SMTP transport, cached against the config that produced it.
+ *
+ * Built lazily rather than at import time: `require("../lib/email")` happens in modules that
+ * never send — the volunteer track imports it for `normaliseEmail` alone — and constructing a
+ * transport at import would make every one of them fail on a missing SMTP_HOST.
+ *
+ * Cached **by config, not simply once**. A plain `if (!transport)` would pin the first
+ * settings it ever saw, so correcting a typo'd SMTP_HOST in `.env` would appear to change
+ * nothing until the process restarted, and the connection pool is worth keeping otherwise.
+ *
+ * @type {{ key: string, value: import("nodemailer").Transporter } | null}
  */
 let transport = null;
 
-/** Test seam — drops the memoised transport so env changes take effect. */
-function __resetTransport() {
-  transport = null;
-}
+/**
+ * Reads SMTP settings from the environment and fails loudly on anything missing.
+ *
+ * Credentials live in `server/.env` and never in the repo. `SMTP_PASS` for Gmail must be an
+ * **app password**, not the account password — Google has refused plain passwords for SMTP
+ * since 2022, and the resulting error says only "Username and Password not accepted".
+ */
+function smtpConfig() {
+  const host = process.env.SMTP_HOST;
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASS;
 
-function getTransport() {
-  if (transport) {
-    return transport;
-  }
+  const missing = [
+    !host && "SMTP_HOST",
+    !user && "SMTP_USER",
+    !pass && "SMTP_PASS",
+  ].filter(Boolean);
 
-  const missing = ["SMTP_HOST", "SMTP_USER", "SMTP_PASS"].filter((key) => !process.env[key]);
   if (missing.length > 0) {
-    // Loudly, not quietly. Falling back to log-mode here is precisely the bug this
-    // function exists to remove: an app that reports delivered on mail it never sent.
     throw new Error(
-      `EMAIL_MODE=smtp requires ${missing.join(", ")} — set them in server/.env or use EMAIL_MODE=log`,
+      `EMAIL_MODE=smtp needs ${missing.join(", ")} in server/.env. ` +
+        `Set EMAIL_MODE=log to preview emails in the server log instead.`,
     );
   }
 
-  const port = Number(process.env.SMTP_PORT) || 587;
-
-  transport = nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
+  const port = Number(process.env.SMTP_PORT || 587);
+  return {
+    host,
     port,
-    // 465 is implicit TLS; 587 and 25 start plaintext and upgrade via STARTTLS.
-    secure: port === 465,
-    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
-  });
+    // 465 is implicit TLS; 587 starts plaintext and upgrades via STARTTLS. Getting this
+    // backwards produces a connection that hangs rather than a clear error.
+    secure: process.env.SMTP_SECURE ? process.env.SMTP_SECURE === "true" : port === 465,
+    auth: { user, pass },
+  };
+}
 
-  return transport;
+function getTransport(config = smtpConfig()) {
+  const key = JSON.stringify(config);
+  if (!transport || transport.key !== key) {
+    // Required here rather than at module scope so the dependency is only loaded by processes
+    // that actually send.
+    transport = { key, value: require("nodemailer").createTransport(config) };
+  }
+  return transport.value;
+}
+
+/**
+ * Verifies the SMTP connection and credentials without sending anything.
+ * Used by `npm run email:check` so a misconfiguration surfaces before a donor is owed an email.
+ *
+ * @returns {Promise<{ ok: true, host: string, port: number, user: string }>}
+ */
+async function verifyTransport() {
+  const config = smtpConfig();
+  await getTransport(config).verify();
+  return { ok: true, host: config.host, port: config.port, user: config.auth.user };
 }
 
 /**
@@ -89,8 +124,8 @@ function getTransport() {
  * Modes:
  *   `smtp` — real delivery through the SMTP_* credentials in server/.env. Throws if
  *            they are incomplete or the server rejects the message.
- *   `send` — reserved for Resend. Still throws: its sandbox only delivers to verified
- *            addresses until love21foundation.com DNS is verified (§17).
+ *   `send` — the unbuilt Resend path. Still throws rather than aliasing to smtp, so a
+ *            config asking for it gets corrected instead of quietly redirected.
  *   anything else, including unset — renders to stdout. `log` (donations default) and
  *            `console` (the volunteer track's `.env.example` value) both land here.
  *
@@ -104,21 +139,29 @@ function getTransport() {
  * @returns {Promise<{ mode: 'log'|'smtp', delivered: boolean, id?: string }>}
  */
 async function sendEmail(message) {
-  if (MODE() === "send") {
-    // Real Resend call would live here. Not wired — DNS blocker per §17.
-    throw new Error("EMAIL_MODE=send not implemented — verify love21foundation.com DNS first");
-  }
+  const mode = MODE();
 
-  if (MODE() === "smtp") {
+  if (mode === "smtp") {
+    const from = process.env.SMTP_FROM || process.env.SMTP_USER;
     const info = await getTransport().sendMail({
-      from: process.env.EMAIL_FROM || process.env.SMTP_USER,
+      from,
       to: message.to,
       subject: message.subject,
       text: message.text,
       ...(message.html ? { html: message.html } : {}),
     });
-
+    // Logged because a donor's tracking link travels in these, and "did it actually go out"
+    // is the first question when someone says they never received it.
+    console.log(`[EMAIL · smtp] ${message.to} — ${message.subject} — id ${info.messageId}`);
     return { mode: "smtp", delivered: true, id: info.messageId };
+  }
+
+  if (mode === "send") {
+    // Kept as a guard rather than silently aliased to smtp: `send` was the Resend path, and a
+    // config still asking for it should be corrected rather than quietly redirected.
+    throw new Error(
+      "EMAIL_MODE=send was the unbuilt Resend path — use EMAIL_MODE=smtp (see .env.example)",
+    );
   }
 
   const banner = "─".repeat(60);
@@ -131,4 +174,4 @@ async function sendEmail(message) {
   return { mode: "log", delivered: true };
 }
 
-module.exports = { normaliseEmail, sendEmail, __resetTransport };
+module.exports = { normaliseEmail, sendEmail, verifyTransport };

@@ -137,6 +137,7 @@ function editionLabel(edition) {
 
 module.exports = {
   SELECTION_FLOOR_DAYS,
+  MONTH_ABBREVIATIONS,
   lastDayOfMonth,
   editionForDonation,
   selectionStart,

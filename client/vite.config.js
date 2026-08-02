@@ -20,7 +20,8 @@ export default defineConfig({
   },
   server: {
     proxy: {
-      '/api': 'http://localhost:3000',
+      // Overridable so parallel worktrees can each run their own server.
+      '/api': process.env.API_PROXY_TARGET ?? 'http://localhost:3000',
     },
   },
 })

@@ -3,6 +3,7 @@
 export const HOME_SECTION_NAV = [
   { id: 'impact', en: 'Impact', 'zh-Hant': '影響力', 'zh-Hans': '影响力' },
   { id: 'stories', en: 'Stories', 'zh-Hant': '故事', 'zh-Hans': '故事' },
+  { id: 'news', en: 'News', 'zh-Hant': '最新消息', 'zh-Hans': '最新消息' },
   { id: 'programmes', en: 'Programmes', 'zh-Hant': '活動', 'zh-Hans': '活动' },
   { id: 'leadership', en: 'Leadership', 'zh-Hant': '領導團隊', 'zh-Hans': '领导团队' },
   { id: 'support', en: 'Support', 'zh-Hant': '支持我們', 'zh-Hans': '支持我们' },

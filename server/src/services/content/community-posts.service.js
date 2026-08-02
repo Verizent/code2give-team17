@@ -1,6 +1,7 @@
 const communityPostsRepo = require("../../data/community-posts.repo");
 const { ApiError } = require("../../lib/api-error");
 const { parsePaging, buildMeta } = require("../../lib/pagination");
+const { isOwnMediaUrl } = require("./media.service");
 
 /**
  * `GET /api/community-posts` — approved Voices for the public tab.
@@ -36,9 +37,30 @@ async function submitVoice(body, actor) {
     return { id: null, submitted_at: new Date().toISOString() };
   }
 
+  // photo_url is a plain string on the wire, so a caller can send one without ever
+  // calling the upload endpoint. Refusing anything we did not store ourselves is what
+  // makes that endpoint's size and MIME checks meaningful rather than optional, and
+  // keeps an attacker-chosen third-party URL off the moderator's screen.
+  if (postData.photo_url !== undefined && !isOwnMediaUrl(postData.photo_url)) {
+    throw ApiError.badRequest("photo_url must come from POST /api/uploads/community-photo.");
+  }
+
+  // DEMO-ONLY: VOICES_AUTO_APPROVE=true publishes a submission straight to the wall,
+  // skipping the moderation queue, so the flow can be shown end to end without an
+  // admin login mid-demo. Real version must never set this — it is the only thing
+  // stopping anonymous text and images appearing on a public page unreviewed.
+  //
+  // Compared against the exact string "true" rather than tested for truthiness: an
+  // env var is always a string, so `if (process.env.X)` would treat "false" as on,
+  // which is how a demo flag quietly ships enabled.
+  const autoApprove = process.env.VOICES_AUTO_APPROVE === "true";
+
   return communityPostsRepo.create({
     ...postData,
     submitted_by: actor?.userId ?? null,
+    // Omitted rather than set to 'pending' when off, so the column default stays the
+    // single source of truth for what an unmoderated row looks like.
+    ...(autoApprove ? { status: "approved" } : {}),
   });
 }
 

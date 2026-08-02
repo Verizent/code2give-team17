@@ -6,6 +6,8 @@ import { useSite } from '@/components/site-provider'
 import { ShareMomentButton } from '@/components/community/share-moment'
 import { ArticlesCta } from '@/components/community/articles-cta'
 import { StoryFeed } from '@/components/community/story-feed'
+import { VoicesFeed } from '@/components/community/voices-feed'
+import { InstagramStrip } from '@/components/community/instagram-strip'
 import { StayClose } from '@/components/community/stay-close'
 
 export function CommunityPage() {
@@ -33,6 +35,8 @@ export function CommunityPage() {
 
         <div className="mx-auto max-w-[1120px] px-4 py-10 sm:px-8 sm:py-16">
           <StoryFeed />
+          <VoicesFeed />
+          <InstagramStrip />
         </div>
 
         <ArticlesCta />

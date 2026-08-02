@@ -7,8 +7,6 @@ import { LoginPage } from '@/pages/LoginPage'
 import { AdminLayout } from '@/features/admin/AdminLayout'
 import { AdminDashboardPage } from '@/pages/AdminDashboardPage'
 import { AdminCampaignsPage } from '@/pages/AdminCampaignsPage'
-import { AdminAttendancePage } from '@/pages/AdminAttendancePage'
-import { AdminStoryDeskPage } from '@/pages/AdminStoryDeskPage'
 import { AdminModerationPage } from '@/pages/AdminModerationPage'
 import { AdminArticlesPage } from '@/pages/AdminArticlesPage'
 import { VolunteerPage } from '@/pages/VolunteerPage'
@@ -20,7 +18,11 @@ import { GiveWishlistPage } from '@/pages/GiveWishlistPage'
 import { CampaignCreatePage } from '@/pages/CampaignCreatePage'
 import { CampaignPublicPage } from '@/pages/CampaignPublicPage'
 import { GiveThanksPage } from '@/pages/GiveThanksPage'
+import { DonorTrackPage } from '@/pages/DonorTrackPage'
 import { SupportPage } from '@/pages/SupportPage'
+import { ArticlePage } from '@/pages/ArticlePage'
+import { AdminInstagramPage } from '@/pages/AdminInstagramPage'
+import { AdminWishlistPage } from '@/pages/AdminWishlistPage'
 
 export default function App() {
   return (
@@ -37,22 +39,34 @@ export default function App() {
       <Route path="/give/wishlist" element={<GiveWishlistPage />} />
       <Route path="/give/campaigns/new" element={<CampaignCreatePage />} />
       <Route path="/give/thanks" element={<GiveThanksPage />} />
+      {/* Bearer token in the path (§15). Must sit above the `*` catch-all, or a valid
+          tracking link silently redirects home — the same trap that made Stripe's old
+          /donate/thanks success_url look like it worked. */}
+      <Route path="/give/track/:token" element={<DonorTrackPage />} />
       <Route path="/c/:slug" element={<CampaignPublicPage />} />
       <Route path="/me" element={<MyImpactPage />} />
       <Route path="/admin" element={<AdminLayout />}>
         <Route index element={<AdminDashboardPage />} />
         <Route path="articles" element={<AdminArticlesPage />} />
-        <Route path="stories" element={<AdminStoryDeskPage />} />
         <Route path="campaigns" element={<AdminCampaignsPage />} />
-        <Route path="attendance" element={<AdminAttendancePage />} />
         <Route path="moderation" element={<AdminModerationPage />} />
-        <Route path="proofs" element={<Navigate to="/admin/stories" replace />} />
-        <Route path="social" element={<Navigate to="/admin/stories" replace />} />
-        <Route path="instagram" element={<Navigate to="/admin/stories" replace />} />
+        <Route path="instagram" element={<AdminInstagramPage />} />
+        <Route path="wishlist" element={<AdminWishlistPage />} />
+        {/* Story desk and Class roll were removed; their old links, and the ones that
+            used to redirect into Story desk, now land on the hub. */}
+        <Route path="analytics" element={<Navigate to="/admin" replace />} />
+        <Route path="stories" element={<Navigate to="/admin" replace />} />
+        <Route path="attendance" element={<Navigate to="/admin" replace />} />
+        <Route path="proofs" element={<Navigate to="/admin" replace />} />
+        <Route path="social" element={<Navigate to="/admin" replace />} />
       </Route>
       <Route path="/support" element={<SupportPage />} />
       <Route path="/about" element={<Navigate to="/" replace />} />
-      <Route path="/news" element={<Navigate to="/articles" replace />} />
+      {/* Two different things that share a word: /articles is external press
+          coverage, /news/:slug is one of Love 21's own published articles from the
+          content API. Bare /news goes to the Home strip that lists the latter. */}
+      <Route path="/news/:slug" element={<ArticlePage />} />
+      <Route path="/news" element={<Navigate to="/#news" replace />} />
       <Route path="/portal" element={<Navigate to="/" replace />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

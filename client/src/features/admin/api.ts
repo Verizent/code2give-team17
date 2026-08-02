@@ -9,7 +9,6 @@ export type DashboardMetrics = {
   pending_campaigns: number
   pending_voices: number
   voices_available: boolean
-  pending_proofs?: number
   impact_current?: boolean
 }
 
@@ -30,27 +29,6 @@ export type DashboardPayload = {
   queue: DashboardQueueItem[]
 }
 
-export type AttendanceSession = {
-  id: string
-  title: string
-  location: string
-  programme: string
-  starts_at: string
-  ends_at: string
-  capacity: number
-  spots_filled: number
-  source: string
-  headcount_confirmed: number
-  headcount_expected: number
-  signups: Array<{
-    id: string
-    status: string
-    hours_logged: number
-    attended_at: string | null
-    volunteer: { id: string; full_name: string | null; email: string | null }
-  }>
-}
-
 export type CommunityPost = {
   id: string
   author_name: string
@@ -61,153 +39,50 @@ export type CommunityPost = {
   submitted_at: string
 }
 
-export type FunnelPayload = {
-  stages: Array<{
-    id: string
-    label: string
-    count: number
-    conversion_from_prev: number | null
-  }>
-  dropoffs: Array<{
-    from: string
-    to: string
-    from_label: string
-    to_label: string
-    lost: number
-    rate: number
-  }>
-  sources: Array<{
-    source: string
-    label: string
-    visitors: number
-    volunteers: number
-    donors: number
-  }>
-  seeded: boolean
-  empty?: boolean
-  period_label: string
-  note?: string
-}
-
-export type ProofItem = {
-  id: string
-  title: string
-  programme: string
-  captured_at: string
-  consent: 'consented' | 'partial' | 'none'
-  members_visible: number
-  members_blurred: number
-  thumb: string
-  status: 'pending' | 'approved'
-  approved_at: string | null
-  fanout: {
-    website_story: { locale: string; headline: string; excerpt: string; path: string }
-    drafts: Array<{ channel: string; lang: string; caption: string }>
-    languages: string[]
-    stats_delta: { sessions_featured: number; photos_published: number }
-    blur_note: string
-  } | null
-}
-
-export type SocialDraft = {
-  id: string
-  channel: 'instagram' | 'facebook'
-  lang: 'en' | 'zh-Hant' | 'zh-Hans'
-  caption: string
-  status: 'draft' | 'queued' | 'copied'
-  scheduled_for: string | null
-  proof_id: string | null
-  created_at: string
-}
-
 export async function fetchAdminDashboard(): Promise<DashboardPayload> {
   const { data } = await apiData<DashboardPayload>('/api/admin/dashboard')
   return data
 }
 
-export async function fetchAdminFunnel(): Promise<FunnelPayload> {
-  const { data } = await apiData<FunnelPayload>('/api/admin/funnel')
-  return data
-}
-
-export async function fetchProofs(): Promise<{ items: ProofItem[]; available: boolean }> {
-  const res = await apiClient<Envelope<ProofItem[]> & { meta?: { available?: boolean } }>(
-    '/api/admin/proofs',
-  )
-  return {
-    items: res.data ?? [],
-    available: res.meta?.available !== false,
+/** `null` means the denominator was empty — render "not enough data", never 0%. */
+export type AnalyticsPayload = {
+  range: string
+  donor_retention: {
+    rate: number | null
+    retained: number
+    prior_donors: number
+    current_donors: number
+    prior_window_label: string
+    current_window_label: string
+    /** The 40–45% sector benchmark is annual; false means do not print it. */
+    benchmark_applies: boolean
+  }
+  repeat_gift: { rate: number | null; repeat_donors: number; total_donors: number }
+  capacity_fill: { rate: number | null; attended: number; capacity: number }
+  satisfaction: {
+    average_rating: number | null
+    would_return_rate: number | null
+    responses: number
+  }
+  donations_by_month: Array<{ month: string; amount_hkd: number }>
+  programmes: Array<{
+    programme: string
+    capacity: number
+    signups: number
+    attended: number
+    fill_rate: number | null
+  }>
+  acquisition: {
+    donors: Array<{ source: string; count: number }>
+    volunteers: Array<{ source: string; count: number }>
+    available: boolean
   }
 }
 
-export async function approveProof(id: string): Promise<ProofItem> {
-  const { data } = await apiData<ProofItem>(
-    `/api/admin/proofs/${encodeURIComponent(id)}/approve`,
-    { method: 'POST', body: '{}' },
+export async function fetchAdminAnalytics(range = 'all'): Promise<AnalyticsPayload> {
+  const { data } = await apiData<AnalyticsPayload>(
+    `/api/admin/analytics?range=${encodeURIComponent(range)}`,
   )
-  return data
-}
-
-export async function fetchSocialDrafts(): Promise<{ items: SocialDraft[]; available: boolean }> {
-  const res = await apiClient<Envelope<SocialDraft[]> & { meta?: { available?: boolean } }>(
-    '/api/admin/social',
-  )
-  return {
-    items: res.data ?? [],
-    available: res.meta?.available !== false,
-  }
-}
-
-export async function scheduleSocialDraft(id: string, scheduled_for: string) {
-  const { data } = await apiData<SocialDraft>(
-    `/api/admin/social/${encodeURIComponent(id)}`,
-    {
-      method: 'PATCH',
-      body: JSON.stringify({ scheduled_for }),
-    },
-  )
-  return data
-}
-
-export async function markSocialCopied(id: string) {
-  const { data } = await apiData<SocialDraft>(
-    `/api/admin/social/${encodeURIComponent(id)}/copy`,
-    { method: 'POST', body: '{}' },
-  )
-  return data
-}
-
-export async function fetchAttendance(from?: string, to?: string): Promise<{
-  sessions: AttendanceSession[]
-  from: string
-  to: string
-}> {
-  const params = new URLSearchParams()
-  if (from) params.set('from', from)
-  if (to) params.set('to', to)
-  const qs = params.toString()
-  const path = qs ? `/api/admin/attendance?${qs}` : '/api/admin/attendance'
-  const res = await apiClient<Envelope<AttendanceSession[]> & { meta?: { from?: string; to?: string } }>(
-    path,
-  )
-  return {
-    sessions: res.data ?? [],
-    from: res.meta?.from ?? '',
-    to: res.meta?.to ?? '',
-  }
-}
-
-export async function markSignupAttended(
-  signupId: string,
-  hours_logged?: number,
-): Promise<{ signup: { id: string; status: string }; badges_awarded: string[] }> {
-  const { data } = await apiData<{
-    signup: { id: string; status: string }
-    badges_awarded: string[]
-  }>(`/api/admin/volunteer-signups/${encodeURIComponent(signupId)}/attendance`, {
-    method: 'POST',
-    body: JSON.stringify(hours_logged != null ? { hours_logged } : {}),
-  })
   return data
 }
 
@@ -339,4 +214,128 @@ export async function unpublishAdminArticle(id: string): Promise<AdminArticle> {
     { method: 'POST', body: '{}' },
   )
   return data
+}
+
+export type AdminWishlistItem = {
+  id: string
+  title_en: string
+  title_zh: string
+  why_en: string
+  why_zh: string
+  needed: number
+  /** Derived from wishlist_pledges by the pledge RPC — never sent on a write. */
+  pledged: number
+  image_url: string
+  is_active: boolean
+  created_at?: string
+  updated_at?: string
+}
+
+/** `id` is the slug and is settable on create only; a rename would move the public URL. */
+export type WishlistCreatePayload = {
+  id: string
+  title_en: string
+  title_zh: string
+  why_en: string
+  why_zh: string
+  needed: number
+  image_url: string
+  is_active?: boolean
+}
+
+export type WishlistUpdatePayload = Partial<Omit<WishlistCreatePayload, 'id'>>
+
+export async function fetchAdminWishlist(): Promise<AdminWishlistItem[]> {
+  const res = await apiClient<Envelope<AdminWishlistItem[]>>('/api/admin/wishlist?limit=50')
+  return res.data ?? []
+}
+
+export async function fetchAdminWishlistItem(id: string): Promise<AdminWishlistItem> {
+  const { data } = await apiData<AdminWishlistItem>(
+    `/api/admin/wishlist/${encodeURIComponent(id)}`,
+  )
+  return data
+}
+
+export async function createAdminWishlistItem(
+  payload: WishlistCreatePayload,
+): Promise<AdminWishlistItem> {
+  const { data } = await apiData<AdminWishlistItem>('/api/admin/wishlist', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+  return data
+}
+
+export async function updateAdminWishlistItem(
+  id: string,
+  payload: WishlistUpdatePayload,
+): Promise<AdminWishlistItem> {
+  const { data } = await apiData<AdminWishlistItem>(
+    `/api/admin/wishlist/${encodeURIComponent(id)}`,
+    { method: 'PATCH', body: JSON.stringify(payload) },
+  )
+  return data
+}
+
+/** Server answers 204 with no body, so there is nothing to unwrap. */
+export async function deleteAdminWishlistItem(id: string): Promise<void> {
+  await apiClient(`/api/admin/wishlist/${encodeURIComponent(id)}`, { method: 'DELETE' })
+}
+
+export type AdminInstagramEmbed = {
+  id: string
+  url: string
+  caption_en: string | null
+  caption_zh: string | null
+  thumbnail_url: string | null
+  display_order: number
+  is_active: boolean
+}
+
+export async function fetchInstagramEmbeds(): Promise<AdminInstagramEmbed[]> {
+  const res = await apiClient<Envelope<AdminInstagramEmbed[]>>('/api/admin/instagram?limit=50')
+  return res.data ?? []
+}
+
+export async function createInstagramEmbed(
+  body: Partial<AdminInstagramEmbed>,
+): Promise<AdminInstagramEmbed> {
+  const { data } = await apiData<AdminInstagramEmbed>('/api/admin/instagram', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
+  return data
+}
+
+export async function updateInstagramEmbed(
+  id: string,
+  body: Partial<AdminInstagramEmbed>,
+): Promise<AdminInstagramEmbed> {
+  const { data } = await apiData<AdminInstagramEmbed>(
+    `/api/admin/instagram/${encodeURIComponent(id)}`,
+    { method: 'PATCH', body: JSON.stringify(body) },
+  )
+  return data
+}
+
+export async function deleteInstagramEmbed(id: string): Promise<void> {
+  await apiClient(`/api/admin/instagram/${encodeURIComponent(id)}`, { method: 'DELETE' })
+}
+
+/**
+ * Uploads a cover image and returns its public URL.
+ *
+ * Sends raw bytes with the file's own Content-Type — the server mounts express.raw on
+ * this route only. FormData would have needed a multipart parser added as a shared
+ * dependency; base64 would inflate every upload by a third.
+ */
+export async function uploadCoverImage(file: File): Promise<string> {
+  const { data } = await apiData<{ url: string }>('/api/admin/uploads/cover', {
+    method: 'POST',
+    body: file,
+    // Overrides apiClient's JSON default; the body is the image itself.
+    headers: { 'Content-Type': file.type },
+  })
+  return data.url
 }

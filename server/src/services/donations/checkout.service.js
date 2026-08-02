@@ -15,8 +15,32 @@ const donationsRepo = require("../../data/donations.repo");
 /** Stripe's minimum charge in HKD, below which the API rejects the session outright. */
 const MIN_AMOUNT_HKD = 4;
 
+/**
+ * Ceiling on a single online gift, matching `recordDonationSchema`.
+ *
+ * Stripe caps `unit_amount` at 999,999,999,999 cents, so without a bound of our own the ×100
+ * in `toCents` pushed an over-large amount past it and the SDK threw *after* validation —
+ * surfacing as a 500 with a raw Stripe message instead of a 400 the form could show. Anything
+ * above this is a conversation with the foundation, not a checkout session.
+ */
+const MAX_AMOUNT_HKD = 1_000_000;
+
 /** Hosted Checkout only. Never Stripe Elements — that changes our PCI position (CONTEXT.md §17). */
 const PAYMENT_METHODS = ["card"];
+
+/**
+ * Our `frequency` → Stripe's `recurring.interval`. Absent from this map means a one-off
+ * payment, not an unsupported value — the schema is what rejects unknown frequencies.
+ *
+ * Stripe accepts `day | week | month | year`; only the two the donate form offers are wired.
+ */
+const RECURRING_INTERVALS = { weekly: "week", monthly: "month" };
+
+/** Card-statement product name per frequency. Keep in step with RECURRING_INTERVALS. */
+const PRODUCT_NAMES = {
+  weekly: "Weekly gift to Love 21",
+  monthly: "Monthly gift to Love 21",
+};
 
 /**
  * Integer dollars → cents.
@@ -43,9 +67,13 @@ async function createCheckoutSession(input, { clientOrigin }) {
   if (!Number.isInteger(amountHkd) || amountHkd < MIN_AMOUNT_HKD) {
     throw ApiError.badRequest(`amount_hkd must be a whole number of at least ${MIN_AMOUNT_HKD}`);
   }
+  if (amountHkd > MAX_AMOUNT_HKD) {
+    throw ApiError.badRequest(`amount_hkd must be at most ${MAX_AMOUNT_HKD}`);
+  }
 
   const frequency = input.frequency ?? "once";
-  const isRecurring = frequency === "monthly";
+  const interval = RECURRING_INTERVALS[frequency];
+  const isRecurring = Boolean(interval);
   const trackingOptIn = input.tracking_opt_in ?? true;
 
   const stripe = stripeLib.getStripe();
@@ -59,9 +87,9 @@ async function createCheckoutSession(input, { clientOrigin }) {
         price_data: {
           currency: "hkd",
           unit_amount: toCents(amountHkd),
-          ...(isRecurring ? { recurring: { interval: "month" } } : {}),
+          ...(isRecurring ? { recurring: { interval } } : {}),
           product_data: {
-            name: isRecurring ? "Monthly gift to Love 21" : "Gift to Love 21",
+            name: PRODUCT_NAMES[frequency] ?? "Gift to Love 21",
             // Never "your gift pays for N sessions" — the §15 copy rule forbids exclusive
             // attribution, and this string appears on the donor's card statement page.
             description: "Your gift helps make Love 21 sessions possible.",
@@ -72,12 +100,24 @@ async function createCheckoutSession(input, { clientOrigin }) {
     // Stripe collects the email natively; the webhook reads it back off the session. This is
     // why our own form has no email field at all.
     customer_creation: isRecurring ? undefined : "always",
-    success_url: `${clientOrigin}/donate/thanks?session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${clientOrigin}/donate?cancelled=1`,
+    // These must match routes the client actually serves (client/src/App.jsx). They
+    // previously pointed at `/donate`, which the router does not define — it falls through
+    // to the `*` catch-all and redirects to `/`, so a donor who paid landed on the homepage
+    // with no confirmation. Nothing failed loudly, because Stripe considers any 200 a
+    // successful return. Change these only alongside the routes themselves.
+    success_url: `${clientOrigin}/give/thanks?session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${clientOrigin}/give?cancelled=1`,
+    // Stripe caps a metadata value at 500 characters. The sources are a short comma-joined
+    // list of known tags so they cannot approach that; the free text is clamped to 200 by
+    // the schema. Carrying them here rather than storing them on the donation is deliberate:
+    // the answer belongs to the donor, and the donor row does not exist until the webhook
+    // reads back the email Stripe collected.
     metadata: {
       amount_hkd: String(amountHkd),
       tracking_opt_in: String(trackingOptIn),
       campaign_id: input.campaign_id ?? "",
+      referral_sources: (input.referral_sources ?? []).join(","),
+      referral_source_other: input.referral_source_other ?? "",
     },
   });
 
@@ -96,4 +136,4 @@ async function createCheckoutSession(input, { clientOrigin }) {
   };
 }
 
-module.exports = { createCheckoutSession, toCents, MIN_AMOUNT_HKD };
+module.exports = { createCheckoutSession, toCents, MIN_AMOUNT_HKD, MAX_AMOUNT_HKD };

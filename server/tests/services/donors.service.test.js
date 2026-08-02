@@ -378,6 +378,89 @@ test("buildTrackView.period.events carry PLAN.md §C1 fields — kind, title, st
   assert.equal(event.cost_at_allocation, undefined, "cost is internal, not exposed");
 });
 
+test("a period is labelled by when it sends, not by the window it spans", async (t) => {
+  // The window ("15 Aug – 30 Aug") is an internal batching rule and says nothing about which
+  // sessions appear beneath it — those come from `[donation +7d, +30d]`. Rendered as a range
+  // above the list it read as a claim about those sessions, so a gift on 2 Aug showed sessions
+  // on the 10th and 11th under a heading saying 15–30 Aug. The send date is the thing a donor
+  // actually wants: when do I hear what happened?
+  stubTrackDeps(t, {
+    periods: [
+      { id: "p1", period_start: "2026-08-15", period_end: "2026-08-31", status: "open" },
+    ],
+  });
+
+  const view = await buildTrackView(trackDonor);
+
+  assert.equal(view.period.label, "31 Aug", "the day the update goes out");
+  assert.equal(view.period.sends_on, "2026-08-31");
+  assert.equal(view.period.period_end, "2026-08-31", "raw column unchanged");
+  assert.equal(view.periods[0].label, view.period.label, "block and archive must agree");
+});
+
+test("the send date is the real end of month, not a fixed 31st", async (t) => {
+  // "The 31st" is not a date. A job or label hardcoding it is wrong five months a year, and
+  // wrong twice over in February.
+  const cases = [
+    ["2026-06-15", "2026-06-30", "30 Jun"],
+    ["2026-02-15", "2026-02-28", "28 Feb"],
+    ["2028-02-15", "2028-02-29", "29 Feb"],
+    ["2026-07-31", "2026-08-15", "15 Aug"],
+  ];
+
+  for (const [start, end, label] of cases) {
+    mock.restoreAll();
+    stubTrackDeps(t, {
+      periods: [{ id: "p1", period_start: start, period_end: end, status: "open" }],
+    });
+
+    const view = await buildTrackView(trackDonor);
+    assert.equal(view.period.label, label, `label for period ending ${end}`);
+  }
+});
+
+test("buildTrackView lists a session once even when several gifts landed on it", async (t) => {
+  // Reproduces a real report: HK$500 (1 credit) then HK$1,450 (3 credits) in one window
+  // produced 4 allocations across 3 distinct sessions, and "Family support circle" appeared
+  // twice on the page. Two gifts collide whenever the second one's eligibility window
+  // overlaps the first — the allocator picks soonest-first and does not exclude what an
+  // earlier gift already funded, which is by design.
+  //
+  // `events` was built by mapping over ALLOCATIONS while the deduplicated `sessionIds` was
+  // used only to fetch. A donor seeing the same class listed twice reads it as us
+  // double-counting their money. The identical bug in the edition email was fixed earlier in
+  // period-close.service.js; this is the same defect on the page.
+  const period = {
+    id: "p1",
+    period_start: "2026-08-15",
+    period_end: "2026-08-31",
+    status: "open",
+  };
+  stubTrackDeps(t, {
+    periods: [period],
+    allocs: [
+      { id: "a1", session_id: "s_family", donor_period_id: "p1", status: "pending" },
+      { id: "a2", session_id: "s_family", donor_period_id: "p1", status: "pending" },
+      { id: "a3", session_id: "s_moment10", donor_period_id: "p1", status: "pending" },
+      { id: "a4", session_id: "s_moment11", donor_period_id: "p1", status: "pending" },
+    ],
+    sessions: [
+      { id: "s_family", title_en: "Family support circle", starts_at: "2026-08-10T02:00:00Z" },
+      { id: "s_moment10", title_en: "Community moment", starts_at: "2026-08-10T06:00:00Z" },
+      { id: "s_moment11", title_en: "Community moment", starts_at: "2026-08-11T02:00:00Z" },
+    ],
+  });
+
+  const view = await buildTrackView(trackDonor);
+
+  assert.equal(view.period.events.length, 3, "4 allocations, 3 distinct sessions");
+  assert.equal(view.period.events_shown, 3, "events_shown must agree with the list");
+
+  const ids = view.period.events.map((e) => e.id);
+  assert.deepEqual(new Set(ids).size, ids.length, "no session appears twice");
+  assert.deepEqual(ids, ["s_family", "s_moment10", "s_moment11"], "still ordered by starts_at");
+});
+
 test("buildTrackView resolves title/location via donor.locale=zh-Hant", async (t) => {
   stubTrackDeps(t, {
     allocs: [
@@ -451,4 +534,101 @@ test("buildTrackView tolerates a donor with no periods yet — period is null bu
   assert.deepEqual(view.periods, []);
   assert.equal(view.lifetime.total_given_hkd, 300, "strip still populates from donations");
   assert.equal(view.lifetime.donation_count, 1);
+});
+
+// ---------------------------------------------------------------------------
+// Referral sources — "how did you hear about Love 21", asked once per donor
+// ---------------------------------------------------------------------------
+
+test("upsertDonor records referral sources for a first-time donor", async (t) => {
+  mock.method(donorsRepo, "findByEmail", async () => null);
+  const createDonor = mock.method(donorsRepo, "createDonor", async (row) => ({
+    ...stubDonor,
+    ...row,
+  }));
+  t.after(() => mock.restoreAll());
+
+  await upsertDonor({
+    email: "alice@example.com",
+    referralSources: ["friend_family", "other"],
+    referralSourceOther: "Met the team at a school fair",
+  });
+
+  const row = createDonor.mock.calls[0].arguments[0];
+  assert.deepEqual(row.referral_sources, ["friend_family", "other"]);
+  assert.equal(row.referral_source_other, "Met the team at a school fair");
+});
+
+test("upsertDonor never overwrites an answer the donor already gave", async (t) => {
+  // The question is once per donor, not once per gift. Without this a second donation would
+  // rewrite the original answer — and because the payer email comes back from Stripe rather
+  // than from us, so could anyone who pays on that address. Same reasoning as tracking_opt_in.
+  const answered = { ...stubDonor, referral_sources: ["social"] };
+  mock.method(donorsRepo, "findByEmail", async () => answered);
+  const updateDonor = mock.method(donorsRepo, "updateDonor", async () => answered);
+  t.after(() => mock.restoreAll());
+
+  await upsertDonor({
+    email: "alice@example.com",
+    referralSources: ["company", "press"],
+    referralSourceOther: "should be ignored",
+  });
+
+  const rewrote = updateDonor.mock.calls.some(
+    (call) => call.arguments[1]?.referral_sources !== undefined,
+  );
+  assert.equal(rewrote, false, "an existing answer must never be rewritten");
+});
+
+test("upsertDonor fills in an answer for a donor who never gave one", async (t) => {
+  // A supporter who donated before the question existed (or skipped it) is still asked, and
+  // their first answer is recorded. Empty is "never answered", not "answered with nothing".
+  const unanswered = { ...stubDonor, referral_sources: [] };
+  mock.method(donorsRepo, "findByEmail", async () => unanswered);
+  const updateDonor = mock.method(donorsRepo, "updateDonor", async () => unanswered);
+  t.after(() => mock.restoreAll());
+
+  await upsertDonor({ email: "alice@example.com", referralSources: ["event"] });
+
+  const patch = updateDonor.mock.calls[0].arguments[1];
+  assert.deepEqual(patch.referral_sources, ["event"]);
+});
+
+test("upsertDonor drops referral values the CHECK constraint would reject", async (t) => {
+  // These make a round trip through Stripe session metadata, so what comes back is untrusted.
+  // A rejected insert here would fail the webhook and un-succeed a donation that was paid.
+  mock.method(donorsRepo, "findByEmail", async () => null);
+  const createDonor = mock.method(donorsRepo, "createDonor", async (row) => ({
+    ...stubDonor,
+    ...row,
+  }));
+  t.after(() => mock.restoreAll());
+
+  await upsertDonor({
+    email: "alice@example.com",
+    referralSources: ["social", "tiktok", "social", "", "press"],
+  });
+
+  assert.deepEqual(
+    createDonor.mock.calls[0].arguments[0].referral_sources,
+    ["social", "press"],
+    "unknown values and duplicates are dropped, known ones kept",
+  );
+});
+
+test("upsertDonor keeps free text only when other is among the sources", async (t) => {
+  mock.method(donorsRepo, "findByEmail", async () => null);
+  const createDonor = mock.method(donorsRepo, "createDonor", async (row) => ({
+    ...stubDonor,
+    ...row,
+  }));
+  t.after(() => mock.restoreAll());
+
+  await upsertDonor({
+    email: "alice@example.com",
+    referralSources: ["search"],
+    referralSourceOther: "orphaned text",
+  });
+
+  assert.equal(createDonor.mock.calls[0].arguments[0].referral_source_other, null);
 });

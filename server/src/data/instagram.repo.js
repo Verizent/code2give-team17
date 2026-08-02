@@ -1,7 +1,8 @@
 const { getSupabase } = require("../config/supabase");
 const { assertOk } = require("./supabase-error");
 
-const COLUMNS = "id, url, caption_en, caption_zh, display_order, is_active, created_at, updated_at";
+const COLUMNS =
+  "id, url, caption_en, caption_zh, thumbnail_url, display_order, is_active, created_at, updated_at";
 
 async function listAll({ from, to }) {
   const { data, error, count } = await getSupabase()
