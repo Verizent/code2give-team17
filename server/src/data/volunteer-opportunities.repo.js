@@ -13,7 +13,8 @@ const LIST_COLUMNS = [
   "starts_at",
   "ends_at",
   "capacity",
-  "spots_filled",
+  // Live column is `spots_filled_handson` — see opportunities.repo.js.
+  "spots_filled:spots_filled_handson",
   "min_age",
   "skills",
   "status",

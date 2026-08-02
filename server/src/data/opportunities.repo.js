@@ -13,7 +13,10 @@ const LIST_COLUMNS = [
   "starts_at",
   "ends_at",
   "capacity",
-  "spots_filled",
+  // The live column is `spots_filled_handson`; aliasing it back keeps the HandsOn
+  // count reaching the service under the name it already reads, so the effective-fill
+  // arithmetic in opportunities.service.js stays untouched.
+  "spots_filled:spots_filled_handson",
   "min_age",
   "skills",
   "status",
@@ -90,7 +93,7 @@ async function listInRange({ fromIso, toIso }) {
 async function summariseOpen() {
   const { data, error } = await getSupabase()
     .from("volunteer_opportunities")
-    .select("id, capacity, spots_filled, starts_at, status")
+    .select("id, capacity, spots_filled:spots_filled_handson, starts_at, status")
     .in("status", ["open", "full"]);
   assertOk(error);
 
