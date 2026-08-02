@@ -124,6 +124,28 @@ async function markEmailVerified(volunteerId) {
 }
 
 /**
+ * Has this address already told us how it found Love 21?
+ *
+ * Mirrors donorsRepo.hasReferralSources. Selects the one column and returns a boolean, so
+ * nothing about the volunteer can leak out through the caller by accident. Unknown address
+ * and known-but-never-answered both come back false, which is what makes the endpoint above
+ * useless as a way to test whether someone volunteers here.
+ *
+ * @param {string} email Already normalised by the caller.
+ */
+async function hasDiscoverySources(email) {
+  const db = getServiceClient();
+  const { data, error } = await db
+    .from("volunteers")
+    .select("discovery_sources")
+    .eq("email", email)
+    .maybeSingle();
+
+  throwIfDbError(error);
+  return (data?.discovery_sources?.length ?? 0) > 0;
+}
+
+/**
  * Records how the volunteer first heard about Love 21. Callers check that nothing is
  * recorded yet — it is asked once, and a later blank submission must not erase it.
  *
@@ -135,6 +157,7 @@ async function setDiscovery(volunteerId, patch) {
 }
 
 module.exports = {
+  hasDiscoverySources,
   setDiscovery,
   findByEmail,
   findByAccessToken,

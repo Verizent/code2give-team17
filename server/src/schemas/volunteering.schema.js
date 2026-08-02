@@ -63,11 +63,6 @@ const createSignupBodySchema = z.object({
   opportunity_id: z.string().uuid(),
 });
 
-// Optional here, enforced in signups.service: a signed-in caller signing up their own
-// address has already proved it to Supabase Auth, and making them read a code out of
-// their inbox again would be theatre. Everyone else must present a token — this endpoint
-// is unauthenticated, so it is the only thing standing between it and signing up an
-// address the caller does not own.
 // Mirrors the database's discovery_sources_are_known constraint. Kept in step by hand: a
 // value accepted here and rejected there is a 500 on an otherwise valid signup.
 const discoverySourceSchema = z.enum([
@@ -84,6 +79,11 @@ const discoverySourceSchema = z.enum([
   "other",
 ]);
 
+// verification_token is optional here and enforced in signups.service: a signed-in caller
+// signing up their own address has already proved it to Supabase Auth, and making them read
+// a code out of their inbox again would be theatre. Everyone else must present one — this
+// endpoint is unauthenticated, so the token is the only thing standing between it and
+// signing up an address the caller does not own.
 const guestSignupBodySchema = z.object({
   opportunity_id: z.string().uuid(),
   full_name: z.string().trim().min(1).max(120),
@@ -96,6 +96,8 @@ const guestSignupBodySchema = z.object({
   discovery_sources: z.array(discoverySourceSchema).max(11).optional(),
   discovery_other: z.string().trim().max(200).optional().nullable(),
 });
+
+const discoveryStatusQuerySchema = z.object({ email: emailSchema });
 
 const listSignupsQuerySchema = z.object({
   opportunity_id: z.string().uuid().optional(),
@@ -133,6 +135,7 @@ module.exports = {
   volunteerTokenParamsSchema,
   createSignupBodySchema,
   guestSignupBodySchema,
+  discoveryStatusQuerySchema,
   listSignupsQuerySchema,
   signupIdParamsSchema,
   createInterestBodySchema,

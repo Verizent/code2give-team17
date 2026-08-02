@@ -4,6 +4,7 @@ import { useSite } from '@/components/site-provider'
 import { useAuth } from '@/features/auth/AuthProvider'
 import {
   confirmEmailVerification,
+  hasAnsweredDiscovery,
   startEmailVerification,
   submitSignup,
 } from '@/features/volunteering/api'
@@ -17,6 +18,15 @@ import {
 } from '@/features/volunteering/profile-prefs'
 import { trackEvent } from '@/lib/analytics'
 import { cn } from '@/lib/utils'
+
+/**
+ * Good enough to decide whether to spend a lookup on a half-typed address. Not validation —
+ * the browser's own type="email" and the server both police that, and the real authority on
+ * deliverability is the verification code arriving.
+ */
+function isEmailish(value: string) {
+  return /^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$/.test(value.trim())
+}
 
 /** Short auto-confirm signup — no staff gate. Logged-in users skip name/email/phone/emergency. */
 export function ShortSignupForm({
@@ -62,6 +72,7 @@ export function ShortSignupForm({
   // their Instagram post"), and a single answer throws away the overlap between channels.
   const [discovery, setDiscovery] = useState<string[]>([])
   const [discoveryOther, setDiscoveryOther] = useState('')
+  const [discoveryAnswered, setDiscoveryAnswered] = useState(false)
 
   function toggleDiscovery(key: string) {
     setDiscovery((current) =>
@@ -87,6 +98,35 @@ export function ShortSignupForm({
     }
     setAgeGroup('')
   }, [auth.ready, auth.user])
+
+  const lookupEmail = (loggedIn ? accountEmail : email).trim().toLowerCase()
+
+  /**
+   * Returning volunteers are not asked again how they found Love 21 — it is recorded once
+   * per person, and the server ignores a second answer anyway, so asking would be a
+   * question whose answer goes nowhere.
+   *
+   * Debounced because it runs off a field being typed into, and only fired once the value
+   * looks like an address so we are not probing on every keystroke.
+   */
+  useEffect(() => {
+    if (!isEmailish(lookupEmail)) {
+      setDiscoveryAnswered(false)
+      return
+    }
+
+    let cancelled = false
+    const timer = setTimeout(() => {
+      void hasAnsweredDiscovery(lookupEmail).then((answered) => {
+        if (!cancelled) setDiscoveryAnswered(answered)
+      })
+    }, 400)
+
+    return () => {
+      cancelled = true
+      clearTimeout(timer)
+    }
+  }, [lookupEmail])
 
   const fullName = loggedIn ? accountName || name : name
   const submitEmail = loggedIn ? accountEmail : email
@@ -152,8 +192,13 @@ export function ShortSignupForm({
         emergency_name: loggedIn ? undefined : emergencyName || undefined,
         emergency_phone: loggedIn ? undefined : emergencyPhone || undefined,
         verification_token,
-        discovery_sources: discovery.length > 0 ? discovery : undefined,
-        discovery_other: discovery.includes('other') ? discoveryOther || undefined : undefined,
+        // Nothing sent when they were never asked. The server would ignore it, but sending
+        // an answer the volunteer did not give this time is a lie in the request either way.
+        discovery_sources: !discoveryAnswered && discovery.length > 0 ? discovery : undefined,
+        discovery_other:
+          !discoveryAnswered && discovery.includes('other')
+            ? discoveryOther || undefined
+            : undefined,
       })
 
       if (!result.ok) {
@@ -332,7 +377,9 @@ export function ShortSignupForm({
         </div>
       ) : null}
 
-      <fieldset className={cn(step === 'verify' && 'hidden')}>
+      <fieldset
+        className={cn((step === 'verify' || discoveryAnswered) && 'hidden')}
+      >
         <legend className="text-sm font-semibold text-navy">{v.discoveryTitle}</legend>
         <p className="mt-1 text-xs text-navy/55">{v.discoveryHint}</p>
         <div className="mt-3 flex flex-wrap gap-2">

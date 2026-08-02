@@ -99,6 +99,26 @@ export function invalidateOpportunitiesCache() {
  * verification gate, which is what made the gate look like it was doing nothing.
  */
 /**
+ * Has this address already told us how it found Love 21?
+ *
+ * Mirrors the donate form's /api/donations/referral-status. Deliberately fail-open: a
+ * lookup that errors returns false and leaves the question showing, so the worst case is
+ * asking a returning volunteer twice rather than silently losing a first-timer's answer.
+ */
+export async function hasAnsweredDiscovery(email: string): Promise<boolean> {
+  if (!isRealApiMode()) return false
+
+  try {
+    const { data } = await apiData<{ answered?: boolean }>(
+      `/api/volunteer/discovery-status?email=${encodeURIComponent(email)}`,
+    )
+    return Boolean(data?.answered)
+  } catch {
+    return false
+  }
+}
+
+/**
  * Step 1 of proving the address: asks the server to email a six-digit code. The code
  * itself never comes back over the API — reading it out of the inbox is the whole point.
  */

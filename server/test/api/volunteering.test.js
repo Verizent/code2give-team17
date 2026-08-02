@@ -224,6 +224,85 @@ describe("volunteering API", { skip }, () => {
     // (schema-level until a token is present; the service check covers a wrong-address token)
   });
 
+  /**
+   * Mirrors GET /api/donations/referral-status for donors. The signup form asks how someone
+   * found Love 21 only once; this is how it knows whether to show the question at all.
+   */
+  it("reports discovery as unanswered for an address we have never seen", async () => {
+    const { status, body } = await apiRequest(
+      "GET",
+      `/api/volunteer/discovery-status?email=${encodeURIComponent(`never-seen-${Date.now()}@example.test`)}`,
+    );
+
+    assert.equal(status, 200);
+    assert.equal(body.data.answered, false);
+    assert.deepEqual(Object.keys(body.data), ["answered"], "the response says nothing else");
+  });
+
+  it("reports discovery as answered once the volunteer has told us", async () => {
+    const { body: listBody } = await apiRequest("GET", "/api/opportunities?limit=50");
+    const target = listBody.data.find((item) => item.seats_left > 0);
+    if (!target) {
+      return;
+    }
+
+    const email = `discovery-status-${Date.now()}@example.test`;
+    const verification_token = await proveEmail(email);
+
+    const before = await apiRequest(
+      "GET",
+      `/api/volunteer/discovery-status?email=${encodeURIComponent(email)}`,
+    );
+    assert.equal(before.body.data.answered, false);
+
+    await apiRequest("POST", "/api/volunteer/signups", {
+      opportunity_id: target.id,
+      full_name: "Discovery Status Test",
+      email,
+      verification_token,
+      discovery_sources: ["instagram"],
+    });
+
+    const after = await apiRequest(
+      "GET",
+      `/api/volunteer/discovery-status?email=${encodeURIComponent(email)}`,
+    );
+    assert.equal(after.body.data.answered, true);
+  });
+
+  /**
+   * A volunteer who signed up without answering must still be asked next time — otherwise
+   * the question disappears for everyone who ever declined it.
+   */
+  it("keeps discovery unanswered for a volunteer who skipped the question", async () => {
+    const { body: listBody } = await apiRequest("GET", "/api/opportunities?limit=50");
+    const target = listBody.data.find((item) => item.seats_left > 0);
+    if (!target) {
+      return;
+    }
+
+    const email = `discovery-skipped-${Date.now()}@example.test`;
+    const verification_token = await proveEmail(email);
+
+    await apiRequest("POST", "/api/volunteer/signups", {
+      opportunity_id: target.id,
+      full_name: "Skipped Discovery Test",
+      email,
+      verification_token,
+    });
+
+    const { body } = await apiRequest(
+      "GET",
+      `/api/volunteer/discovery-status?email=${encodeURIComponent(email)}`,
+    );
+    assert.equal(body.data.answered, false);
+  });
+
+  it("400s a malformed address rather than guessing", async () => {
+    const { status } = await apiRequest("GET", "/api/volunteer/discovery-status?email=nope");
+    assert.equal(status, 400);
+  });
+
   it("refuses a token that proved a different address", async () => {
     const { body: listBody } = await apiRequest("GET", "/api/opportunities?limit=50");
     const target = listBody.data.find((item) => item.seats_left > 0);
