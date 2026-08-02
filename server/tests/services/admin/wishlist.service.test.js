@@ -182,6 +182,23 @@ test("updateItem allows needed exactly equal to pledged", async (t) => {
   assert.equal(row.needed, 3);
 });
 
+test("updateItem throws 404 when the row disappears between the read and the write", async (t) => {
+  // Reachable only by a concurrent delete: findById saw the row, update matched nothing.
+  // Worth keeping rather than trusting the earlier existence check, because the two
+  // statements are not in one transaction.
+  mock.method(wishlistRepo, "findById", async () => item);
+  mock.method(wishlistRepo, "update", async () => null);
+  t.after(() => mock.restoreAll());
+
+  await assert.rejects(
+    () => wishlistService.updateItem("sports-equipment", { title_en: "x" }),
+    (err) => {
+      assert.equal(err.status, 404);
+      return true;
+    },
+  );
+});
+
 test("deleteItem returns the removed row", async (t) => {
   mock.method(wishlistRepo, "remove", async () => item);
   t.after(() => mock.restoreAll());
