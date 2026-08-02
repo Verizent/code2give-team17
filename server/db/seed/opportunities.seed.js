@@ -37,10 +37,13 @@ const opportunities = [
     starts_at: nextWeekdayAt(0, 3, 14, 0),
     ends_at: nextWeekdayAt(0, 3, 15, 30),
     capacity: 1,
-    spots_filled: 1,
+    spots_filled_handson: 1,
     min_age: 16,
     skills: ["patient", "photography"],
-    status: "full",
+    // 'open' even though this one is at capacity: fullness is derived, never stored.
+    // spots_filled_handson (1) meeting capacity (1) is what makes the API report it full,
+    // and it corrects itself the moment HandsOn frees a seat on the next sync.
+    status: "open",
     source: "handson",
     handson_url: "https://volunteer.handsonhongkong.org/opportunity/a0CQ90000FjeH0wMQE",
     handson_opportunity_id: "a0CQ90000FjeH0wMQE",
@@ -59,7 +62,7 @@ const opportunities = [
     starts_at: nextWeekdayAt(3, 2, 16, 0),
     ends_at: nextWeekdayAt(3, 2, 17, 0),
     capacity: 2,
-    spots_filled: 0,
+    spots_filled_handson: 0,
     min_age: 14,
     skills: ["sports", "patient", "youth14"],
     status: "open",
@@ -81,7 +84,10 @@ const opportunities = [
     starts_at: nextWeekdayAt(4, 4, 11, 0),
     ends_at: nextWeekdayAt(4, 4, 12, 30),
     capacity: 3,
-    spots_filled: 1,
+    // 0, not 1: this listing is source 'internal', so it has no HandsOn presence for
+    // anyone to book through. It carried 1 while also having handson_url and
+    // handson_opportunity_id null, which described a booking that could not exist.
+    spots_filled_handson: 0,
     min_age: 16,
     skills: ["kitchen", "patient"],
     status: "open",

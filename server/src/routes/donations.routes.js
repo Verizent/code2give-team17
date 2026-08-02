@@ -8,6 +8,10 @@ const {
   getCheckoutStatus,
 } = require("../services/donations.service");
 const { createCheckoutSession } = require("../services/donations/checkout.service");
+const { REFERRAL_SOURCES } = require("../services/donors.service");
+const donorsRepo = require("../data/donors.repo");
+const { normalizeEmail } = require("../lib/normalize");
+const rateLimit = require("../middleware/rate-limit");
 
 const router = express.Router();
 
@@ -35,9 +39,16 @@ const checkoutSchema = z.strictObject({
   frequency:       z.enum(["once", "weekly", "monthly"]).optional(),
   campaign_id:     z.string().uuid().optional(),
   tracking_opt_in: z.boolean().optional(),
+  // "How did you hear about Love 21" — optional, multi-select, recorded once per donor
+  // (see upsertDonor). Not a property of this gift, which is why it is not stored on the
+  // donation row; it rides along because the donate form is where we ask.
+  referral_sources: z.array(z.enum(REFERRAL_SOURCES)).max(REFERRAL_SOURCES.length).optional(),
+  referral_source_other: z.string().trim().max(200).optional(),
 });
 
 const sessionParamSchema = z.object({ session_id: z.string().min(1) });
+
+const referralStatusQuerySchema = z.object({ email: z.string().trim().email().max(254) });
 
 // PLAN.md §Phase C3 — post-payment optional feedback. Every field optional; strictObject
 // so a client sending an unknown key gets a 400 rather than silently losing the value.
@@ -70,6 +81,39 @@ router.get(
   async (request, response, next) => {
     try {
       response.json(envelope(await getCheckoutStatus(request.validatedParams.session_id)));
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+/**
+ * GET /api/donations/referral-status?email=…
+ *
+ * Answers one question for the donate form: has this address already told us how it found
+ * Love 21? If so the form hides that block, because it is asked once per donor.
+ *
+ * The response is a bare `{ answered: boolean }` and nothing else. It is unauthenticated —
+ * it has to be, the donate form has no session — which makes it a way to test whether an
+ * address is a known donor. Returning only the boolean keeps that to a yes/no rather than
+ * exposing a name, gift history, or the tracking token, and the answer is identical for an
+ * address that has never donated and one that donated without ever answering.
+ *
+ * NOTE: `rateLimit` is still the DEMO-ONLY no-op stub (src/middleware/rate-limit.js), so it
+ * throttles nothing today. It is wired here so this route is covered the moment that stub
+ * grows a real store — of everything we serve, this is the one where enumeration costs us.
+ */
+router.get(
+  "/referral-status",
+  // Generous because the donate form calls this from a debounced onChange while an email is
+  // typed, so one honest donor makes a handful. 30 per 15 minutes still leaves enumeration
+  // useless — probing a meaningful list of addresses would take days.
+  rateLimit({ key: "referral-status", limit: 30 }),
+  validate({ query: referralStatusQuerySchema }),
+  async (request, response, next) => {
+    try {
+      const email = normalizeEmail(request.validatedQuery.email);
+      response.json(envelope({ answered: await donorsRepo.hasReferralSources(email) }));
     } catch (error) {
       next(error);
     }

@@ -4,17 +4,17 @@ import {
   type GiftFrequency,
   type StoredDonation,
 } from '@/features/donations/donation-store'
-import type { DonateProgramme } from '@/features/donations/fixtures'
 
 export type CheckoutInput = {
   amount_hkd: number
   frequency: GiftFrequency
-  programme: DonateProgramme
   email: string
   receipt_name: string
   receipt_for_other?: boolean
   journey_opt_in: boolean
   campaign_slug?: string
+  referral_sources?: string[]
+  referral_source_other?: string
 }
 
 export type CheckoutResult =
@@ -50,6 +50,15 @@ function toCheckoutBody(input: CheckoutInput) {
   // so an unresolvable campaign is dropped rather than failing the whole gift.
   if (input.campaign_slug && UUID_RE.test(input.campaign_slug)) {
     body.campaign_id = input.campaign_slug
+  }
+  // Omitted rather than sent empty: the schema is a strictObject but these are optional, and
+  // an empty array would still take the "donor answered" path server-side and lock in a
+  // non-answer that can never be replaced.
+  if (input.referral_sources?.length) {
+    body.referral_sources = input.referral_sources
+    if (input.referral_sources.includes('other') && input.referral_source_other?.trim()) {
+      body.referral_source_other = input.referral_source_other.trim()
+    }
   }
   return body
 }

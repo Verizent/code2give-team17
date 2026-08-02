@@ -33,7 +33,7 @@ describe("volunteer_opportunities", { skip }, () => {
     assert.equal(row.status, "open");
     assert.equal(row.source, "internal");
     assert.equal(row.capacity, 1, "§5: these listings typically carry one spot");
-    assert.equal(row.spots_filled, 0);
+    assert.equal(row.spots_filled_handson, 0);
     assert.equal(row.min_age, 16, "§5: HandsOn states a 16+ minimum");
     assert.deepEqual(row.skills, []);
     assert.equal(row.handson_url, null);
@@ -77,14 +77,14 @@ describe("volunteer_opportunities", { skip }, () => {
           handson_url: "https://volunteer.handsonhongkong.org/opportunity/a0CQ90000DFXgKwMQL",
           handson_opportunity_id: "a0CQ90000DFXgKwMQL",
           capacity: 1,
-          spots_filled: 1,
+          spots_filled_handson: 1,
           last_synced_at: new Date().toISOString(),
         }),
       ),
     );
 
     assert.equal(row.source, "handson");
-    assert.equal(row.spots_filled, 1);
+    assert.equal(row.spots_filled_handson, 1);
   });
 
   it("rejects an end before its start", async () => {
@@ -103,7 +103,7 @@ describe("volunteer_opportunities", { skip }, () => {
       { status: "pending" },
       { source: "time_auction" },
       { capacity: 0 },
-      { spots_filled: -1 },
+      { spots_filled_handson: -1 },
     ];
 
     for (const patch of cases) {
@@ -163,8 +163,8 @@ describe("volunteer_opportunities", { skip }, () => {
 
   // ---------------------------------------------------------------- UPDATE
 
-  it("refreshes spots_filled and last_synced_at, as a manual HandsOn sync would", async () => {
-    // spots_filled holds HandsOn's count only. Our own bookings live in volunteer_signups, so
+  it("refreshes spots_filled_handson and last_synced_at, as a manual HandsOn sync would", async () => {
+    // spots_filled_handson holds HandsOn's count only. Our own bookings live in volunteer_signups, so
     // this write never has to reason about them and cannot clobber them.
     const created = track(
       "volunteer_opportunities",
@@ -181,34 +181,43 @@ describe("volunteer_opportunities", { skip }, () => {
     const syncedAt = new Date().toISOString();
     const { data, error } = await db()
       .from("volunteer_opportunities")
-      .update({ spots_filled: 3, last_synced_at: syncedAt })
+      .update({ spots_filled_handson: 3, last_synced_at: syncedAt })
       .eq("id", created.id)
       .select()
       .single();
 
     assert.equal(error, null);
-    assert.equal(data.spots_filled, 3);
+    assert.equal(data.spots_filled_handson, 3);
     assert.ok(new Date(data.updated_at) >= new Date(created.updated_at));
   });
 
-  it("allows spots_filled to exceed capacity", async () => {
+  it("allows spots_filled_handson to exceed capacity", async () => {
     // Deliberate. If HandsOn oversells or capacity is revised down, the sync write must still
     // land - a CHECK here would freeze the number stale on a failure we do not control.
     // Overbooking is a derived status, not a write barrier.
+    // Necessarily a handson listing: spots_filled_handson counts bookings made on their
+    // site, so only a row with a HandsOn presence can carry one at all.
     const created = track(
       "volunteer_opportunities",
-      await insert("volunteer_opportunities", newOpportunity({ capacity: 1 })),
+      await insert(
+        "volunteer_opportunities",
+        newOpportunity({
+          capacity: 1,
+          source: "handson",
+          handson_url: "https://volunteer.handsonhongkong.org/opportunity/oversell",
+        }),
+      ),
     );
 
     const { data, error } = await db()
       .from("volunteer_opportunities")
-      .update({ spots_filled: 5 })
+      .update({ spots_filled_handson: 5 })
       .eq("id", created.id)
       .select()
       .single();
 
     assert.equal(error, null, "the schema must not block an oversell");
-    assert.equal(data.spots_filled, 5);
+    assert.equal(data.spots_filled_handson, 5);
   });
 
   it("cancels a listing", async () => {

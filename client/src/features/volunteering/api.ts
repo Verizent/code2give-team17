@@ -89,9 +89,81 @@ export function invalidateOpportunitiesCache() {
 }
 
 /**
- * Prefer server signup; fall back to localStorage when the API is down.
- * Capacity is enforced server-side for UUID opportunities.
+ * Server is authoritative for any real (UUID) opportunity. The local store mirrors what
+ * the server accepted so My Impact and the briefing work offline — it never stands in for
+ * a signup the server refused.
+ *
+ * It used to: any non-409 failure fell through to the local mirror, which returned
+ * `ok: true` with a made-up `vs_…` id, so the success page rendered for a signup that did
+ * not exist. That masked every server rejection — including the 400 from the new email
+ * verification gate, which is what made the gate look like it was doing nothing.
  */
+/**
+ * Has this address already told us how it found Love 21?
+ *
+ * Mirrors the donate form's /api/donations/referral-status. Deliberately fail-open: a
+ * lookup that errors returns false and leaves the question showing, so the worst case is
+ * asking a returning volunteer twice rather than silently losing a first-timer's answer.
+ */
+export async function hasAnsweredDiscovery(email: string): Promise<boolean> {
+  if (!isRealApiMode()) return false
+
+  try {
+    const { data } = await apiData<{ answered?: boolean }>(
+      `/api/volunteer/discovery-status?email=${encodeURIComponent(email)}`,
+    )
+    return Boolean(data?.answered)
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Step 1 of proving the address: asks the server to email a six-digit code. The code
+ * itself never comes back over the API — reading it out of the inbox is the whole point.
+ */
+export async function startEmailVerification(
+  email: string,
+): Promise<
+  { ok: true; id: string } | { ok: false; reason: 'rate_limited' | 'undeliverable' | 'error' }
+> {
+  try {
+    const { data } = await apiData<{ id: string }>('/api/email-verifications', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    })
+    return { ok: true, id: data.id }
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 429) return { ok: false, reason: 'rate_limited' }
+    if (err instanceof ApiError && err.status === 502) {
+      return { ok: false, reason: 'undeliverable' }
+    }
+    return { ok: false, reason: 'error' }
+  }
+}
+
+/** Step 2: exchange the emailed code for a short-lived token the signup will carry. */
+export async function confirmEmailVerification(
+  id: string,
+  code: string,
+): Promise<{ ok: true; token: string } | { ok: false; reason: 'bad_code' | 'error' }> {
+  try {
+    const { data } = await apiData<{ verification_token: string }>(
+      `/api/email-verifications/${id}/confirmation`,
+      { method: 'PUT', body: JSON.stringify({ code }) },
+    )
+    return { ok: true, token: data.verification_token }
+  } catch (err) {
+    // 400 covers wrong, expired, and too-many-attempts. All mean "that code did not work",
+    // and distinguishing them for the caller would help someone guessing more than it
+    // helps someone who mistyped.
+    if (err instanceof ApiError && (err.status === 400 || err.status === 409)) {
+      return { ok: false, reason: 'bad_code' }
+    }
+    return { ok: false, reason: 'error' }
+  }
+}
+
 export async function submitSignup(input: {
   opportunity_id: string
   full_name: string
@@ -100,6 +172,11 @@ export async function submitSignup(input: {
   age_group: VolunteerAgeGroup
   emergency_name?: string
   emergency_phone?: string
+  /** Omitted only when signed in as the address being used — the server allows that. */
+  verification_token?: string
+  /** Asked once per volunteer; the server ignores these if they already answered. */
+  discovery_sources?: string[]
+  discovery_other?: string
 }): Promise<
   { ok: true; signupId: string } | { ok: false; reason: 'full' | 'duplicate' | 'error' }
 > {
@@ -119,6 +196,15 @@ export async function submitSignup(input: {
           full_name: input.full_name,
           email: input.email,
           phone: input.phone ?? null,
+          ...(input.verification_token
+            ? { verification_token: input.verification_token }
+            : {}),
+          ...(input.discovery_sources?.length
+            ? {
+                discovery_sources: input.discovery_sources,
+                ...(input.discovery_other ? { discovery_other: input.discovery_other } : {}),
+              }
+            : {}),
         }),
       })
       invalidateOpportunitiesCache()
@@ -132,23 +218,36 @@ export async function submitSignup(input: {
         emergency_phone: input.emergency_phone,
         id: data.signup.id,
         skipCapacityCheck: true,
+        countedByServer: true,
       })
       return { ok: true, signupId: data.signup.id }
     } catch (err) {
       if (err instanceof ApiError && err.status === 409) {
-        const body = err.message
-        if (
-          body.includes('ALREADY_SIGNED_UP') ||
-          body.includes('Already signed up')
-        ) {
+        // "Full" and "already signed up" are both 409 with code CONFLICT — the server
+        // does not distinguish them by code, so the message is the only signal.
+        // Matched case-insensitively: the server sends "You have already signed up for
+        // this opportunity", which matched neither literal this used to test for, so a
+        // returning volunteer was told the session was full on a session with seats.
+        //
+        // This only works while `message` is present. NODE_ENV=production suppresses it
+        // (server §29), collapsing both cases back to 'full'. The durable fix is a
+        // distinct error code from the server; that is a §29 contract change.
+        const body = err.message?.toLowerCase() ?? ''
+        if (body.includes('already_signed_up') || body.includes('already signed up')) {
           return { ok: false, reason: 'duplicate' }
         }
         return { ok: false, reason: 'full' }
       }
-      // Fall through to local mirror.
+
+      // Report the failure. Mirroring locally here would hand back a fabricated id and
+      // render the success page for a signup the server never created — the volunteer
+      // turns up to a session with no record of them.
+      return { ok: false, reason: 'error' }
     }
   }
 
+  // Mock mode, or a fixture id the API does not know about: the local store is the only
+  // record there is, so it is authoritative rather than a mirror.
   const cached = peekOpportunities().find((o) => o.id === input.opportunity_id)
   const result = createSignup({
     opportunity_id: input.opportunity_id,
@@ -174,6 +273,8 @@ export async function submitInterest(input: {
   email: string
   phone?: string
   message?: string
+  /** Organisation enquiries only. Ignored on the per-opportunity path. */
+  organisation?: string
 }): Promise<{ ok: true; interestId: string | null } | { ok: false; reason: 'duplicate' | 'error' }> {
   if (!isRealApiMode()) {
     return { ok: true, interestId: null }
@@ -206,6 +307,7 @@ export async function submitInterest(input: {
           email: input.email,
           phone: input.phone ?? null,
           message: input.message ?? null,
+          organisation: input.organisation ?? null,
         }),
       },
     )

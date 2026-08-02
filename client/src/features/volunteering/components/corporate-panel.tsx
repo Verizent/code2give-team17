@@ -1,14 +1,42 @@
 import { useState, type FormEvent } from 'react'
 import { useSite } from '@/components/site-provider'
+import { submitInterest } from '@/features/volunteering/api'
 
 export function CorporatePanel() {
   const { t } = useSite()
   const v = t.volunteer
   const [sent, setSent] = useState(false)
+  const [sending, setSending] = useState(false)
+  const [failed, setFailed] = useState(false)
 
-  function submit(event: FormEvent<HTMLFormElement>) {
+  /**
+   * This used to be `setSent(true)` and nothing else — organisation, contact, email and
+   * message were read into the inputs and discarded, so a corporate lead reached nobody
+   * while the form claimed we would reply. It now posts to the general-enquiry endpoint
+   * (no opportunity_id), and only shows the thank-you once the server has the row.
+   */
+  async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    setSent(true)
+    if (sending) return
+
+    const form = new FormData(event.currentTarget)
+    const organisation = String(form.get('organisation') ?? '').trim()
+    const contact = String(form.get('contact') ?? '').trim()
+    const email = String(form.get('email') ?? '').trim()
+    const message = String(form.get('message') ?? '').trim()
+
+    setSending(true)
+    setFailed(false)
+    const result = await submitInterest({
+      full_name: contact,
+      email,
+      organisation,
+      message,
+    })
+    setSending(false)
+
+    if (result.ok) setSent(true)
+    else setFailed(true)
   }
 
   const fieldClass =
@@ -61,9 +89,15 @@ export function CorporatePanel() {
               {v.corporateMessage}
               <textarea name="message" rows={4} className={fieldClass} />
             </label>
+            {failed && (
+              <p role="alert" className="rounded-xl bg-white p-4 text-sm font-semibold text-red">
+                {v.interestError}
+              </p>
+            )}
             <button
               type="submit"
-              className="inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-navy px-6 font-bold text-white hover:bg-navy/90 sm:w-auto"
+              disabled={sending}
+              className="inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-navy px-6 font-bold text-white hover:bg-navy/90 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
             >
               {v.corporateSubmit}
             </button>

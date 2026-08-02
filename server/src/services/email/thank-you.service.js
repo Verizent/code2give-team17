@@ -1,14 +1,20 @@
-// DEMO-ONLY: EMAIL_MODE=console logs a rendered preview and returns the payload
-// so the demo can play back the email without an inbox. EMAIL_MODE=live throws
-// — real send needs Resend credentials and a verified sender domain (§17).
-// Real version needs: npm i resend, RESEND_API_KEY, a domain verified with Resend.
-
 const { ApiError } = require("../../lib/api-error");
+const emailLib = require("../../lib/email");
 const { renderThankYou } = require("../../lib/email-templates");
 
 /**
- * Sends a post-attendance thank-you with rebook CTA — or, in console mode,
- * renders and returns the payload without leaving the server.
+ * Sends a post-attendance thank-you with rebook CTA.
+ *
+ * This used to carry its own private EMAIL_MODE switch: `live` threw, `console` logged, and
+ * every other value silently returned a payload without sending anything. server/.env
+ * carries EMAIL_MODE=smtp, which matched neither branch — so the one email a volunteer is
+ * actually promised was rendered and dropped on the floor, while markAttendance counted it
+ * as sent. Nothing failed, so nothing surfaced.
+ *
+ * Delivery now goes through lib/email, which owns the mode switch for the whole server:
+ * `smtp` really sends, anything else renders to stdout, `send` stays reserved for Resend.
+ * `demo_preview` is gone from the return — it was only ever true, and callers that want the
+ * demo playback get it from log-mode's banner instead.
  *
  * @param {{
  *   volunteer: { email?: string|null, full_name: string, locale?: string },
@@ -22,43 +28,30 @@ async function sendThankYou({ volunteer, signup, opportunity, recommendations })
     throw ApiError.badRequest("Cannot send thank-you: volunteer has no email address");
   }
 
-  const mode = process.env.EMAIL_MODE || "console";
+  const rendered = renderThankYou(volunteer, opportunity, signup, recommendations || []);
 
-  if (mode === "live") {
-    throw ApiError.badRequest(
-      "EMAIL_MODE=live is not implemented — real send needs Resend credentials",
-    );
-  }
-
-  const rendered = renderThankYou(
-    volunteer,
-    opportunity,
-    signup,
-    recommendations || [],
-  );
-
-  const payload = {
-    demo_preview: true,
+  // Deliberately not caught here. markAttendance stamps thank_you_email_sent_at only on
+  // success and its caller logs and swallows, so a failure leaves the signup eligible for a
+  // retry. Swallowing it at this level would mark it sent and lose the email for good.
+  const result = await emailLib.sendEmail({
     to: volunteer.email,
     subject: rendered.subject,
     text: rendered.text,
     html: rendered.html,
+  });
+
+  return {
+    to: volunteer.email,
+    subject: rendered.subject,
+    text: rendered.text,
+    html: rendered.html,
+    mode: result.mode,
+    delivered: result.delivered,
     recommendations: (recommendations || []).map((rec) => ({
       id: rec.id,
       starts_at: rec.starts_at,
     })),
   };
-
-  if (mode === "console") {
-    // Judge-visible playback: the server log carries the whole email.
-    console.log(
-      `\n=== DEMO-ONLY thank-you email (EMAIL_MODE=console) ===\n` +
-        `To: ${payload.to}\nSubject: ${payload.subject}\n\n${payload.text}\n` +
-        `=== end preview ===\n`,
-    );
-  }
-
-  return payload;
 }
 
 module.exports = { sendThankYou };

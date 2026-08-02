@@ -140,9 +140,10 @@ export function VolunteerDetailPage() {
             {opportunity.source === 'handson' ? (
               <p className="text-sm font-bold text-navy">
                 {format(v.handsonCapacity, {
-                  filled: opportunity.spots_filled,
+                  handson: opportunity.spots_filled_handson,
+                  web: opportunity.local_signups_count,
+                  left: Math.max(0, opportunity.capacity - opportunity.spots_filled),
                   capacity: opportunity.capacity,
-                  interested: opportunity.interested_count,
                 })}
               </p>
             ) : (
@@ -156,7 +157,18 @@ export function VolunteerDetailPage() {
 
             {showForm ? (
               <div className="mt-6">
-                {opportunity.source === 'handson' ? (
+                {/*
+                  A seat to claim means a signup; nothing to claim means interest. Source
+                  decides neither — it records where a listing came from, not whether it
+                  can be booked.
+
+                  A handson listing is one where registration is open on BOTH their site
+                  and ours, which is the whole reason spots_filled_handson and our own
+                  signups are counted separately and summed. Sending every handson listing
+                  to the interest form made its free seats unbookable here, and contradicted
+                  the "Also book on HandsOn (optional)" link rendered directly below.
+                */}
+                {full ? (
                   <InterestForm
                     opportunityId={opportunity.id}
                     onCancel={() => setShowForm(false)}
@@ -182,15 +194,10 @@ export function VolunteerDetailPage() {
             ) : (
               <button
                 type="button"
-                disabled={opportunity.source !== 'handson' && full}
                 onClick={() => setShowForm(true)}
-                className="mt-6 inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-red px-5 font-bold text-white disabled:cursor-not-allowed disabled:opacity-40"
+                className="mt-6 inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-red px-5 font-bold text-white"
               >
-                {opportunity.source !== 'handson' && full
-                  ? v.fullBadge
-                  : opportunity.source === 'handson'
-                    ? v.registerInterest
-                    : v.joinSession}
+                {full ? v.registerInterest : v.joinSession}
               </button>
             )}
 

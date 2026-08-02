@@ -1,6 +1,9 @@
 const volunteersRepo = require("../../data/volunteers.repo");
 const signupsRepo = require("../../data/volunteer-signups.repo");
 const opportunitiesService = require("./opportunities.service");
+const emailVerification = require("./email-verification.service");
+const emailLib = require("../../lib/email");
+const { renderSignupConfirmation } = require("../../lib/email-templates");
 const { normalizeEmail } = require("../../lib/normalize-email");
 const { ApiError } = require("../../lib/api-error");
 
@@ -43,7 +46,24 @@ async function resolveVolunteer(input) {
  * @param {{ id: string } | null | undefined} user
  */
 async function createSignup(body, user) {
-  const { row, localFilled } = await opportunitiesService.assertSeatAvailable(body.opportunity_id);
+  // Prove the address before anything else. This endpoint is unauthenticated by design —
+  // a guest must be able to sign up — which without a proof of ownership meant anyone
+  // could sign up anyone: the owner was never told, and the confirmation landed in a
+  // stranger's inbox. Checked ahead of assertSeatAvailable so a stream of unverified
+  // requests cannot exhaust a session's capacity on its way to failing.
+  //
+  // A signed-in caller using their own address is already proved: Supabase Auth would not
+  // have issued the JWT otherwise. The addresses must match — being logged in says nothing
+  // about an address that is not yours, and treating it as proof would reopen the hole for
+  // anyone with an account.
+  const signedInAsSelf =
+    Boolean(user?.email) && normalizeEmail(user.email) === normalizeEmail(body.email);
+
+  if (!signedInAsSelf) {
+    await emailVerification.assertVerificationTokenForEmail(body.verification_token, body.email);
+  }
+
+  const { row } = await opportunitiesService.assertSeatAvailable(body.opportunity_id);
 
   const volunteer = await resolveVolunteer({
     email: body.email,
@@ -53,6 +73,27 @@ async function createSignup(body, user) {
     user,
   });
 
+  // Kept on volunteers rather than derived from the verification row, so the short-lived
+  // proof can be deleted without losing the fact that it happened.
+  if (!volunteer.email_verified_at) {
+    await volunteersRepo.markEmailVerified(volunteer.id);
+  }
+
+  // Asked once. Skipped when nothing was offered, and never overwritten — a volunteer who
+  // answered on their first signup is not re-asked, and a later blank submission must not
+  // erase what they told us.
+  const offered = body.discovery_sources ?? [];
+  const alreadyAnswered = (volunteer.discovery_sources ?? []).length > 0;
+
+  if (offered.length > 0 && !alreadyAnswered) {
+    await volunteersRepo.setDiscovery(volunteer.id, {
+      discovery_sources: offered,
+      // The note belongs to 'other' and the database rejects it otherwise. Dropping a stray
+      // one here keeps it from failing an otherwise perfectly good signup.
+      discovery_other: offered.includes("other") ? body.discovery_other?.trim() || null : null,
+    });
+  }
+
   try {
     const signup = await signupsRepo.createSignup({
       opportunity_id: body.opportunity_id,
@@ -61,9 +102,27 @@ async function createSignup(body, user) {
       status: "confirmed",
     });
 
-    await opportunitiesService.syncStatusAfterSignup(body.opportunity_id, localFilled + 1);
 
     const opportunity = await opportunitiesService.getOpportunityById(body.opportunity_id);
+
+    // Confirm the spot in writing. Before this a volunteer heard nothing at all between
+    // signing up and turning up: the only email in the track fired after attendance, by
+    // which point the session had already happened. Failure is logged, never thrown — the
+    // seat is already taken, and losing the signup because the mail server was down would
+    // be far worse than losing the email.
+    try {
+      const rendered = renderSignupConfirmation(volunteer, { ...row, ...opportunity }, signup);
+      await emailLib.sendEmail({
+        to: volunteer.email,
+        subject: rendered.subject,
+        text: rendered.text,
+        html: rendered.html,
+      });
+    } catch (error) {
+      console.error(
+        `[signup] confirmation email failed for signup ${signup.id}: ${error.message}`,
+      );
+    }
 
     return {
       signup,
@@ -88,7 +147,7 @@ async function createSignup(body, user) {
  * @param {string} [profileId]
  */
 async function createSignupForVolunteer(volunteerId, opportunityId, profileId) {
-  const { localFilled } = await opportunitiesService.assertSeatAvailable(opportunityId);
+  await opportunitiesService.assertSeatAvailable(opportunityId);
 
   const signup = await signupsRepo.createSignup({
     opportunity_id: opportunityId,
@@ -97,7 +156,6 @@ async function createSignupForVolunteer(volunteerId, opportunityId, profileId) {
     status: "confirmed",
   });
 
-  await opportunitiesService.syncStatusAfterSignup(opportunityId, localFilled + 1);
   return signup;
 }
 
@@ -131,7 +189,6 @@ async function deleteSignup(signupId, volunteerId) {
   }
 
   await signupsRepo.cancelSignup(signupId);
-  await opportunitiesService.syncStatusAfterCancel(signup.opportunity_id);
 }
 
 /**
@@ -153,7 +210,6 @@ async function cancelSignup(signupId, user) {
   }
 
   const cancelled = await signupsRepo.cancelSignup(signupId);
-  await opportunitiesService.syncStatusAfterCancel(signup.opportunity_id);
   return cancelled;
 }
 

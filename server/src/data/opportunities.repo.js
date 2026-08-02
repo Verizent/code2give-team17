@@ -13,10 +13,11 @@ const LIST_COLUMNS = [
   "starts_at",
   "ends_at",
   "capacity",
-  // The live column is `spots_filled_handson`; aliasing it back keeps the HandsOn
-  // count reaching the service under the name it already reads, so the effective-fill
-  // arithmetic in opportunities.service.js stays untouched.
-  "spots_filled:spots_filled_handson",
+  // Selected under its real name, not aliased to `spots_filled`. The service derives
+  // effective fullness itself and reads `row.spots_filled_handson` directly
+  // (opportunities.service.js), so an alias would leave that read `undefined` and
+  // `Number(undefined) || 0` would silently report zero HandsOn bookings.
+  "spots_filled_handson",
   "min_age",
   "skills",
   "status",
@@ -36,7 +37,7 @@ async function listOpen({ from, to, programme, source }) {
   let query = getSupabase()
     .from("volunteer_opportunities")
     .select(LIST_COLUMNS, { count: "exact" })
-    .in("status", ["open", "full"])
+    .in("status", ["open"])
     .order("starts_at", { ascending: true })
     .range(from, to);
 
@@ -62,7 +63,7 @@ async function findOpenById(id) {
     .from("volunteer_opportunities")
     .select(LIST_COLUMNS)
     .eq("id", id)
-    .in("status", ["open", "full"])
+    .in("status", ["open"])
     .maybeSingle();
 
   assertOk(error);
@@ -81,7 +82,7 @@ async function listInRange({ fromIso, toIso }) {
     .select(LIST_COLUMNS)
     .gte("starts_at", fromIso)
     .lte("starts_at", toIso)
-    .in("status", ["open", "full"])
+    .in("status", ["open"])
     .order("starts_at", { ascending: true });
   assertOk(error);
   return data ?? [];
@@ -93,8 +94,13 @@ async function listInRange({ fromIso, toIso }) {
 async function summariseOpen() {
   const { data, error } = await getSupabase()
     .from("volunteer_opportunities")
-    .select("id, capacity, spots_filled:spots_filled_handson, starts_at, status")
-    .in("status", ["open", "full"]);
+    // Real column name: the loop below reads `row.spots_filled_handson`, so an alias would
+    // leave it undefined and `?? 0` would report every seat as open.
+    //
+    // `open` only — fullness is derived now rather than stored, so there is no longer a
+    // `full` status to include.
+    .select("id, capacity, spots_filled_handson, starts_at, status")
+    .in("status", ["open"]);
   assertOk(error);
 
   const now = Date.now();
@@ -102,7 +108,7 @@ async function summariseOpen() {
   let spots_open = 0;
   for (const row of data ?? []) {
     if (new Date(row.starts_at).getTime() >= now) upcoming += 1;
-    const open = Math.max(0, (row.capacity ?? 0) - (row.spots_filled ?? 0));
+    const open = Math.max(0, (row.capacity ?? 0) - (row.spots_filled_handson ?? 0));
     spots_open += open;
   }
   return { upcoming, spots_open };

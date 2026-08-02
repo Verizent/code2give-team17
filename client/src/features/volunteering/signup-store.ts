@@ -46,11 +46,41 @@ function writeSignups(list: VolunteerSignup[]) {
   localStorage.setItem(SIGNUPS_KEY, JSON.stringify(list))
 }
 
+/** Server-issued ids are UUIDs; locally minted ones are `vs_…`. */
+function isServerIssued(signupId: string) {
+  return !signupId.startsWith('vs_')
+}
+
+let claimsRepaired = false
+
+/**
+ * Claims written before countedByServer existed double-counted every server signup, and
+ * nothing ever cleared them — the miscount outlived the signup and even the opportunity.
+ * Rebuild once per session from the signups we hold, counting only the ones the server
+ * does not know about. Self-healing, so no migration flag to carry around.
+ */
+function repairClaims(stored: Claims): Claims {
+  const rebuilt: Claims = {}
+  for (const signup of readSignups()) {
+    if (isServerIssued(signup.id)) continue
+    rebuilt[signup.opportunity_id] = (rebuilt[signup.opportunity_id] ?? 0) + 1
+  }
+
+  const changed =
+    Object.keys(rebuilt).length !== Object.keys(stored).length ||
+    Object.entries(rebuilt).some(([id, n]) => stored[id] !== n)
+
+  if (changed) writeClaims(rebuilt)
+  return rebuilt
+}
+
 function readClaims(): Claims {
   try {
     const raw = localStorage.getItem(CLAIMS_KEY)
-    if (!raw) return {}
-    return JSON.parse(raw) as Claims
+    const stored = raw ? (JSON.parse(raw) as Claims) : {}
+    if (claimsRepaired) return stored
+    claimsRepaired = true
+    return repairClaims(stored)
   } catch {
     return {}
   }
@@ -111,6 +141,14 @@ export function createSignup(input: {
   /** When mirroring a server signup, reuse its id and skip local capacity gate. */
   id?: string
   skipCapacityCheck?: boolean
+  /**
+   * True when the server already counted this signup. The API's `spots_filled` includes
+   * every confirmed row, so also recording a local claim made the browser count the same
+   * seat twice — a capacity-3 session read 2/3 after one signup, and capacity-1 sessions
+   * flipped straight to Full. Claims are never cleared, so the miscount outlived the
+   * signup itself.
+   */
+  countedByServer?: boolean
   /** Opportunity from the API cache — used for local capacity checks only. */
   knownOpportunity?: VolunteerOpportunity
 }): { ok: true; signup: VolunteerSignup } | { ok: false; reason: 'full' | 'missing' } {
@@ -138,9 +176,12 @@ export function createSignup(input: {
   signups.unshift(signup)
   writeSignups(signups)
 
-  const claims = readClaims()
-  claims[input.opportunity_id] = (claims[input.opportunity_id] ?? 0) + 1
-  writeClaims(claims)
+  // Only claim a seat the server does not already know about. See countedByServer.
+  if (!input.countedByServer) {
+    const claims = readClaims()
+    claims[input.opportunity_id] = (claims[input.opportunity_id] ?? 0) + 1
+    writeClaims(claims)
+  }
 
   return { ok: true, signup }
 }

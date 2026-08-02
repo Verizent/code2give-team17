@@ -44,7 +44,7 @@ router.get(
 router.post(
   "/:id/interest",
   optionalAuth,
-  rateLimit({ key: "interest" }),
+  rateLimit({ key: "interest", limit: 10 }),
   validate({ params: opportunityIdParamsSchema, body: createInterestBodySchema }),
   async (request, response, next) => {
     try {

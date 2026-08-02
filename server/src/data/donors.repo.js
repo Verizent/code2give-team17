@@ -7,12 +7,35 @@ const { getSupabase } = require("../config/supabase");
 async function findByEmail(email) {
   const { data, error } = await getSupabase()
     .from("donors")
-    .select("id, email, access_token, full_name, tracking_opt_in")
+    // referral_sources is selected so upsertDonor can tell "never answered" from
+    // "answered already" — the first gift writes it and no later one overwrites it.
+    .select("id, email, access_token, full_name, tracking_opt_in, referral_sources")
     .eq("email", email)
     .maybeSingle();
 
   if (error) throw error;
   return data;
+}
+
+/**
+ * Whether this email has already given its referral sources.
+ *
+ * Deliberately returns a bare boolean and nothing else: it answers the donate form's
+ * "should I show the question" and is reachable unauthenticated, so it must not become a
+ * way to read a donor's name, history, or token.
+ *
+ * @param {string} email Normalised (lowercase, trimmed) email.
+ * @returns {Promise<boolean>}
+ */
+async function hasReferralSources(email) {
+  const { data, error } = await getSupabase()
+    .from("donors")
+    .select("referral_sources")
+    .eq("email", email)
+    .maybeSingle();
+
+  if (error) throw error;
+  return (data?.referral_sources?.length ?? 0) > 0;
 }
 
 /**
@@ -83,4 +106,12 @@ async function listRecent({ limit = 50 } = {}) {
   return data ?? [];
 }
 
-module.exports = { findByEmail, findByToken, findById, createDonor, updateDonor, listRecent };
+module.exports = {
+  findByEmail,
+  hasReferralSources,
+  findByToken,
+  findById,
+  createDonor,
+  updateDonor,
+  listRecent,
+};

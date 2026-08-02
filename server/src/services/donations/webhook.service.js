@@ -72,10 +72,21 @@ async function handleCheckoutCompleted(session) {
     throw new Error(`checkout.session.completed carried no email (session ${session.id})`);
   }
 
+  // Metadata comes back as strings, and an empty tag would fail the CHECK constraint — so
+  // split, then drop the blanks. upsertDonor sanitises again and only writes these when the
+  // donor has never answered, which is what makes the question once-per-donor rather than
+  // once-per-gift.
+  const referralSources = String(session.metadata?.referral_sources ?? "")
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+
   const donor = await donorsService.upsertDonor({
     email,
     fullName: session.customer_details?.name ?? undefined,
     trackingOptIn: donation.tracking_opt_in ?? true,
+    referralSources,
+    referralSourceOther: session.metadata?.referral_source_other || undefined,
   });
 
   const eventsCredited = creditFor(donation.amount_hkd);
