@@ -84,12 +84,21 @@ function ShareMomentDialog({ onClose }) {
 
       // Focus trap: without this, Tab walks out of the dialog and into the page
       // behind it, which is still visible but inert.
-      const focusable = panelRef.current?.querySelectorAll(
+      const panel = panelRef.current
+      const focusable = panel?.querySelectorAll(
         'a[href], button:not([disabled]), input:not([disabled]), select, textarea, [tabindex]:not([tabindex="-1"])',
       )
       if (!focusable?.length) return
       const first = focusable[0]
       const last = focusable[focusable.length - 1]
+
+      // Focus can end up outside the panel — on <body> after an element is removed, or
+      // on the page behind. Neither edge branch would match, so Tab would walk out.
+      if (!panel.contains(document.activeElement)) {
+        e.preventDefault()
+        first.focus()
+        return
+      }
 
       if (e.shiftKey && document.activeElement === first) {
         e.preventDefault()
@@ -102,7 +111,9 @@ function ShareMomentDialog({ onClose }) {
 
     window.addEventListener('keydown', onKey)
     document.body.style.overflow = 'hidden'
-    panelRef.current?.querySelector('input, textarea, select')?.focus()
+    // Focus the panel itself rather than the first field, so a screen reader announces
+    // the dialog title and hint before the visitor is dropped into an input.
+    panelRef.current?.focus()
 
     return () => {
       window.removeEventListener('keydown', onKey)
@@ -211,6 +222,9 @@ function ShareMomentDialog({ onClose }) {
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
+        // Focusable only programmatically — the panel is the initial focus target but
+        // must not become a Tab stop of its own.
+        tabIndex={-1}
         // Flex column with a scrolling body: a single scroll container sized to the
         // viewport puts the submit button under the on-screen keyboard on a phone.
         className="flex max-h-[92dvh] w-full max-w-lg flex-col rounded-t-3xl border border-border bg-paper shadow-xl sm:max-h-[calc(100dvh-2rem)] sm:rounded-2xl"
