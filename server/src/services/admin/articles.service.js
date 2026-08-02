@@ -9,6 +9,10 @@ async function listAdminArticles(query = {}) {
   const { rows, total } = await articlesRepo.listAll({
     category: query.category,
     status: query.status,
+    // Delete archives rather than dropping the row, so the CMS has to stop listing
+    // archived articles — otherwise Delete leaves them in place looking untouched.
+    // Skipped when a status is named: it would be redundant or contradictory.
+    excludeStatus: query.status ? undefined : "archived",
     from: paging.from,
     to: paging.to,
   });

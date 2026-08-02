@@ -38,6 +38,13 @@ const DETAIL_COLUMNS = [
 ].join(", ");
 
 /**
+ * Admin adds `status`. The public queries filter on it rather than selecting it, but the
+ * CMS renders it and picks between Publish and Unpublish from it — omitted, every row
+ * arrives `status: undefined` and the page offers Publish on already-live articles.
+ */
+const ADMIN_COLUMNS = [DETAIL_COLUMNS, "status"].join(", ");
+
+/**
  * Published articles only, newest first.
  *
  * Every visitor query filters `status='published'`; the featured strip on Home runs
@@ -92,15 +99,16 @@ async function findPublishedBySlug(slug) {
 }
 
 /** Admin: all statuses, both locale columns returned raw. */
-async function listAll({ category, status, from, to }) {
+async function listAll({ category, status, excludeStatus, from, to }) {
   let query = getSupabase()
     .from("articles")
-    .select(DETAIL_COLUMNS, { count: "exact" })
+    .select(ADMIN_COLUMNS, { count: "exact" })
     .order("published_at", { ascending: false })
     .range(from, to);
 
   if (category) query = query.eq("category", category);
   if (status) query = query.eq("status", status);
+  if (excludeStatus) query = query.neq("status", excludeStatus);
 
   const { data, error, count } = await query;
   assertOk(error);
@@ -111,7 +119,7 @@ async function listAll({ category, status, from, to }) {
 async function findBySlug(slug) {
   const { data, error } = await getSupabase()
     .from("articles")
-    .select(DETAIL_COLUMNS)
+    .select(ADMIN_COLUMNS)
     .eq("slug", slug)
     .maybeSingle();
   assertOk(error);
@@ -133,7 +141,7 @@ async function create(data) {
   const { data: row, error } = await getSupabase()
     .from("articles")
     .insert(data)
-    .select(DETAIL_COLUMNS)
+    .select(ADMIN_COLUMNS)
     .single();
   assertOk(error);
   return row;
@@ -144,7 +152,7 @@ async function update(slug, data) {
     .from("articles")
     .update(data)
     .eq("slug", slug)
-    .select(DETAIL_COLUMNS)
+    .select(ADMIN_COLUMNS)
     .maybeSingle();
   assertOk(error);
   return row ?? null;
@@ -162,7 +170,7 @@ async function update(slug, data) {
 async function findById(id) {
   const { data: row, error } = await getSupabase()
     .from("articles")
-    .select(DETAIL_COLUMNS)
+    .select(ADMIN_COLUMNS)
     .eq("id", id)
     .maybeSingle();
   assertOk(error);
@@ -178,7 +186,7 @@ async function updateById(id, data) {
     .from("articles")
     .update(data)
     .eq("id", id)
-    .select(DETAIL_COLUMNS)
+    .select(ADMIN_COLUMNS)
     .maybeSingle();
   assertOk(error);
   return row ?? null;
@@ -188,5 +196,5 @@ module.exports = {
   listPublished, findPublishedBySlug,
   listAll, findBySlug, slugExists, create, update,
   findById, updateById,
-  LIST_COLUMNS, DETAIL_COLUMNS,
+  LIST_COLUMNS, DETAIL_COLUMNS, ADMIN_COLUMNS,
 };
