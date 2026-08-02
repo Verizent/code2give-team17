@@ -9,9 +9,9 @@ import { cn } from '@/lib/utils'
 const T = (en: string, zh: string) => ({ en, zh })
 
 const HERO_IMAGES = [
-  '/brand/music.jpeg',
-  '/brand/beyond-limit.jpeg',
   '/brand/dragonboat.jpeg',
+  '/brand/beyond-limit.jpeg',
+  '/brand/music.jpeg',
 ]
 
 const HERO_STATS = [
@@ -60,11 +60,11 @@ const ACHIEVEMENTS = [
 ]
 
 const MILESTONES = [
-  { year: '2017', title: T('A simple question starts a movement.', '一個簡單問題，開啟一場行動。'), body: T('Love 21 Foundation is founded by Jeff Rotmeyer, alongside our sister charity ImpactHK.', 'Jeff Rotmeyer 創立 Love 21 基金會，並與姊妹慈善機構 ImpactHK 同行。'), image: 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=1500&q=85' },
-  { year: '2021', title: T('Wellbeing becomes a whole-family journey.', '健康成為全家人的旅程。'), body: T('We launch comprehensive one-on-one nutrition support alongside our sports classes.', '我們在運動課程以外推出全面的一對一營養支援。'), image: 'https://images.unsplash.com/photo-1498837167922-ddd27525d352?auto=format&fit=crop&w=1500&q=85' },
-  { year: '2023', title: T('Our community helps us rebuild.', '社群攜手協助我們重建。'), body: T('After a fire damages our original San Po Kong centre, Hong Kong comes together. We reopen in October with expanded capacity.', '新蒲崗原有中心因火災受損後，香港社群攜手支持我們。我們於十月重新開幕，服務容量大幅提升。'), image: 'https://images.unsplash.com/photo-1559027615-cd4628902d4a?auto=format&fit=crop&w=1500&q=85' },
-  { year: '2025', title: T('Growing to meet the need.', '成長以回應需要。'), body: T('Our first-ever Charity Raffle launches to meet growing demand for our services.', '我們首次推出慈善抽獎活動，以回應日益增加的服務需求。'), image: 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&w=1500&q=85' },
-  { year: '2026', title: T('Beyond limits, together.', '攜手超越界限。'), body: T('On 12 June, our Beyond Limits Banquet at Lippo Chiuchow Restaurant brought supporters together for member dance and magic performances, with Nathan Leung co-hosting alongside our founder — raising funds for fitness, ABA therapy, and counselling sessions.', '6 月 12 日，我們的 Beyond Limits 晚宴假力寶潮州酒樓舉行，支持者共聚一堂，欣賞會員舞蹈及魔術表演，並由 Nathan Leung 與創辦人聯合主持，為健身、應用行為分析治療及輔導服務籌款。'), image: 'https://images.unsplash.com/photo-1517457373958-b7bdd4587205?auto=format&fit=crop&w=1500&q=85' },
+  { year: '2017', title: T('A simple question starts a movement.', '一個簡單問題，開啟一場行動。'), body: T('Love 21 Foundation is founded by Jeff Rotmeyer, alongside our sister charity ImpactHK.', 'Jeff Rotmeyer 創立 Love 21 基金會，並與姊妹慈善機構 ImpactHK 同行。'), image: '/brand/love21.jpeg' },
+  { year: '2021', title: T('Wellbeing becomes a whole-family journey.', '健康成為全家人的旅程。'), body: T('We launch comprehensive one-on-one nutrition support alongside our sports classes.', '我們在運動課程以外推出全面的一對一營養支援。'), image: '/brand/nutrition.jpeg' },
+  { year: '2023', title: T('Our community helps us rebuild.', '社群攜手協助我們重建。'), body: T('After a fire damages our original San Po Kong centre, Hong Kong comes together. We reopen in October with expanded capacity.', '新蒲崗原有中心因火災受損後，香港社群攜手支持我們。我們於十月重新開幕，服務容量大幅提升。'), image: '/brand/fire.jpeg' },
+  { year: '2025', title: T('Growing to meet the need.', '成長以回應需要。'), body: T('Our first-ever Charity Raffle launches to meet growing demand for our services.', '我們首次推出慈善抽獎活動，以回應日益增加的服務需求。'), image: '/brand/charityraffle.jpeg' },
+  { year: '2026', title: T('Beyond limits, together.', '攜手超越界限。'), body: T('On 12 June, our Beyond Limits Banquet at Lippo Chiuchow Restaurant brought supporters together for member dance and magic performances, with Nathan Leung co-hosting alongside our founder — raising funds for fitness, ABA therapy, and counselling sessions.', '6 月 12 日，我們的 Beyond Limits 晚宴假力寶潮州酒樓舉行，支持者共聚一堂，欣賞會員舞蹈及魔術表演，並由 Nathan Leung 與創辦人聯合主持，為健身、應用行為分析治療及輔導服務籌款。'), image: '/brand/beyondlimit.jpeg' },
 ]
 
 const BOARD = [
