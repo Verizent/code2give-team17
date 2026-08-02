@@ -16,6 +16,7 @@ const { articles } = require("./articles.seed");
 const { badges } = require("./badges.seed");
 const { communityPosts } = require("./community-posts.seed");
 const { impactPeriods } = require("./impact.seed");
+const { generateSessions } = require("./sessions.seed");
 const { opportunities } = require("./volunteer-opportunities.seed");
 
 async function upsert(table, rows, onConflict) {
@@ -68,6 +69,39 @@ async function safeSeed(label, fn) {
   }
 }
 
+/**
+ * Sessions: no stable natural key (title includes date), so we only insert when the
+ * `sessions` table is empty. Same idempotency shape as community_posts above.
+ * DEMO-ONLY per sessions.seed.js.
+ */
+async function seedSessions() {
+  const supabase = getSupabase();
+  const { count, error } = await supabase
+    .from("sessions")
+    .select("id", { count: "exact", head: true });
+
+  if (error) {
+    // Table may not exist yet if the 20260803 migration hasn't been applied — say so
+    // and continue rather than fail the whole seed.
+    console.log(`  sessions          skipped — ${error.message}`);
+    return;
+  }
+
+  if (count > 0) {
+    console.log(`  sessions          skipped — ${count} row(s) already present`);
+    return;
+  }
+
+  const rows = generateSessions();
+  const { error: insertError } = await supabase.from("sessions").insert(rows);
+
+  if (insertError) {
+    throw new Error(`Seeding sessions failed: ${insertError.message}`);
+  }
+
+  console.log(`  sessions          ${rows.length} inserted (${rows[0].starts_at.slice(0, 10)} → ${rows[rows.length - 1].starts_at.slice(0, 10)})`);
+}
+
 async function main() {
   console.log("Seeding Love 21 content (upsert only, nothing is deleted)\n");
 
@@ -94,6 +128,11 @@ async function main() {
   });
 
   await safeSeed("community_posts", seedCommunityPosts);
+
+  // Wrapped like the rest: the donations branch called this bare, so a failure here
+  // aborted every later step. That is exactly how the sessions seed got skipped when
+  // the articles upsert failed.
+  await safeSeed("sessions", seedSessions);
 
   console.log("\nDone.");
 }

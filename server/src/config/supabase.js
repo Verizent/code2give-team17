@@ -89,4 +89,3 @@ async function checkSupabaseConnection() {
 }
 
 module.exports = { getSupabase, getServiceClient, checkSupabaseConnection };
-
