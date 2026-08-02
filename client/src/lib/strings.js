@@ -25,6 +25,9 @@ export const STRINGS = {
       easyReadBanner: 'Easy Read is on — larger text, clearer buttons.',
       easyReadTurnOff: 'Turn off',
     },
+    homeSections: {
+      navLabel: 'Page sections',
+    },
     hero: {
       eyebrow: '#Somuchability',
       line1: 'So much',
@@ -77,7 +80,7 @@ export const STRINGS = {
       subhead: 'Our activities run in neighbourhoods all over the city.',
     },
     paths: {
-      title: 'Three ways in',
+      title: 'Ready to make a difference?',
       subhead: 'Pick where you want to start.',
       witness: {
         tag: 'Witness',
@@ -812,6 +815,9 @@ export const STRINGS = {
       easyReadBanner: '簡易閱讀已開啟——字更大、按鈕更清楚。',
       easyReadTurnOff: '關閉',
     },
+    homeSections: {
+      navLabel: '頁面章節',
+    },
     hero: {
       eyebrow: '#Somuchability',
       line1: '無限',
@@ -863,7 +869,7 @@ export const STRINGS = {
       subhead: '我們的活動遍佈全港各區。',
     },
     paths: {
-      title: '三種參與方式',
+      title: '準備好帶來改變嗎？',
       subhead: '選擇你想開始的地方。',
       witness: {
         tag: '見證',
@@ -1549,6 +1555,9 @@ export const STRINGS = {
       easyReadBanner: '简易阅读已开启——字更大、按钮更清楚。',
       easyReadTurnOff: '关闭',
     },
+    homeSections: {
+      navLabel: '页面章节',
+    },
     hero: {
       eyebrow: '#Somuchability',
       line1: '无限',
@@ -1600,7 +1609,7 @@ export const STRINGS = {
       subhead: '我们的活动遍布全港各区。',
     },
     paths: {
-      title: '三种参与方式',
+      title: '准备好带来改变吗？',
       subhead: '选择你想开始的地方。',
       witness: {
         tag: '见证',
@@ -2323,7 +2332,7 @@ const EASY_READ_EN = {
     readMore: 'Read more',
   },
   paths: {
-    title: 'Three ways to help',
+    title: 'Ready to make a difference?',
     subhead: 'Choose one.',
     witness: {
       tag: 'Look',

@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router-dom'
-import { useEffect, useId, useRef, useState } from 'react'
-import { ChevronDown, Menu, X } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Menu, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useSite } from '@/components/site-provider'
 import { BrandLogo } from '@/components/brand-logo'
@@ -99,111 +99,16 @@ function EasyReadToggle() {
   )
 }
 
-/** Volunteer + Give under Help (§10). */
-function HelpNav() {
-  const { t } = useSite()
-  const { pathname } = useLocation()
-  const [open, setOpen] = useState(false)
-  const rootRef = useRef(null)
-  const menuId = useId()
-  const active = pathname.startsWith('/volunteer') || pathname.startsWith('/give')
-
-  const items = [
-    { href: '/volunteer', label: t.nav.volunteer },
-    { href: '/give', label: t.nav.give },
-  ]
-
-  useEffect(() => {
-    setOpen(false)
-  }, [pathname])
-
-  useEffect(() => {
-    if (!open) return
-    function onDoc(e) {
-      if (!rootRef.current?.contains(e.target)) setOpen(false)
-    }
-    function onKey(e) {
-      if (e.key === 'Escape') setOpen(false)
-    }
-    document.addEventListener('mousedown', onDoc)
-    document.addEventListener('keydown', onKey)
-    return () => {
-      document.removeEventListener('mousedown', onDoc)
-      document.removeEventListener('keydown', onKey)
-    }
-  }, [open])
-
-  return (
-    <div
-      ref={rootRef}
-      className="relative"
-      onMouseEnter={() => setOpen(true)}
-      onMouseLeave={() => setOpen(false)}
-    >
-      <button
-        type="button"
-        aria-expanded={open}
-        aria-haspopup="menu"
-        aria-controls={menuId}
-        onClick={() => setOpen((v) => !v)}
-        className={cn(
-          NAV_LINK,
-          'gap-0.5',
-          active &&
-            'font-semibold after:absolute after:right-0 after:bottom-0 after:left-0 after:h-0.5 after:bg-red',
-        )}
-      >
-        {t.nav.help}
-        <ChevronDown
-          className={cn('h-3.5 w-3.5 text-navy/40 transition-transform', open && 'rotate-180')}
-          aria-hidden
-        />
-      </button>
-      {open && (
-        <div
-          id={menuId}
-          role="menu"
-          aria-label={t.nav.help}
-          className="absolute top-full left-1/2 z-50 min-w-[10.5rem] -translate-x-1/2 pt-2"
-        >
-          <ul className="overflow-hidden rounded-md border border-navy/10 bg-white py-1 shadow-lg">
-            {items.map((item) => {
-              const itemActive = pathname.startsWith(item.href)
-              return (
-                <li key={item.href} role="none">
-                  <Link
-                    role="menuitem"
-                    to={item.href}
-                    onClick={() => setOpen(false)}
-                    className={cn(
-                      'flex h-10 items-center px-4 text-[14px] font-medium text-navy hover:bg-navy/5',
-                      itemActive && 'bg-navy/5 font-semibold',
-                    )}
-                  >
-                    {item.label}
-                  </Link>
-                </li>
-              )
-            })}
-          </ul>
-        </div>
-      )}
-    </div>
-  )
-}
-
 export function SiteHeader() {
   const { t, easyRead, setEasyRead } = useSite()
   const auth = useAuth()
   const { pathname } = useLocation()
   const [open, setOpen] = useState(false)
-  const [helpOpen, setHelpOpen] = useState(false)
   const userId = auth.user?.id
   const [accountRole, setAccountRole] = useState(() => readCachedRole(userId))
 
   useEffect(() => {
     setOpen(false)
-    setHelpOpen(false)
   }, [pathname])
 
   useEffect(() => {
@@ -258,16 +163,13 @@ export function SiteHeader() {
     }
   }, [open])
 
-  /** Order: Home · Community · Help · News */
-  const leftNav = [
+  /** Order: Home · Community · Volunteer · Give */
+  const primaryNav = [
     { href: '/', label: t.nav.home },
     { href: '/community', label: t.nav.community },
+    { href: '/volunteer', label: t.nav.volunteer },
+    { href: '/give', label: t.nav.give },
   ]
-  const rightNav = [
-    { href: '/news', label: t.nav.news },
-  ]
-
-  const helpActive = pathname.startsWith('/volunteer') || pathname.startsWith('/give')
 
   // Wait for auth + role before choosing label/href so they never disagree or flash wrong.
   const accountLoading = !auth.ready || (Boolean(auth.user) && accountRole === 'pending')
@@ -313,21 +215,7 @@ export function SiteHeader() {
             aria-label="Primary"
             className="hidden min-w-0 items-center justify-start gap-4 lg:flex xl:gap-5"
           >
-            {leftNav.map((item) => (
-              <Link
-                key={item.href}
-                to={item.href}
-                className={cn(
-                  NAV_LINK,
-                  navActive(item.href) &&
-                    'font-semibold after:absolute after:right-0 after:bottom-0 after:left-0 after:h-0.5 after:bg-red',
-                )}
-              >
-                {item.label}
-              </Link>
-            ))}
-            <HelpNav />
-            {rightNav.map((item) => (
+            {primaryNav.map((item) => (
               <Link
                 key={item.href}
                 to={item.href}
@@ -363,26 +251,38 @@ export function SiteHeader() {
               )}
               <Link
                 to="/volunteer"
-                className="inline-flex h-10 items-center rounded-md border border-red px-3 text-[14px] font-semibold text-red hover:bg-red/5 xl:px-3.5"
+                className="inline-flex h-10 shrink-0 items-center whitespace-nowrap rounded-md border border-red px-3 text-[14px] font-semibold text-red hover:bg-red/5 xl:px-3.5"
               >
                 {t.nav.volunteer}
               </Link>
               <Link
                 to="/give"
-                className="inline-flex h-10 items-center rounded-md bg-red px-3.5 text-[14px] font-bold text-white hover:bg-red/90 xl:px-4"
+                className="inline-flex h-10 shrink-0 items-center whitespace-nowrap rounded-md bg-red px-3.5 text-[14px] font-bold text-white hover:bg-red/90 xl:px-4"
               >
                 {t.nav.donate}
+              </Link>
+              <Link
+                to="/support"
+                className="inline-flex h-10 shrink-0 items-center whitespace-nowrap rounded-md bg-teal px-3.5 text-[14px] font-bold text-white hover:bg-teal/90 xl:px-4"
+              >
+                {t.nav.askForHelp}
               </Link>
             </div>
           </div>
 
-          {/* Actions — mobile: Donate + menu */}
+          {/* Actions — mobile: Donate + Ask for help + menu */}
           <div className="flex items-center justify-end gap-2 lg:hidden">
             <Link
               to="/give"
-              className="header-compact inline-flex h-9 items-center rounded-md bg-red px-3.5 text-[13px] font-semibold text-white sm:h-10 sm:px-4 sm:text-sm"
+              className="header-compact inline-flex h-9 items-center whitespace-nowrap rounded-md bg-red px-2.5 text-[13px] font-semibold text-white sm:h-10 sm:px-3 sm:text-sm"
             >
               {t.nav.donate}
+            </Link>
+            <Link
+              to="/support"
+              className="header-compact inline-flex h-9 items-center whitespace-nowrap rounded-md bg-teal px-2.5 text-[13px] font-semibold text-white sm:h-10 sm:px-3 sm:text-sm"
+            >
+              {t.nav.askForHelp}
             </Link>
             <button
               type="button"
@@ -403,57 +303,7 @@ export function SiteHeader() {
             className="border-t border-black/5 bg-white lg:hidden"
           >
             <nav className="mx-auto flex max-w-[1120px] flex-col px-4 py-2 sm:px-8">
-              {[...leftNav].map((item) => (
-                <Link
-                  key={item.href}
-                  to={item.href}
-                  onClick={() => setOpen(false)}
-                  className="flex h-12 items-center border-b border-black/5 text-[15px] font-medium text-navy"
-                >
-                  {item.label}
-                </Link>
-              ))}
-
-              <div className="border-b border-black/5">
-                <button
-                  type="button"
-                  aria-expanded={helpOpen}
-                  onClick={() => setHelpOpen((v) => !v)}
-                  className={cn(
-                    'flex h-12 w-full items-center justify-between text-[15px] font-medium text-navy',
-                    helpActive && 'font-semibold',
-                  )}
-                >
-                  {t.nav.help}
-                  <ChevronDown
-                    className={cn(
-                      'h-4 w-4 text-navy/40 transition-transform',
-                      helpOpen && 'rotate-180',
-                    )}
-                    aria-hidden
-                  />
-                </button>
-                {helpOpen && (
-                  <div className="flex flex-col gap-0 pb-2 pl-3">
-                    <Link
-                      to="/volunteer"
-                      onClick={() => setOpen(false)}
-                      className="flex h-10 items-center text-[14px] font-medium text-navy/75"
-                    >
-                      {t.nav.volunteer}
-                    </Link>
-                    <Link
-                      to="/give"
-                      onClick={() => setOpen(false)}
-                      className="flex h-10 items-center text-[14px] font-medium text-navy/75"
-                    >
-                      {t.nav.give}
-                    </Link>
-                  </div>
-                )}
-              </div>
-
-              {rightNav.map((item) => (
+              {primaryNav.map((item) => (
                 <Link
                   key={item.href}
                   to={item.href}
@@ -470,13 +320,6 @@ export function SiteHeader() {
               </div>
 
               <div className="flex flex-col gap-2 py-4">
-                <Link
-                  to="/volunteer"
-                  onClick={() => setOpen(false)}
-                  className="flex h-11 items-center justify-center rounded-md border border-red text-[15px] font-semibold text-red"
-                >
-                  {t.nav.volunteer}
-                </Link>
                 {account ? (
                   <Link
                     to={account.href}
@@ -499,6 +342,13 @@ export function SiteHeader() {
                   className="flex h-11 items-center justify-center rounded-md bg-red text-[15px] font-semibold text-white"
                 >
                   {t.nav.donate}
+                </Link>
+                <Link
+                  to="/support"
+                  onClick={() => setOpen(false)}
+                  className="flex h-11 items-center justify-center rounded-md bg-teal text-[15px] font-semibold text-white"
+                >
+                  {t.nav.askForHelp}
                 </Link>
               </div>
             </nav>

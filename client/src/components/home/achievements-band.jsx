@@ -80,21 +80,40 @@ export function AchievementsBand() {
             ))}
           </div>
 
-          <div className="mt-10 border-t border-navy/10 pt-8">
+          <div className="mt-10 overflow-hidden border-t border-navy/10 pt-8">
             <p className="text-xs font-bold tracking-wide text-navy/50 uppercase">
               {t.corporateImpact.wallLabel}
             </p>
             <p className="mt-1 max-w-lg text-sm text-navy/60">{t.corporateImpact.wallSubhead}</p>
-            <ul className="mt-5 grid grid-cols-2 gap-2.5 sm:grid-cols-3 md:grid-cols-4">
-              {corporatePartnerNames.map((name) => (
-                <li
-                  key={name}
-                  className="flex min-h-[64px] items-center justify-center rounded-xl border border-navy/10 bg-white px-3 text-center text-sm leading-tight font-bold text-navy/70 sm:text-base"
-                >
-                  {name}
-                </li>
-              ))}
-            </ul>
+            <div className="relative mt-5">
+              <ul className="achievements-marquee flex w-max gap-2.5 pr-2.5">
+                {[...corporatePartnerNames, ...corporatePartnerNames].map((name, index) => (
+                  <li
+                    key={`${name}-${index}`}
+                    className="flex min-h-[56px] shrink-0 items-center justify-center rounded-full border border-navy/10 bg-white px-5 text-center text-sm leading-tight font-bold text-navy/70"
+                  >
+                    {name}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <style>{`
+              @keyframes achievements-marquee {
+                from { transform: translateX(0); }
+                to { transform: translateX(-50%); }
+              }
+              .achievements-marquee {
+                animation: achievements-marquee 36s linear infinite;
+              }
+              @media (prefers-reduced-motion: reduce) {
+                .achievements-marquee {
+                  animation: none;
+                  flex-wrap: wrap;
+                  width: 100%;
+                  justify-content: center;
+                }
+              }
+            `}</style>
           </div>
 
           <Link

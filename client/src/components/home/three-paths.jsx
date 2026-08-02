@@ -39,7 +39,11 @@ export function ThreePaths() {
   ]
 
   return (
-    <section aria-labelledby="paths-title" className="bg-red py-16 sm:py-24">
+    <section
+      id="support"
+      aria-labelledby="paths-title"
+      className="scroll-mt-28 bg-red py-16 sm:py-24"
+    >
       <div className="mx-auto max-w-[1120px] px-5 sm:px-8">
         <h2
           id="paths-title"

@@ -42,7 +42,7 @@ export function ImpactGarden({ garden }: { garden: MeImpactGarden }) {
             <p className="mt-4 text-sm text-navy/55">{m.gardenPillarHint}</p>
             <div className="mt-4 flex flex-wrap justify-center gap-3 sm:justify-start">
               <Link
-                to="/news"
+                to="/#stories"
                 className="text-sm font-semibold text-teal underline-offset-4 hover:underline"
               >
                 {m.gardenLearnCta}
