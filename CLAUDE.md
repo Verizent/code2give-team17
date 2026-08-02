@@ -362,9 +362,16 @@ one page must land together. Conventional commits (`feat:`, `fix:`, `refactor:`,
 branches on merge. Screenshot every UI PR — §24 is a stated requirement and can't be
 reviewed from a diff.
 
-`CLAUDE.md`, `CONTEXT.md` and `.claude/rules/` are **tracked** as of `9b98d43` — edits to them
-show up in `git status` as normal working-tree changes and belong in a `docs:` commit.
-`.claude/settings.local.json` is the one ignored path (per-machine permission grants).
+`CLAUDE.md`, `CONTEXT.md` and everything under `.claude/` are **untracked** (gitignored)
+as of the commit that added this note. Edits to them are per-machine only — they will not
+appear in `git status`, will not travel through PRs, and each teammate maintains their own
+copy locally. Persistent shared documentation (TDD evidence, plan artefacts, etc.) belongs
+under `docs/` where git will pick it up.
+
+Rationale: these files carry per-agent scratch context and per-teammate operator
+preferences; tracking them was creating merge noise on every session that touched an
+ECC rule pack or session summary. If a rule genuinely needs to be shared, promote it into
+`docs/` or into a code comment where its enforcement lives.
 
 ## ECC rule packs
 
