@@ -1,15 +1,12 @@
 import { useEffect, useState } from 'react'
 import {
   fetchAdminDashboard,
-  fetchAdminFunnel,
   fetchAdminAnalytics,
   type AnalyticsPayload,
   type DashboardPayload,
-  type FunnelPayload,
 } from '@/features/admin/api'
 import { useSite } from '@/components/site-provider'
 import { BarChart } from '@/features/admin/components/bar-chart'
-import { FunnelPanel } from '@/features/admin/components/funnel-panel'
 import { MetricTiles } from '@/features/admin/components/metric-tiles'
 import { ProgrammeBars } from '@/features/admin/components/programme-bars'
 import { RateTile } from '@/features/admin/components/rate-tile'
@@ -35,7 +32,6 @@ export function AdminDashboardPage() {
   const { t } = useSite()
   const a = t.admin
   const [dashboard, setDashboard] = useState<DashboardPayload | null>(null)
-  const [funnel, setFunnel] = useState<FunnelPayload | null>(null)
   const [analytics, setAnalytics] = useState<AnalyticsPayload | null>(null)
   const [dashboardFailed, setDashboardFailed] = useState(false)
   const [analyticsFailed, setAnalyticsFailed] = useState(false)
@@ -48,11 +44,6 @@ export function AdminDashboardPage() {
     void fetchAdminDashboard()
       .then((data) => !cancelled && setDashboard(data))
       .catch(() => !cancelled && setDashboardFailed(true))
-    void fetchAdminFunnel()
-      .then((data) => !cancelled && setFunnel(data))
-      .catch(() => {
-        /* Supplementary — its absence should not raise an error on the page. */
-      })
     return () => {
       cancelled = true
     }
@@ -145,20 +136,6 @@ export function AdminDashboardPage() {
           </p>
         ) : (
           <MetricTiles tiles={tiles} />
-        )}
-        {funnel && (
-          <FunnelPanel
-            funnel={funnel}
-            copy={{
-              title: a.dashboardFunnelTitle,
-              intro: a.dashboardFunnelIntro,
-              dropoffs: a.dashboardFunnelDropoffs,
-              sources: a.dashboardFunnelSources,
-              sourcesHint: a.dashboardFunnelSourcesHint,
-              empty: a.dashboardFunnelEmpty,
-              sourcesEmpty: a.dashboardFunnelSourcesEmpty,
-            }}
-          />
         )}
       </section>
 

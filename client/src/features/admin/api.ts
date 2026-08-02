@@ -39,41 +39,8 @@ export type CommunityPost = {
   submitted_at: string
 }
 
-export type FunnelPayload = {
-  stages: Array<{
-    id: string
-    label: string
-    count: number
-    conversion_from_prev: number | null
-  }>
-  dropoffs: Array<{
-    from: string
-    to: string
-    from_label: string
-    to_label: string
-    lost: number
-    rate: number
-  }>
-  sources: Array<{
-    source: string
-    label: string
-    visitors: number
-    volunteers: number
-    donors: number
-  }>
-  seeded: boolean
-  empty?: boolean
-  period_label: string
-  note?: string
-}
-
 export async function fetchAdminDashboard(): Promise<DashboardPayload> {
   const { data } = await apiData<DashboardPayload>('/api/admin/dashboard')
-  return data
-}
-
-export async function fetchAdminFunnel(): Promise<FunnelPayload> {
-  const { data } = await apiData<FunnelPayload>('/api/admin/funnel')
   return data
 }
 

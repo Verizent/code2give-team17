@@ -833,15 +833,6 @@ export const STRINGS = {
       dashboardQueueIntro:
         'Open items from story desk, class roll, fundraisers, Voices, and impact — based on what is waiting right now.',
       dashboardQueueOpen: 'Open',
-      dashboardFunnelTitle: 'Interests → signups → gifts',
-      dashboardFunnelIntro:
-        'Form-side counts from this site — not anonymous visitor analytics',
-      dashboardFunnelDropoffs: 'Biggest drops between stages',
-      dashboardFunnelSources: 'How people said they found us',
-      dashboardFunnelSourcesHint:
-        'From volunteer discovery and donor referral form answers — not campaign tracking codes.',
-      dashboardFunnelEmpty: 'No interests, signups, or gifts yet.',
-      dashboardFunnelSourcesEmpty: 'No discovery or referral answers recorded yet.',
     },
   },
   'zh-Hant': {
@@ -1620,13 +1611,6 @@ export const STRINGS = {
       dashboardQueueTitle: '今日待辦',
       dashboardQueueIntro: '故事台、點名、籌款、聲音與影響數字——依目前等候項目列出。',
       dashboardQueueOpen: '開啟',
-      dashboardFunnelTitle: '興趣 → 報名 → 捐款',
-      dashboardFunnelIntro: '本站表單累計——不是匿名訪客分析',
-      dashboardFunnelDropoffs: '階段之間的最大落差',
-      dashboardFunnelSources: '他們如何找到我們',
-      dashboardFunnelSourcesHint: '來自義工與捐款表單的自我回報——不是廣告追蹤代碼。',
-      dashboardFunnelEmpty: '尚無興趣登記、報名或捐款。',
-      dashboardFunnelSourcesEmpty: '尚無來源或轉介答案。',
     },
   },
   'zh-Hans': {
@@ -2405,13 +2389,6 @@ export const STRINGS = {
       dashboardQueueTitle: '今日待办',
       dashboardQueueIntro: '故事台、点名、筹款、声音与影响数字——依目前等候项目列出。',
       dashboardQueueOpen: '开启',
-      dashboardFunnelTitle: '兴趣 → 报名 → 捐款',
-      dashboardFunnelIntro: '本站表单累计——不是匿名访客分析',
-      dashboardFunnelDropoffs: '阶段之间的最大落差',
-      dashboardFunnelSources: '他们如何找到我们',
-      dashboardFunnelSourcesHint: '来自义工与捐款表单的自我回报——不是广告追踪代码。',
-      dashboardFunnelEmpty: '尚无兴趣登记、报名或捐款。',
-      dashboardFunnelSourcesEmpty: '尚无来源或转介答案。',
     },
   },
 }

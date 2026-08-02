@@ -13,7 +13,6 @@ const donorsRepo = require("../data/donors.repo");
 const sessionsRepo = require("../data/sessions.repo");
 const { closeReadyPeriods } = require("../services/donations/period-close.service");
 const { getDashboard } = require("../services/admin/dashboard.service");
-const { getFunnel } = require("../services/admin/funnel.service");
 const { getAnalytics } = require("../services/admin/analytics.service");
 const { analyticsQuerySchema } = require("../schemas/analytics.schema");
 
@@ -28,14 +27,6 @@ const router = express.Router();
 router.get("/dashboard", async (request, response, next) => {
   try {
     response.json(envelope(await getDashboard()));
-  } catch (error) {
-    next(error);
-  }
-});
-
-router.get("/funnel", async (request, response, next) => {
-  try {
-    response.json(envelope(await getFunnel()));
   } catch (error) {
     next(error);
   }
