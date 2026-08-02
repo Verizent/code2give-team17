@@ -1,6 +1,7 @@
 const communityPostsRepo = require("../../data/community-posts.repo");
 const { ApiError } = require("../../lib/api-error");
 const { parsePaging, buildMeta } = require("../../lib/pagination");
+const { isOwnMediaUrl } = require("./media.service");
 
 /**
  * `GET /api/community-posts` — approved Voices for the public tab.
@@ -34,6 +35,14 @@ async function submitVoice(body, actor) {
 
   if (website) {
     return { id: null, submitted_at: new Date().toISOString() };
+  }
+
+  // photo_url is a plain string on the wire, so a caller can send one without ever
+  // calling the upload endpoint. Refusing anything we did not store ourselves is what
+  // makes that endpoint's size and MIME checks meaningful rather than optional, and
+  // keeps an attacker-chosen third-party URL off the moderator's screen.
+  if (postData.photo_url !== undefined && !isOwnMediaUrl(postData.photo_url)) {
+    throw ApiError.badRequest("photo_url must come from POST /api/uploads/community-photo.");
   }
 
   return communityPostsRepo.create({

@@ -7,6 +7,7 @@ const {
   buildObjectKey,
   uploadCommunityPhoto,
   MAX_UPLOAD_BYTES,
+  isOwnMediaUrl,
 } = require("../../../src/services/content/media.service");
 
 /** Smallest byte prefixes that a real file of each type starts with. */
@@ -111,4 +112,25 @@ test("uploadCommunityPhoto refuses an empty body", async (t) => {
   t.after(() => mock.restoreAll());
 
   await assert.rejects(() => uploadCommunityPhoto(Buffer.alloc(0)), { status: 400 });
+});
+
+test("isOwnMediaUrl accepts only URLs the upload endpoint could have produced", () => {
+  const previous = process.env.SUPABASE_URL;
+  process.env.SUPABASE_URL = "https://proj.supabase.co";
+  const base = "https://proj.supabase.co/storage/v1/object/public/media/community/";
+
+  assert.equal(isOwnMediaUrl(`${base}0ef03983-a5bf-4307-add5-f276164c1717.png`), true);
+
+  // Skipping the upload endpoint and posting a URL directly would otherwise bypass
+  // every size and MIME check the endpoint exists to enforce.
+  assert.equal(isOwnMediaUrl("https://evil.example.com/tracker.gif"), false);
+  // A lookalike host that merely starts with ours.
+  assert.equal(isOwnMediaUrl("https://proj.supabase.co.evil.com/storage/v1/object/public/media/community/a.png"), false);
+  // Right host, wrong bucket or prefix.
+  assert.equal(isOwnMediaUrl("https://proj.supabase.co/storage/v1/object/public/avatars/a.png"), false);
+  assert.equal(isOwnMediaUrl("javascript:alert(1)"), false);
+  assert.equal(isOwnMediaUrl(""), false);
+  assert.equal(isOwnMediaUrl(undefined), false);
+
+  process.env.SUPABASE_URL = previous;
 });

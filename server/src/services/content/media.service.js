@@ -90,4 +90,41 @@ async function uploadCommunityPhoto(buffer) {
   return mediaRepo.uploadPublicObject(buildObjectKey(contentType), buffer, contentType);
 }
 
-module.exports = { detectImageType, buildObjectKey, uploadCommunityPhoto, MAX_UPLOAD_BYTES };
+/**
+ * Is this a URL our own upload endpoint could have produced?
+ *
+ * `photo_url` arrives as a plain string on the create-post body, so without this a
+ * caller can skip the upload endpoint entirely and store any URL they like — which
+ * would bypass every size and MIME check the endpoint exists to enforce, and put an
+ * attacker-chosen third-party URL in front of a moderator.
+ *
+ * Parsed with `new URL` and compared on `origin`, not by prefix: a string test would
+ * accept `https://proj.supabase.co.evil.com/...`.
+ *
+ * @param {unknown} value
+ * @returns {boolean}
+ */
+function isOwnMediaUrl(value) {
+  if (typeof value !== "string" || value === "") return false;
+
+  const base = process.env.SUPABASE_URL;
+  if (!base) return false;
+
+  try {
+    const url = new URL(value);
+    return (
+      url.origin === new URL(base).origin &&
+      url.pathname.startsWith("/storage/v1/object/public/media/community/")
+    );
+  } catch {
+    return false;
+  }
+}
+
+module.exports = {
+  detectImageType,
+  buildObjectKey,
+  uploadCommunityPhoto,
+  isOwnMediaUrl,
+  MAX_UPLOAD_BYTES,
+};
