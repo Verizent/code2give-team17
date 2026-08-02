@@ -477,6 +477,10 @@ export const STRINGS = {
       pledgeSuccess: 'We’ll email how to send or drop off.',
       pledgeClose: 'Close',
       wishlistEmpty: 'Nothing on the wishlist right now.',
+      wishlistLoading: 'Loading the wishlist…',
+      // Deliberately not the empty state: telling a supporter nothing is needed, when the
+      // truth is we could not reach the server, turns an outage into a lost gift.
+      wishlistLoadFailed: 'We could not load the wishlist just now. Please try again shortly.',
       fundraiseTitle: 'Create a fundraiser',
       fundraiseSubhead: 'Three steps: create, wait for approval, then share and watch progress.',
       fundraiseSteps: [
@@ -1356,6 +1360,8 @@ export const STRINGS = {
       pledgeSuccess: '我們會電郵說明如何送交或自取。',
       pledgeClose: '關閉',
       wishlistEmpty: '目前心願清單沒有項目。',
+      wishlistLoading: '正在載入心願清單⋯',
+      wishlistLoadFailed: '暫時無法載入心願清單，請稍後再試。',
       fundraiseTitle: '發起籌款',
       fundraiseSubhead: '三步：建立、等候審批，然後分享並查看進度。',
       fundraiseSteps: ['建立頁面', '我們審批', '分享並查看進度'],
@@ -2193,6 +2199,8 @@ export const STRINGS = {
       pledgeSuccess: '我们会电邮说明如何送交或自取。',
       pledgeClose: '关闭',
       wishlistEmpty: '目前心愿清单没有项目。',
+      wishlistLoading: '正在载入心愿清单⋯',
+      wishlistLoadFailed: '暂时无法载入心愿清单，请稍后再试。',
       fundraiseTitle: '发起筹款',
       fundraiseSubhead: '三步：建立、等候审批，然后分享并查看进度。',
       fundraiseSteps: ['建立页面', '我们审批', '分享并查看进度'],

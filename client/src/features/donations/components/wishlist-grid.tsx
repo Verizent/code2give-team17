@@ -1,14 +1,45 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { useSite } from '@/components/site-provider'
 import { listWishlist, type WishlistItem } from '@/features/donations/api'
+import { fetchWishlist } from '@/features/donations/wishlist'
 import { addPledge, getExtraPledged } from '@/features/donations/wishlist-store'
+import { isRealApiMode } from '@/lib/apiClient'
 import { trackEvent } from '@/lib/analytics'
 
 export function WishlistGrid() {
   const { locale, t } = useSite()
   const g = t.give
-  const baseItems = listWishlist()
   const [, setTick] = useState(0)
+
+  // Bundled fixtures were the only source until now, and they had already drifted: the seeded
+  // trampoline socks read 12 pledged where the database said 32. A hardcoded copy of mutable
+  // data is wrong the moment anybody pledges.
+  const [baseItems, setBaseItems] = useState<WishlistItem[]>(
+    isRealApiMode() ? [] : listWishlist(),
+  )
+  const [loading, setLoading] = useState(isRealApiMode())
+  const [loadFailed, setLoadFailed] = useState(false)
+
+  useEffect(() => {
+    if (!isRealApiMode()) return
+    let cancelled = false
+    void (async () => {
+      try {
+        const fetched = await fetchWishlist()
+        if (!cancelled) setBaseItems(fetched)
+      } catch {
+        // Kept distinct from "no items": rendering the empty state would tell a supporter
+        // nothing is needed, when the truth is we could not reach the server.
+        if (!cancelled) setLoadFailed(true)
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   const items = baseItems.map((item) => ({
     ...item,
     pledged: item.pledged + getExtraPledged(item.id),
@@ -39,7 +70,13 @@ export function WishlistGrid() {
         {g.wishlistTitle}
       </h2>
       <p className="mt-3 max-w-2xl text-navy/70">{g.wishlistSubhead}</p>
-      {items.length ? (
+      {loading ? (
+        <p className="mt-8 rounded-2xl bg-white p-6 text-navy/60">{g.wishlistLoading}</p>
+      ) : loadFailed ? (
+        <p role="alert" className="mt-8 rounded-2xl bg-white p-6 text-navy/70">
+          {g.wishlistLoadFailed}
+        </p>
+      ) : items.length ? (
         <div className="mt-8 grid gap-5 sm:grid-cols-2">
           {items.map((item) => {
             const percent = Math.min(100, Math.round((item.pledged / item.needed) * 100))
