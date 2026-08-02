@@ -1,4 +1,8 @@
 const analyticsRepo = require("../../data/analytics.repo");
+// Cross-service import on purpose: the dashboard already owns UTC month bucketing and
+// its edge cases are unit-tested there. A second implementation here would be a second
+// thing to get wrong at a year boundary.
+const { lastSixMonths, fillMonthSeries } = require("./dashboard.service");
 
 const MONTHS_PER_WINDOW = 12;
 const SUCCEEDED = "succeeded";
@@ -169,6 +173,34 @@ function popularProgrammes(sessions) {
     .sort((a, b) => b.attendance_count - a.attendance_count || b.capacity - a.capacity);
 }
 
+/**
+ * Settled donation totals for the last six calendar months, oldest first.
+ *
+ * Months with no gifts are zero-filled rather than omitted, so the chart shows a quiet
+ * month as a short bar instead of silently compressing the axis.
+ *
+ * @param {object[]} donations
+ * @param {Date} [now]
+ */
+function donationsByMonth(donations, now = new Date()) {
+  const totals = new Map();
+
+  for (const row of succeededOnly(donations)) {
+    const at = new Date(row.created_at);
+    if (Number.isNaN(at.getTime())) continue;
+
+    const month = at.toISOString().slice(0, 7);
+    totals.set(month, (totals.get(month) ?? 0) + (Number(row.amount_hkd) || 0));
+  }
+
+  const live = [...totals].map(([month, amount_hkd]) => ({ month, amount_hkd }));
+
+  return fillMonthSeries(live, lastSixMonths(now), (row, month) => ({
+    month,
+    amount_hkd: row?.amount_hkd ?? 0,
+  }));
+}
+
 /** @param {object[]} rows */
 function countBySource(rows) {
   const counts = new Map();
@@ -215,6 +247,7 @@ async function getAnalytics(now = new Date()) {
     repeat_gift: repeatGiftRate(donations),
     capacity_fill: capacityFill(sessions),
     satisfaction: satisfaction(signups),
+    donations_by_month: donationsByMonth(donations, now),
     programmes: popularProgrammes(sessions),
     acquisition: {
       ...acquisitionSource(sources),
@@ -230,6 +263,7 @@ module.exports = {
   repeatGiftRate,
   capacityFill,
   satisfaction,
+  donationsByMonth,
   popularProgrammes,
   acquisitionSource,
 };
