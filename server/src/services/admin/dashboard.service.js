@@ -7,19 +7,35 @@ const communityPostsRepo = require("../../data/community-posts.repo");
 const impactRepo = require("../../data/impact.repo");
 
 /**
+ * Last `count` calendar month keys ending at `now` (UTC), oldest first.
+ *
+ * `Date.UTC` is given a negative month index rather than the month being decremented in
+ * place — that is what rolls the year back correctly at a January boundary.
+ *
+ * @param {number} count
+ * @param {Date} [now]
+ * @returns {string[]}
+ */
+function lastNMonths(count, now = new Date()) {
+  const keys = [];
+  const year = now.getUTCFullYear();
+  const month = now.getUTCMonth();
+
+  for (let i = count - 1; i >= 0; i -= 1) {
+    keys.push(new Date(Date.UTC(year, month - i, 1)).toISOString().slice(0, 7));
+  }
+
+  return keys;
+}
+
+/**
  * Last six calendar month keys ending at `now` (UTC), oldest first.
  *
  * @param {Date} [now]
  * @returns {string[]}
  */
 function lastSixMonths(now = new Date()) {
-  const keys = [];
-  const cursor = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
-  for (let i = 5; i >= 0; i -= 1) {
-    const d = new Date(Date.UTC(cursor.getUTCFullYear(), cursor.getUTCMonth() - i, 1));
-    keys.push(d.toISOString().slice(0, 7));
-  }
-  return keys;
+  return lastNMonths(6, now);
 }
 
 /**
@@ -146,6 +162,7 @@ async function getDashboard() {
 
 module.exports = {
   getDashboard,
+  lastNMonths,
   lastSixMonths,
   fillMonthSeries,
 };

@@ -61,10 +61,10 @@ test("repeat giving is a believable non-zero", { skip }, async () => {
   assert.ok(repeat_gift.rate > 0 && repeat_gift.rate < 100);
 });
 
-test("donations_by_month returns six populated months, oldest first", { skip }, async () => {
+test("donations_by_month returns twelve populated months, oldest first", { skip }, async () => {
   const { donations_by_month } = await getAnalytics();
 
-  assert.equal(donations_by_month.length, 6);
+  assert.equal(donations_by_month.length, 12);
 
   const months = donations_by_month.map((row) => row.month);
   assert.deepEqual([...months].sort(), months, "months are not in ascending order");
@@ -142,4 +142,24 @@ test("the stub is deterministic — the demo cannot change between rehearsal and
   const payloadA = await getAnalytics();
   const payloadB = await getAnalytics();
   assert.deepEqual(payloadA, payloadB);
+});
+
+test("a year of sessions, not a fortnight of them", { skip }, async () => {
+  const { programmes, capacity_fill } = await getAnalytics();
+
+  assert.equal(programmes.length, 5);
+  for (const row of programmes) {
+    assert.ok(
+      row.capacity >= 200,
+      `${row.programme} offers only ${row.capacity} places — too thin to read as a year`,
+    );
+  }
+  assert.ok(capacity_fill.capacity > 1500);
+});
+
+test("a year of feedback, not a handful", { skip }, async () => {
+  const { satisfaction } = await getAnalytics();
+
+  assert.ok(satisfaction.responses >= 50, `only ${satisfaction.responses} responses`);
+  assert.ok(satisfaction.average_rating >= 1 && satisfaction.average_rating <= 5);
 });

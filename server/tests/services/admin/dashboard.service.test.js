@@ -9,6 +9,7 @@ const communityPostsRepo = require("../../../src/data/community-posts.repo");
 const impactRepo = require("../../../src/data/impact.repo");
 const {
   getDashboard,
+  lastNMonths,
   lastSixMonths,
   fillMonthSeries,
 } = require("../../../src/services/admin/dashboard.service");
@@ -48,6 +49,26 @@ test("dashboard metrics no longer report pending_proofs", async (t) => {
   const { metrics } = await getDashboard();
 
   assert.ok(!("pending_proofs" in metrics));
+});
+
+test("lastNMonths returns N ascending keys ending at the given month", () => {
+  const keys = lastNMonths(12, new Date("2026-08-02T12:00:00Z"));
+  assert.equal(keys.length, 12);
+  assert.equal(keys[0], "2025-09");
+  assert.equal(keys[11], "2026-08");
+  assert.deepEqual([...keys].sort(), keys);
+});
+
+test("lastNMonths crosses a year boundary without drifting", () => {
+  // February is where naive month arithmetic breaks: subtracting 11 months has to
+  // roll the year back, not clamp the day.
+  const keys = lastNMonths(12, new Date("2026-02-01T00:00:00Z"));
+  assert.equal(keys[0], "2025-03");
+  assert.equal(keys[11], "2026-02");
+});
+
+test("lastNMonths handles a single month", () => {
+  assert.deepEqual(lastNMonths(1, new Date("2026-08-02T12:00:00Z")), ["2026-08"]);
 });
 
 test("lastSixMonths returns six YYYY-MM keys ending at now", () => {

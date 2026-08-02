@@ -2,9 +2,11 @@ const analyticsRepo = require("../../data/analytics.repo");
 // Cross-service import on purpose: the dashboard already owns UTC month bucketing and
 // its edge cases are unit-tested there. A second implementation here would be a second
 // thing to get wrong at a year boundary.
-const { lastSixMonths, fillMonthSeries } = require("./dashboard.service");
+const { lastNMonths, fillMonthSeries } = require("./dashboard.service");
 
 const MONTHS_PER_WINDOW = 12;
+/** The giving chart spans a full year. */
+const CHART_MONTHS = 12;
 const SUCCEEDED = "succeeded";
 const UNKNOWN_SOURCE = "unknown";
 
@@ -174,7 +176,7 @@ function popularProgrammes(sessions) {
 }
 
 /**
- * Settled donation totals for the last six calendar months, oldest first.
+ * Settled donation totals for the last twelve calendar months, oldest first.
  *
  * Months with no gifts are zero-filled rather than omitted, so the chart shows a quiet
  * month as a short bar instead of silently compressing the axis.
@@ -195,7 +197,7 @@ function donationsByMonth(donations, now = new Date()) {
 
   const live = [...totals].map(([month, amount_hkd]) => ({ month, amount_hkd }));
 
-  return fillMonthSeries(live, lastSixMonths(now), (row, month) => ({
+  return fillMonthSeries(live, lastNMonths(CHART_MONTHS, now), (row, month) => ({
     month,
     amount_hkd: row?.amount_hkd ?? 0,
   }));

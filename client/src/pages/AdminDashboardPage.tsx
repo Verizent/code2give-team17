@@ -194,7 +194,8 @@ export function AdminDashboardPage() {
               />
             </div>
 
-            <div className="mt-12 max-w-2xl">
+            {/* Full width: twelve bars are unreadable in a max-w-2xl column. */}
+            <div className="mt-12">
               <BarChart
                 label={a.hubChartMoney}
                 description={a.hubChartMoneyDesc}

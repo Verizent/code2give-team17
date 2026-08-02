@@ -718,9 +718,9 @@ export const STRINGS = {
       hubIllustrativeIntro:
         'Everything below this line is generated demo data, not real supporter activity. The figures above are real.',
       hubChartMoney: 'Money given',
-      hubChartMoneyDesc: 'Illustrative monthly giving across the past six months.',
+      hubChartMoneyDesc: 'Illustrative monthly giving across the past twelve months.',
       hubChartMoneyUnit: 'HK$ per calendar month',
-      hubChartTotal: '6 mo total',
+      hubChartTotal: '12 mo total',
       hubSectionError: 'Could not load this section.',
       storiesTitle: 'Story desk',
       storiesIntro:
@@ -1500,9 +1500,9 @@ export const STRINGS = {
       hubIllustrative: '數據分析 — 示範數據',
       hubIllustrativeIntro: '此線以下全部為示範數據，並非真實的支持者活動。以上數字為真實數據。',
       hubChartMoney: '捐款金額',
-      hubChartMoneyDesc: '過去六個月的示範每月捐款。',
+      hubChartMoneyDesc: '過去十二個月的示範每月捐款。',
       hubChartMoneyUnit: '每月港幣',
-      hubChartTotal: '六個月總計',
+      hubChartTotal: '十二個月總計',
       hubSectionError: '無法載入此部分。',
       storiesTitle: '故事台',
       storiesIntro:
@@ -2274,9 +2274,9 @@ export const STRINGS = {
       hubIllustrative: '数据分析 — 示范数据',
       hubIllustrativeIntro: '此线以下全部为示范数据，并非真实的支持者活动。以上数字为真实数据。',
       hubChartMoney: '捐款金额',
-      hubChartMoneyDesc: '过去六个月的示范每月捐款。',
+      hubChartMoneyDesc: '过去十二个月的示范每月捐款。',
       hubChartMoneyUnit: '每月港币',
-      hubChartTotal: '六个月总计',
+      hubChartTotal: '十二个月总计',
       hubSectionError: '无法载入此部分。',
       storiesTitle: '故事台',
       storiesIntro:

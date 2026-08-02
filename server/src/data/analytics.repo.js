@@ -90,7 +90,7 @@ function monthStart(months) {
  * which is ~44% and sits inside the published 40–45% sector band. A stub that flattered
  * the number would make the benchmark on the tile meaningless.
  *
- * Current-window gifts are spread across the last six months by `index % 6` so every
+ * Current-window gifts are spread across all twelve months by `index % 12` so every
  * month of the chart has at least one gift — a chart with a hole in it reads as broken
  * rather than as a quiet month.
  */
@@ -110,7 +110,10 @@ function stubDonations() {
     const donorId = `stub-donor-${String(i + 1).padStart(2, "0")}`;
     const random = makeRandom(hashToInt(donorId));
     const amount = () => [100, 250, 500, 1000, 2000][Math.floor(random() * 5)];
-    const recentMonth = i % 6;
+    // Across all 12 months of the current window, not 6: the giving chart spans a
+    // year, and `% 6` left the older half of it empty — six blank bars read as a
+    // broken chart rather than as quiet months.
+    const recentMonth = i % 12;
 
     if (i < 18) {
       // Gave last year.
@@ -130,7 +133,7 @@ function stubDonations() {
 }
 
 /**
- * 45 sessions, nine per programme, filled 55–95%.
+ * 120 sessions, 24 per programme — roughly a fortnightly cadence across a year.
  *
  * Never uniformly full: a chart where every bar is complete reads as fabricated, and the
  * gap between places offered and attendance is the insight the programme panel exists to
@@ -140,7 +143,7 @@ function stubSessions() {
   const rows = [];
 
   for (const programme of STUB_PROGRAMMES) {
-    for (let i = 0; i < 9; i += 1) {
+    for (let i = 0; i < 24; i += 1) {
       const random = makeRandom(hashToInt(`${programme}-${i}`));
       const capacity = 8 + Math.floor(random() * 17);
       const fill = 0.55 + random() * 0.4;
@@ -156,7 +159,7 @@ function stubSessions() {
 }
 
 /**
- * 40 signups, roughly 70% of which left feedback.
+ * 90 signups across a year, roughly 70% of which left feedback.
  *
  * Not all of them — a 100% response rate does not happen, and the response count on the
  * tile is there to show how thin the sample is.
@@ -164,7 +167,7 @@ function stubSessions() {
 function stubSignupFeedback() {
   const rows = [];
 
-  for (let i = 0; i < 40; i += 1) {
+  for (let i = 0; i < 90; i += 1) {
     const random = makeRandom(hashToInt(`stub-signup-${i}`));
     const answered = random() < 0.7;
 
@@ -177,7 +180,7 @@ function stubSignupFeedback() {
     rows.push({
       experience_rating: rating,
       would_return: rating >= 4,
-      feedback_submitted_at: monthStart(i % 6),
+      feedback_submitted_at: monthStart(i % 12),
     });
   }
 
