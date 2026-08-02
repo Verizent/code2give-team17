@@ -1,6 +1,5 @@
 const { getServiceClient } = require("../config/supabase");
-const { throwIfDbError, PG } = require("./supabase-error");
-const { ApiError } = require("../lib/api-error");
+const { throwIfDbError } = require("./supabase-error");
 
 /**
  * @param {object} values
@@ -8,10 +7,6 @@ const { ApiError } = require("../lib/api-error");
 async function createInterest(values) {
   const db = getServiceClient();
   const { data, error } = await db.from("volunteer_interests").insert(values).select().single();
-
-  if (error?.code === PG.UNIQUE_VIOLATION) {
-    throw new ApiError(409, "You have already expressed interest in this opportunity");
-  }
 
   throwIfDbError(error, {
     conflictMessage: "You have already expressed interest in this opportunity",

@@ -1,6 +1,5 @@
 const { getServiceClient } = require("../config/supabase");
-const { throwIfDbError, PG } = require("./supabase-error");
-const { ApiError } = require("../lib/api-error");
+const { throwIfDbError } = require("./supabase-error");
 
 const SIGNUP_COLUMNS = [
   "id",
@@ -27,10 +26,6 @@ async function createSignup(values) {
     })
     .select(SIGNUP_COLUMNS)
     .single();
-
-  if (error?.code === PG.UNIQUE_VIOLATION) {
-    throw new ApiError(409, "Already signed up for this opportunity", "ALREADY_SIGNED_UP");
-  }
 
   throwIfDbError(error, {
     conflictMessage: "You have already signed up for this opportunity",
