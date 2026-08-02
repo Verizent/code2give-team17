@@ -1,0 +1,441 @@
+import { apiData, apiClient, type Envelope } from '@/lib/apiClient'
+import { ANALYTICS_STUB, analyticsFixture } from './fixtures'
+
+export type DashboardMetrics = {
+  donations_total_hkd: number
+  donations_count: number
+  volunteer_sessions_upcoming: number
+  volunteer_spots_open: number
+  interests_count: number
+  pending_campaigns: number
+  pending_voices: number
+  voices_available: boolean
+  impact_current?: boolean
+}
+
+export type DashboardQueueItem = {
+  id: string
+  title: string
+  detail: string
+  count: number | null
+  href: string
+}
+
+export type DashboardPayload = {
+  metrics: DashboardMetrics
+  charts: {
+    donations_by_month: Array<{ month: string; amount_hkd: number }>
+    volunteer_hours_by_month: Array<{ month: string; hours: number }>
+  }
+  queue: DashboardQueueItem[]
+}
+
+export type CommunityPost = {
+  id: string
+  author_name: string
+  relationship: string
+  story: string
+  photo_url: string | null
+  status: 'pending' | 'approved' | 'rejected'
+  submitted_at: string
+}
+
+export async function fetchAdminDashboard(): Promise<DashboardPayload> {
+  const { data } = await apiData<DashboardPayload>('/api/admin/dashboard')
+  return data
+}
+
+/** `null` means the denominator was empty — render "not enough data", never 0%. */
+export type AnalyticsPayload = {
+  range: string
+  donor_retention: {
+    rate: number | null
+    retained: number
+    prior_donors: number
+    current_donors: number
+    prior_window_label: string
+    current_window_label: string
+    /** The 40–45% sector benchmark is annual; false means do not print it. */
+    benchmark_applies: boolean
+  }
+  repeat_gift: { rate: number | null; repeat_donors: number; total_donors: number }
+  capacity_fill: { rate: number | null; attended: number; capacity: number }
+  satisfaction: {
+    average_rating: number | null
+    would_return_rate: number | null
+    responses: number
+  }
+  donations_by_month: Array<{ month: string; amount_hkd: number }>
+  programmes: Array<{
+    programme: string
+    capacity: number
+    signups: number
+    attended: number
+    fill_rate: number | null
+  }>
+  acquisition: {
+    donors: Array<{ source: string; count: number }>
+    volunteers: Array<{ source: string; count: number }>
+    available: boolean
+  }
+}
+
+export async function fetchAdminAnalytics(range = 'all'): Promise<AnalyticsPayload> {
+  if (ANALYTICS_STUB) return analyticsFixture(range)
+  const { data } = await apiData<AnalyticsPayload>(
+    `/api/admin/analytics?range=${encodeURIComponent(range)}`,
+  )
+  return data
+}
+
+export async function fetchCommunityPosts(status = 'pending'): Promise<{
+  items: CommunityPost[]
+  available: boolean
+}> {
+  const res = await apiClient<
+    Envelope<CommunityPost[]> & { meta?: { available?: boolean } }
+  >(`/api/admin/community-posts?status=${encodeURIComponent(status)}`)
+  return {
+    items: res.data ?? [],
+    available: res.meta?.available !== false,
+  }
+}
+
+export async function moderateCommunityPost(
+  id: string,
+  status: 'approved' | 'rejected',
+): Promise<CommunityPost> {
+  const { data } = await apiData<CommunityPost>(
+    `/api/admin/community-posts/${encodeURIComponent(id)}/moderate`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ status }),
+    },
+  )
+  return data
+}
+
+/**
+ * Permanently removes a submission. Unlike an article, this is a hard delete — there is
+ * no archived state on community_posts, so the row is gone and there is no undo.
+ */
+export async function deleteCommunityPost(id: string): Promise<void> {
+  await apiClient(`/api/admin/community-posts/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+  })
+}
+
+export type AdminArticle = {
+  id: string
+  slug: string
+  category: 'news' | 'education' | 'report'
+  title_en: string
+  title_zh: string | null
+  excerpt_en: string | null
+  excerpt_zh: string | null
+  body_en?: Array<{ type: string; text?: string }>
+  body_zh?: Array<{ type: string; text?: string }>
+  cover_image_url: string | null
+  cover_alt_en: string | null
+  cover_alt_zh: string | null
+  author: string | null
+  status: 'draft' | 'published' | 'archived'
+  published_at: string | null
+  tags: string[]
+  is_featured: boolean
+  reading_time_minutes: number | null
+  meta_title_en?: string | null
+  meta_title_zh?: string | null
+  meta_description_en?: string | null
+  meta_description_zh?: string | null
+  og_image_url?: string | null
+  updated_at?: string
+}
+
+export type ArticleWritePayload = {
+  category: 'news' | 'education' | 'report'
+  title_en: string
+  title_zh?: string
+  excerpt_en?: string
+  excerpt_zh?: string
+  body_en?: Array<{ type: 'paragraph'; text: string }>
+  body_zh?: Array<{ type: 'paragraph'; text: string }>
+  cover_image_url?: string
+  cover_alt_en?: string
+  cover_alt_zh?: string
+  author?: string
+  tags?: string[]
+  is_featured?: boolean
+  meta_title_en?: string
+  meta_description_en?: string
+}
+
+export async function fetchAdminArticles(status = 'all'): Promise<{
+  items: AdminArticle[]
+  available: boolean
+}> {
+  const res = await apiClient<
+    Envelope<AdminArticle[]> & { meta?: { available?: boolean } }
+  >(`/api/admin/articles?status=${encodeURIComponent(status)}`)
+  return {
+    items: res.data ?? [],
+    available: res.meta?.available !== false,
+  }
+}
+
+export async function fetchAdminArticle(id: string): Promise<AdminArticle> {
+  const { data } = await apiData<AdminArticle>(
+    `/api/admin/articles/${encodeURIComponent(id)}`,
+  )
+  return data
+}
+
+export async function createAdminArticle(payload: ArticleWritePayload): Promise<AdminArticle> {
+  const { data } = await apiData<AdminArticle>('/api/admin/articles', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+  return data
+}
+
+export async function updateAdminArticle(
+  id: string,
+  payload: Partial<ArticleWritePayload> & { slug?: string },
+): Promise<AdminArticle> {
+  const { data } = await apiData<AdminArticle>(
+    `/api/admin/articles/${encodeURIComponent(id)}`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    },
+  )
+  return data
+}
+
+export async function publishAdminArticle(id: string): Promise<AdminArticle> {
+  const { data } = await apiData<AdminArticle>(
+    `/api/admin/articles/${encodeURIComponent(id)}/publish`,
+    { method: 'POST', body: '{}' },
+  )
+  return data
+}
+
+export async function unpublishAdminArticle(id: string): Promise<AdminArticle> {
+  const { data } = await apiData<AdminArticle>(
+    `/api/admin/articles/${encodeURIComponent(id)}/unpublish`,
+    { method: 'POST', body: '{}' },
+  )
+  return data
+}
+
+export type AdminWishlistItem = {
+  id: string
+  title_en: string
+  title_zh: string
+  why_en: string
+  why_zh: string
+  needed: number
+  /** Derived from wishlist_pledges by the pledge RPC — never sent on a write. */
+  pledged: number
+  image_url: string
+  is_active: boolean
+  created_at?: string
+  updated_at?: string
+}
+
+/** `id` is the slug and is settable on create only; a rename would move the public URL. */
+export type WishlistCreatePayload = {
+  id: string
+  title_en: string
+  title_zh: string
+  why_en: string
+  why_zh: string
+  needed: number
+  image_url: string
+  is_active?: boolean
+}
+
+export type WishlistUpdatePayload = Partial<Omit<WishlistCreatePayload, 'id'>>
+
+export async function fetchAdminWishlist(): Promise<AdminWishlistItem[]> {
+  const res = await apiClient<Envelope<AdminWishlistItem[]>>('/api/admin/wishlist?limit=50')
+  return res.data ?? []
+}
+
+export async function fetchAdminWishlistItem(id: string): Promise<AdminWishlistItem> {
+  const { data } = await apiData<AdminWishlistItem>(
+    `/api/admin/wishlist/${encodeURIComponent(id)}`,
+  )
+  return data
+}
+
+export async function createAdminWishlistItem(
+  payload: WishlistCreatePayload,
+): Promise<AdminWishlistItem> {
+  const { data } = await apiData<AdminWishlistItem>('/api/admin/wishlist', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+  return data
+}
+
+export async function updateAdminWishlistItem(
+  id: string,
+  payload: WishlistUpdatePayload,
+): Promise<AdminWishlistItem> {
+  const { data } = await apiData<AdminWishlistItem>(
+    `/api/admin/wishlist/${encodeURIComponent(id)}`,
+    { method: 'PATCH', body: JSON.stringify(payload) },
+  )
+  return data
+}
+
+/** Server answers 204 with no body, so there is nothing to unwrap. */
+export async function deleteAdminWishlistItem(id: string): Promise<void> {
+  await apiClient(`/api/admin/wishlist/${encodeURIComponent(id)}`, { method: 'DELETE' })
+}
+
+/**
+ * Removes an article from the CMS and the public site.
+ *
+ * The server archives rather than dropping the row, so a mis-click is recoverable from
+ * the database — but there is no restore UI, so to the operator this is a delete.
+ */
+export async function deleteAdminArticle(id: string): Promise<void> {
+  await apiClient(`/api/admin/articles/${encodeURIComponent(id)}`, { method: 'DELETE' })
+}
+
+export type AdminInstagramEmbed = {
+  id: string
+  url: string
+  caption_en: string | null
+  caption_zh: string | null
+  thumbnail_url: string | null
+  display_order: number
+  is_active: boolean
+}
+
+export async function fetchInstagramEmbeds(): Promise<AdminInstagramEmbed[]> {
+  const res = await apiClient<Envelope<AdminInstagramEmbed[]>>('/api/admin/instagram?limit=50')
+  return res.data ?? []
+}
+
+export async function createInstagramEmbed(
+  body: Partial<AdminInstagramEmbed>,
+): Promise<AdminInstagramEmbed> {
+  const { data } = await apiData<AdminInstagramEmbed>('/api/admin/instagram', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
+  return data
+}
+
+export async function updateInstagramEmbed(
+  id: string,
+  body: Partial<AdminInstagramEmbed>,
+): Promise<AdminInstagramEmbed> {
+  const { data } = await apiData<AdminInstagramEmbed>(
+    `/api/admin/instagram/${encodeURIComponent(id)}`,
+    { method: 'PATCH', body: JSON.stringify(body) },
+  )
+  return data
+}
+
+export async function deleteInstagramEmbed(id: string): Promise<void> {
+  await apiClient(`/api/admin/instagram/${encodeURIComponent(id)}`, { method: 'DELETE' })
+}
+
+// ── Volunteers ─────────────────────────────────────────────────────────────
+
+export type AdminOpportunity = {
+  id: string
+  title_en: string
+  title_zh: string
+  description_en: string
+  description_zh: string
+  location_en: string
+  location_zh: string
+  programme: string
+  starts_at: string
+  ends_at: string | null
+  capacity: number
+  min_age: number
+  skills: string[]
+  status: string
+  source: string
+  /**
+   * Signups on our side, from `volunteer_signups`. Not `spots_filled_handson`, which counts
+   * bookings made inside HandsOn's system and must never be read as our roster size.
+   */
+  signup_count: number
+}
+
+export type OpportunitySignup = {
+  id: string
+  status: string
+  created_at: string
+  volunteer: { id: string; email: string; full_name: string | null; locale: string | null } | null
+}
+
+export type OpportunityCreatePayload = {
+  title_en: string
+  title_zh: string
+  description_en: string
+  description_zh: string
+  location_en: string
+  location_zh: string
+  programme: string
+  starts_at: string
+  ends_at: string
+  capacity: number
+  min_age?: number
+  skills?: string[]
+}
+
+/**
+ * `limit=50` is the server's ceiling (`parsePaging` clamps there) and the default of 12
+ * would quietly hide most of the list. Rows come back `starts_at` descending, so future
+ * sessions sort first and are never what gets cut off.
+ */
+export async function fetchAdminOpportunities(): Promise<{
+  items: AdminOpportunity[]
+  total: number
+}> {
+  const res = await apiClient<Envelope<AdminOpportunity[]>>('/api/admin/postings?limit=50')
+  return { items: res.data ?? [], total: res.meta?.total ?? (res.data?.length ?? 0) }
+}
+
+export async function fetchOpportunitySignups(id: string): Promise<OpportunitySignup[]> {
+  const res = await apiClient<Envelope<OpportunitySignup[]>>(
+    `/api/admin/postings/${encodeURIComponent(id)}/signups`,
+  )
+  return res.data ?? []
+}
+
+/** Creating a listing also creates the `sessions` row linked to it; both come back. */
+export async function createOpportunity(
+  payload: OpportunityCreatePayload,
+): Promise<{ opportunity: AdminOpportunity; session: { id: string } }> {
+  const { data } = await apiData<{ opportunity: AdminOpportunity; session: { id: string } }>(
+    '/api/admin/postings',
+    { method: 'POST', body: JSON.stringify(payload) },
+  )
+  return data
+}
+
+/**
+ * Uploads a cover image and returns its public URL.
+ *
+ * Sends raw bytes with the file's own Content-Type — the server mounts express.raw on
+ * this route only. FormData would have needed a multipart parser added as a shared
+ * dependency; base64 would inflate every upload by a third.
+ */
+export async function uploadCoverImage(file: File): Promise<string> {
+  const { data } = await apiData<{ url: string }>('/api/admin/uploads/cover', {
+    method: 'POST',
+    body: file,
+    // Overrides apiClient's JSON default; the body is the image itself.
+    headers: { 'Content-Type': file.type },
+  })
+  return data.url
+}

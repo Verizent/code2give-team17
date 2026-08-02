@@ -1,122 +1,76 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { Navigate, Route, Routes } from 'react-router-dom'
+import { HomePage } from '@/pages/HomePage'
+import { CommunityPage } from '@/pages/CommunityPage'
+import { ArticlesPage } from '@/pages/ArticlesPage'
+import { MyImpactPage } from '@/pages/MyImpactPage'
+import { LoginPage } from '@/pages/LoginPage'
+import { AdminLayout } from '@/features/admin/AdminLayout'
+import { AdminDashboardPage } from '@/pages/AdminDashboardPage'
+import { AdminCampaignsPage } from '@/pages/AdminCampaignsPage'
+import { AdminVolunteersPage } from '@/pages/AdminVolunteersPage'
+import { AdminModerationPage } from '@/pages/AdminModerationPage'
+import { AdminArticlesPage } from '@/pages/AdminArticlesPage'
+import { VolunteerPage } from '@/pages/VolunteerPage'
+import { VolunteerDetailPage } from '@/pages/VolunteerDetailPage'
+import { VolunteerSuccessPage } from '@/pages/VolunteerSuccessPage'
+import { VolunteerBriefingPage } from '@/pages/VolunteerBriefingPage'
+import { GivePage } from '@/pages/GivePage'
+import { GiveWishlistPage } from '@/pages/GiveWishlistPage'
+import { CampaignCreatePage } from '@/pages/CampaignCreatePage'
+import { CampaignPublicPage } from '@/pages/CampaignPublicPage'
+import { GiveThanksPage } from '@/pages/GiveThanksPage'
+import { DonorTrackPage } from '@/pages/DonorTrackPage'
+import { SupportPage } from '@/pages/SupportPage'
+import { ArticlePage } from '@/pages/ArticlePage'
+import { AdminInstagramPage } from '@/pages/AdminInstagramPage'
+import { AdminWishlistPage } from '@/pages/AdminWishlistPage'
 
-function App() {
-  const [count, setCount] = useState(0)
-
+export default function App() {
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
-
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
+    <Routes>
+      <Route path="/" element={<HomePage />} />
+      <Route path="/community" element={<CommunityPage />} />
+      <Route path="/articles" element={<ArticlesPage />} />
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/volunteer" element={<VolunteerPage />} />
+      <Route path="/volunteer/success" element={<VolunteerSuccessPage />} />
+      <Route path="/volunteer/briefing/:signupId" element={<VolunteerBriefingPage />} />
+      <Route path="/volunteer/:id" element={<VolunteerDetailPage />} />
+      <Route path="/give" element={<GivePage />} />
+      <Route path="/give/wishlist" element={<GiveWishlistPage />} />
+      <Route path="/give/campaigns/new" element={<CampaignCreatePage />} />
+      <Route path="/give/thanks" element={<GiveThanksPage />} />
+      {/* Bearer token in the path (§15). Must sit above the `*` catch-all, or a valid
+          tracking link silently redirects home — the same trap that made Stripe's old
+          /donate/thanks success_url look like it worked. */}
+      <Route path="/give/track/:token" element={<DonorTrackPage />} />
+      <Route path="/c/:slug" element={<CampaignPublicPage />} />
+      <Route path="/me" element={<MyImpactPage />} />
+      <Route path="/admin" element={<AdminLayout />}>
+        <Route index element={<AdminDashboardPage />} />
+        <Route path="articles" element={<AdminArticlesPage />} />
+        <Route path="campaigns" element={<AdminCampaignsPage />} />
+        <Route path="volunteers" element={<AdminVolunteersPage />} />
+        <Route path="moderation" element={<AdminModerationPage />} />
+        <Route path="instagram" element={<AdminInstagramPage />} />
+        <Route path="wishlist" element={<AdminWishlistPage />} />
+        {/* Story desk and Class roll were removed; their old links, and the ones that
+            used to redirect into Story desk, now land on the hub. */}
+        <Route path="analytics" element={<Navigate to="/admin" replace />} />
+        <Route path="stories" element={<Navigate to="/admin" replace />} />
+        <Route path="attendance" element={<Navigate to="/admin" replace />} />
+        <Route path="proofs" element={<Navigate to="/admin" replace />} />
+        <Route path="social" element={<Navigate to="/admin" replace />} />
+      </Route>
+      <Route path="/support" element={<SupportPage />} />
+      <Route path="/about" element={<Navigate to="/" replace />} />
+      {/* Two different things that share a word: /articles is external press
+          coverage, /news/:slug is one of Love 21's own published articles from the
+          content API. Bare /news goes to the Home strip that lists the latter. */}
+      <Route path="/news/:slug" element={<ArticlePage />} />
+      <Route path="/news" element={<Navigate to="/#news" replace />} />
+      <Route path="/portal" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   )
 }
-
-export default App

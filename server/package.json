@@ -6,7 +6,16 @@
   "scripts": {
     "start": "node index.js",
     "dev": "node --watch index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "seed": "node db/seed/seed.js",
+    "seed:admin": "node db/seed/admin.seed.js",
+    "seed:analytics": "node db/seed/analytics.seed.js",
+    "seed:volunteer-attendance": "node db/seed/volunteer-attendance.seed.js",
+    "seed:volunteer-history": "node db/seed/volunteer-history.seed.js",
+    "test": "node --test --test-concurrency=1",
+    "test:coverage": "node --test --experimental-test-coverage",
+    "test:schema": "node --test --test-concurrency=1 \"test/schema/**/*.test.js\"",
+    "email:check": "node scripts/email-check.js",
+    "seed:past-donation": "node scripts/seed-past-donation.js"
   },
   "keywords": [],
   "author": "",
@@ -18,6 +27,9 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.57.4",
     "dotenv": "^17.2.2",
-    "express": "^5.2.1"
+    "express": "^5.2.1",
+    "nodemailer": "^9.0.3",
+    "stripe": "^22.4.0",
+    "zod": "^4.4.3"
   }
 }

@@ -1,5 +1,7 @@
 const express = require("express");
 const apiRoutes = require("./routes");
+const uploadsRoutes = require("./routes/uploads.routes");
+const webhooksRoutes = require("./routes/webhooks.routes");
 const notFound = require("./middleware/not-found");
 const errorHandler = require("./middleware/error-handler");
 
@@ -7,13 +9,35 @@ const app = express();
 const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || "http://localhost:5173";
 
 app.disable("x-powered-by");
-app.use(express.json());
 
+// Off by default, which is what this has always done — but the rate limiters key on
+// `request.ip`, and without this that is the socket address. Behind a reverse proxy every
+// visitor collapses into the proxy's single IP, which turns an IP-keyed limit from a defence
+// into an outage: the 31st honest donor in the window gets a 429.
+//
+// Set TRUST_PROXY when deploying behind one (`1` for a single hop, or a subnet expression).
+// Never set it when the server is directly reachable — X-Forwarded-For is caller-controlled,
+// so trusting it there lets anyone mint a fresh bucket per request and skip the limits.
+if (process.env.TRUST_PROXY) {
+  const hops = Number.parseInt(process.env.TRUST_PROXY, 10);
+  app.set("trust proxy", Number.isNaN(hops) ? process.env.TRUST_PROXY : hops);
+}
+
+// MUST stay above express.json(). Stripe signs the exact bytes it sent, so a body that has
+// been parsed and re-stringified fails verification on a perfectly valid signature
+// (CONTEXT.md §17). The route mounts express.raw() itself; this line is what stops the JSON
+// parser consuming the stream first.
+app.use("/api/webhooks/stripe", webhooksRoutes);
+
+// CORS runs before the body parsers, not after, because the photo upload below also has
+// to sit above express.json() and still needs these headers plus the OPTIONS
+// short-circuit — a raw-body route mounted above the old position got neither.
 app.use((request, response, next) => {
   response.set({
     "Access-Control-Allow-Origin": CLIENT_ORIGIN,
     "Access-Control-Allow-Methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    "Access-Control-Allow-Headers":
+      "Content-Type, Authorization, X-Volunteer-Token, X-Stub-User-Id, X-Stub-Role",
   });
 
   if (request.method === "OPTIONS") {
@@ -23,6 +47,12 @@ app.use((request, response, next) => {
 
   next();
 });
+
+// Same ordering constraint as the Stripe webhook: this route reads an image as a raw
+// Buffer, so express.json() must not consume the stream first.
+app.use("/api/uploads", uploadsRoutes);
+
+app.use(express.json());
 
 app.get("/", (request, response) => {
   response.json({
