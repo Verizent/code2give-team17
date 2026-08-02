@@ -13,6 +13,11 @@ cp .env.example .env   # fill in SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY at m
 npm run dev            # node --watch index.js — port 3000
 ```
 
+For the **donation flow** you additionally need `STRIPE_SECRET_KEY` (test mode, `sk_test_`)
+and `STRIPE_WEBHOOK_SECRET` — the latter is printed fresh by every `stripe listen` run and
+must be re-pasted each session. `EMAIL_MODE` defaults to `log`, which is what the demo uses.
+See [Running it locally](#running-it-locally).
+
 ## Commands
 
 | Command | What it does |
@@ -127,6 +132,33 @@ Returns `{ "data": { label, period_start, period_end, families_served, total_ses
 
 ---
 
+#### Donations + donor tracking
+
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| `POST` | `/api/donations/checkout` | None | Create a Stripe Checkout Session + `pending` donation |
+| `POST` | `/api/webhooks/stripe` | Signature | Stripe events — the only writer of `succeeded` |
+| `GET` | `/api/donations/session/:session_id` | None² | Thanks-page poll while the webhook lands |
+| `POST` | `/api/donations` | None | **DEMO-ONLY** — succeeded donation with no payment |
+| `POST` | `/api/donations/:id/feedback` | None² | Post-payment optional form |
+| `GET` | `/api/donors/track/:token` | Bearer token² | The donor tracking page |
+| `POST` | `/api/donors/recover-link` | None | "Find my page" — uniform response, **DEMO-ONLY stub** |
+| `GET` | `/api/admin/donations` | Admin¹ | Donation table, filter by status |
+| `GET` | `/api/admin/donations/stats` | Admin¹ | Dashboard aggregate strip |
+| `GET` | `/api/admin/donors` | Admin¹ | Donor directory |
+| `GET` | `/api/admin/allocations` | Admin¹ | Allocation list |
+| `PATCH` | `/api/admin/allocations/:id` | Admin¹ | Reassign an allocation to another session |
+| `POST` | `/api/admin/cron/close-periods` | Admin¹ | Manual trigger for the batching job |
+| `POST` | `/api/admin/demo/advance-donation/:id` | Admin¹ | **DEMO-ONLY** — force allocation state |
+
+> ² **Unguessable-identifier auth.** These carry no session — the Stripe session id and the
+> donor `access_token` are long random values that *are* the credential. See
+> [Why the token is in the URL](#why-the-token-is-in-the-url).
+
+Full mechanics in [Donor tracking — how it works](#donor-tracking--how-it-works) below.
+
+---
+
 ### 🚧 Not yet built — our responsibility
 
 These are planned endpoints for the Home + News track. Register each in `routes/index.js`
@@ -165,12 +197,328 @@ so there is no accidental overlap.
 | Domain | Path prefix | Owner track |
 |---|---|---|
 | Volunteer | `/api/opportunities`, `/api/volunteer/*`, `/api/admin/postings/*` | BE1 / volunteer track |
-| Donations + Stripe | `/api/donations/*`, `/api/donors/*`, `/api/webhooks/stripe` | BE2 / donate track |
-| Campaigns | `/api/campaigns/*` | donate track |
-| Sessions calendar | `/api/sessions/*` | volunteer track |
-| Wishlist | `/api/wishlist/*` | donate track |
+| Sessions calendar | `/api/sessions/*` | volunteer track — **but `sessions` the table is created by this branch's migration**, see below |
 | HandsOn sync | `/api/admin/handson/sync` | volunteer track |
-| Demo controls | `/api/admin/demo/*` | shared |
+| Attendance | `/api/admin/sessions/attendance/bulk` | volunteer track — overlaps our demo-advance control |
+
+> **`/api/donations/*`, `/api/donors/*`, `/api/webhooks/stripe`, `/api/campaigns/*` and
+> `/api/wishlist/*` used to be listed here as another track's work. They are now built on
+> this branch** — see [Donations + donor tracking](#donations--donor-tracking) above.
+
+> **`sessions` ownership is unresolved.** CONTEXT.md §13 puts it in the shared data model;
+> §30 gives sessions and attendance to the volunteer track. This branch's
+> `20260803_1055` migration creates the table because donor tracking cannot work without it.
+> If the volunteer track lands its own `sessions` DDL, the two must be reconciled **before
+> either is applied** — two `create table sessions` files is a conflict git merges cleanly
+> and silently.
+
+---
+
+## Donor tracking — how it works
+
+The flagship donation feature. A donor pays, gets a private page showing the specific
+sessions their gift supports, and receives a batched email when those sessions actually
+happen. No account, ever — the tokenised link *is* the identity.
+
+### The end-to-end procedure
+
+```
+ ┌── 1. CHECKOUT ─────────────────────────────────────────────────────┐
+ │  POST /api/donations/checkout  { amount_hkd, frequency }           │
+ │     → Stripe Checkout Session created                              │
+ │     → donations row INSERT  status='pending', donor_id=NULL        │
+ │     → returns { checkout_url, session_id, donation_id }            │
+ │  Browser redirects to Stripe's hosted page. We never see a card.   │
+ └────────────────────────────────────────────────────────────────────┘
+                                 │  donor pays
+                                 ▼
+ ┌── 2. WEBHOOK ──────────────────────────────────────────────────────┐
+ │  POST /api/webhooks/stripe   checkout.session.completed            │
+ │   a. INSERT stripe_events (event_id PK) — duplicate ⇒ 200, stop    │
+ │   b. read email off the session, normalise, upsert donors row      │
+ │   c. UPDATE donations: donor_id, events_credited,                  │
+ │      cost_per_event_at_donation, status='succeeded'                │
+ │   d. allocateForDonation()  ← attaches real sessions               │
+ └────────────────────────────────────────────────────────────────────┘
+                                 │
+                                 ▼
+ ┌── 3. ALLOCATION ───────────────────────────────────────────────────┐
+ │  n = events_credited                                               │
+ │  eligible = sessions WHERE status='scheduled'                      │
+ │             AND starts_at IN [donation+7d, donation+30d]           │
+ │             ORDER BY starts_at ASC LIMIT n                         │
+ │  find-or-open donor_periods row for this gift's calendar window    │
+ │  INSERT n × donation_allocations  status='pending'                 │
+ │         cost_at_allocation = donation.cost_per_event_at_donation   │
+ └────────────────────────────────────────────────────────────────────┘
+                                 │
+                                 ▼
+ ┌── 4. THE PAGE ─────────────────────────────────────────────────────┐
+ │  GET /api/donors/track/:token                                      │
+ │  lifetime strip (never resets) + current edition + session list    │
+ └────────────────────────────────────────────────────────────────────┘
+                                 │  sessions run, admin records attendance
+                                 ▼
+ ┌── 5. BATCHING (15th / end-of-month) ───────────────────────────────┐
+ │  POST /api/admin/cron/close-periods                                │
+ │  for each open donor_period past its period_end:                   │
+ │     completed = allocations WHERE status='completed'                │
+ │                 AND email_sent_at IS NULL                          │
+ │     if completed is empty → roll forward, DO NOT email             │
+ │     else → send ONE email listing all of them                      │
+ │            stamp email_sent_at (starts the 14-day removal clock)   │
+ │            close the period                                        │
+ └────────────────────────────────────────────────────────────────────┘
+                                 │
+                                 ▼
+ ┌── 6. REMOVAL (next boundary) ──────────────────────────────────────┐
+ │  Track view filters out allocations whose email_sent_at is         │
+ │  older than 14 days. Lifetime strip still counts them.             │
+ └────────────────────────────────────────────────────────────────────┘
+```
+
+### How many sessions a gift buys
+
+`src/lib/donation-credit.js`:
+
+```
+events_credited = max(1, ceil(amount_hkd / COST_PER_EVENT_HKD))
+```
+
+`COST_PER_EVENT_HKD = 500`. HKD 2,500 → 5 events; HKD 501 → 2 events.
+
+**`ceil`, not `floor`, and this is deliberate.** Under `floor`, a HKD 501 donor is told
+their extra dollar bought nothing. The claim we make is *"your gift helped make this
+session possible"* — never *"paid for"* — so rounding up is truthful. A refactor to
+`Math.floor` or integer division silently changes 2 → 1 and **only
+`tests/lib/donation-credit.test.js` would catch it.**
+
+**Uncapped.** HKD 50,000 credits 100 events. The number is the honest one and every
+lifetime total derives from it; only the *rendered list* is capped, at
+`MAX_EVENTS_SHOWN = 10`.
+
+**The divisor is snapshotted** onto each donation as `cost_per_event_at_donation`. Revising
+the constant later must never rewrite what a donor was already told. `creditFor()` accepts an
+override precisely so a historical donation can be replayed against its own snapshot.
+
+### Which sessions get picked
+
+A **rolling window**: sessions starting between `donation + 7 days` and `donation + 30 days`,
+`status='scheduled'`, ordered by `starts_at` ascending, limited to `events_credited`.
+
+The 7-day floor matters — a session must not run before the donor has had a chance to read
+about it. The 30-day ceiling keeps the list to things they can actually anticipate.
+
+If fewer eligible sessions exist than credited, the service inserts what it found and returns
+`{ insufficient: true, remaining: N }`. Nothing retries automatically yet (see
+[gaps](#demo-only-gaps-in-donor-tracking)).
+
+### Editions and the batching calendar
+
+Session *eligibility* is rolling; email *cadence* is a fixed calendar. These are decoupled
+on purpose.
+
+`src/lib/donation-periods.js` maps a donation date to its edition:
+
+| Gift made | Edition sends | Covers |
+|---|---|---|
+| 1st – 15th | **last day of that month** | 15th → EOM−1 |
+| 16th – EOM | **15th of next month** | last month's EOM → 14th |
+
+> **"The 31st" is not a date.** February has 28 or 29; April, June, September and November
+> have 30. `lastDayOfMonth()` computes it. A job literally scheduled on the 31st skips five
+> months a year.
+
+An edition never reports on a session happening the day it sends — that day rolls into the
+next edition, where it is a settled fact.
+
+**Empty editions never send.** A period whose completed allocations are all already emailed
+(or which has none) rolls forward untouched. Six lines of "headcount pending" is a worse
+email than no email, and a one-time donor only gets two emails total.
+
+### The lifetime strip
+
+Computed on read in `donors.service.buildTrackView()` — never stored as counters, so a
+data correction never has to sweep denormalised aggregates.
+
+| Field | Definition |
+|---|---|
+| `sessions_supported` | `COUNT(DISTINCT session_id)` over `status='completed'` allocations |
+| `sessions_on_the_way` | `COUNT(DISTINCT session_id)` over `pending` + `planned` |
+| `people_reached` | `SUM(attendance_count)` over those distinct completed sessions |
+| `total_given_hkd` | `SUM(amount_hkd)` over `status='succeeded'` donations only |
+| `donation_count` | `COUNT` of succeeded donations |
+| `donor.supporter_since` | `MIN(created_at)` over succeeded donations |
+
+**`DISTINCT` is load-bearing.** Two of a donor's gifts can land on the same session; counting
+rows would inflate the headline number.
+
+**Failed and refunded donations are excluded from every figure.** A refund still counting
+toward a lifetime total is a number we would have to defend in front of the judging panel
+and lose.
+
+**New-donor case:** a first-timer sees `sessions_supported: 0` alongside
+`sessions_on_the_way: 5`. The client renders *"0 supported · 5 on the way"* — zero must not
+read as failure at the moment of peak engagement.
+
+**Null attendance counts as 0, not omitted.** A session that ran but whose headcount staff
+haven't entered still counts as supported; it contributes 0 to `people_reached` and the
+client renders *"ran · headcount pending"*. Never fabricate a number, never show a bare `0`
+as if it were fact.
+
+### Track response shape
+
+```jsonc
+{ "data": {
+  "donor":    { "full_name": "Alex", "supporter_since": "2026-06-01T00:00:00Z" },
+  "lifetime": { "sessions_supported": 3, "sessions_on_the_way": 2,
+                "people_reached": 34, "total_given_hkd": 2500, "donation_count": 1 },
+  "period":   { "id": "...", "period_start": "2026-08-15", "period_end": "2026-08-31",
+                "status": "open", "is_current": true,
+                "events_credited": 5,     // what the gift bought
+                "events_shown": 5,        // capped at MAX_EVENTS_SHOWN
+                "events": [ { "kind": "session", "id": "...",
+                              "title": "Floor curling",      // resolved to donor.locale
+                              "location": "San Po Kong",
+                              "starts_at": "2026-08-20T10:00:00Z",
+                              "status": "scheduled",         // the SESSION's status
+                              "expected_participants": null,
+                              "attendance_count": null,      // null ⇒ pending, never 0
+                              "photo_url": null } ] },
+  "periods":  [ { "id": "...", "label": "15 Aug – 30 Aug", "status": "open" } ]
+} }
+```
+
+`?period=<uuid>` returns an archived edition instead of the current one.
+
+**There is no `allocations` key, and `events[].status` is the session's own
+`scheduled | completed | cancelled`** — not the allocation's internal
+`pending | planned | completed`. The allocation table is an implementation detail; the donor
+sees events, not bookkeeping.
+
+`title` and `location` collapse `_en` / `_zh` pairs via `lib/locale.resolveLocale()` using
+`donor.locale`, falling back to English when a translation is empty.
+
+### Why the token is in the URL
+
+`donors.access_token` is `crypto.randomBytes(32).toString('hex')` — 64 hex chars, generated
+once and **stable forever**, so an old email link never breaks.
+
+Putting a bearer credential in a URL is an accepted tradeoff, not an oversight. Mitigations:
+
+- the token is cryptographically random, never a sequential id
+- `GET /api/donors/track/:token` sets `X-Robots-Tag: noindex, nofollow`
+- there is **no enumeration endpoint** — you cannot list donors or tokens
+- an unknown token returns `404`, never `403` — a 403 would confirm the token shape
+
+Anyone the email is forwarded to sees the page, including cumulative giving history. That
+is the known cost of "no accounts, ever".
+
+### Data model
+
+| Table | Role |
+|---|---|
+| `donors` | Keyed on **normalised** email (lowercase + trim). `access_token`, `tracking_opt_in`, `last_completion_email_at`. |
+| `donations` | `donor_id` (nullable until the webhook), `amount_hkd`, `events_credited`, `cost_per_event_at_donation`, `stripe_session_id` (unique), `status`, plus the optional feedback columns. |
+| `donation_allocations` | The join: `donation_id`, `session_id`, `donor_period_id`, `cost_at_allocation`, `status`, `email_sent_at`. Unique on `(donation_id, session_id)`. |
+| `donor_periods` | One edition. `period_start`, `period_end`, `status`, `emailed_at`. Partial unique index enforces **one open period per donor**. |
+| `sessions` | The events calendar. Also the public calendar. `attendance_count`, `attendance_source`, `photo_url`. |
+| `stripe_events` | Idempotency ledger. `event_id` is the PK. |
+
+> **Email normalisation is not cosmetic.** `Bob@X.com` and `bob@x.com` must resolve to one
+> donor or collation silently splits a supporter's history across two tracking pages. Done in
+> `lib/normalize.js`, applied on every write path.
+
+### Idempotency
+
+Three independent guards, because Stripe retries on any timeout or non-2xx:
+
+1. **`stripe_events` ledger** — written *before* any handler runs. A duplicate delivery
+   short-circuits to `200` without touching donors, donations or email.
+2. **`donations.stripe_session_id` unique** — a second insert for the same session fails at
+   the DB.
+3. **Status check** — an already-`succeeded` donation is never re-credited.
+
+The webhook always returns `200` once the event is recorded, including for unhandled event
+types. A non-2xx would make Stripe retry forever.
+
+Allocation runs inside `handleCheckoutCompleted` but wrapped in its own `try/catch` — a query
+failure there must not prevent the `200`, or the retry loop never converges.
+
+### The state machine
+
+```
+allocation:  pending ──► planned ──► completed
+                 └──► cancelled (session cancelled)
+
+session:     scheduled ──► completed
+                  └──► cancelled
+```
+
+`POST /api/admin/demo/advance-donation/:id` with `{ "to": "planned" | "completed" }` forces
+every allocation on a donation. **DEMO-ONLY** — it exists so a 10-minute stage demo can reach
+the completed state without waiting two weeks.
+
+> **Overlaps `POST /api/admin/sessions/attendance/bulk`** (volunteer track). Both mark things
+> completed. Theirs is the real path — session-driven, with genuine attendance. Coordinate
+> before either is wired into the demo script.
+
+### Running it locally
+
+```bash
+# 1. Apply the migrations (announce first — an ALTER mid-rehearsal breaks a teammate)
+#    supabase/migrations/20260803_1055_sessions_and_allocations.sql
+#    supabase/migrations/20260803_1060_donations_drop_programme.sql   ← needs sign-off
+
+# 2. Seed ~40 demo sessions across days +2 to +30
+npm run seed
+
+# 3. Stripe listener — copy the whsec_ it prints into server/.env
+stripe listen --forward-to localhost:3000/api/webhooks/stripe
+
+# 4. Boot
+npm run dev
+```
+
+> **`STRIPE_WEBHOOK_SECRET` is regenerated by every `stripe listen` session.** Forget to
+> re-paste it and the webhook 500s, the donation stays `pending` forever, and nothing
+> allocates. This is the single most common way the demo breaks.
+
+Watch the batch email land in the server terminal (`EMAIL_MODE=log`) after
+`POST /api/admin/cron/close-periods`.
+
+### DEMO-ONLY gaps in donor tracking
+
+| What is faked / missing | Real version needs |
+|---|---|
+| Seeded `[demo]`-prefixed sessions | Staff-authored sessions via `/admin/postings` |
+| `POST /api/donors/recover-link` returns `{sent:true}`, sends nothing | Resend + a sliding-window rate limiter |
+| `EMAIL_MODE=log` prints to stdout | DNS verification on `love21foundation.com` (§17) |
+| Batching runs only on manual trigger | A real scheduler (`node-cron` or platform cron) |
+| No retry for `insufficient` allocations | Nightly job re-running `allocateForDonation` |
+| No admin auth on `/api/admin/*` | `requireRole('admin')` from backend-dev |
+| `advance-donation` forces state | Deletion before any real deployment |
+| `sessions.expected_participants` always `null` | The column, plus admin entry at scheduling |
+| Only `sessions` are allocatable | Union with `volunteer_opportunities` |
+
+### Where the code lives
+
+```
+src/lib/donation-credit.js            the ceil formula + COST_PER_EVENT_HKD
+src/lib/donation-periods.js           fixed-calendar edition maths, editionLabel
+src/lib/email.js                      EMAIL_MODE=log|send wrapper
+src/lib/stripe.js                     Stripe client + signature verification
+src/services/donations/
+  checkout.service.js                 Checkout Session + pending donation
+  webhook.service.js                  event dispatch, idempotency, credit snapshot
+  allocation.service.js               the rolling-window selection algorithm
+  period-close.service.js             batching, email, email_sent_at stamping
+src/services/donors.service.js        upsertDonor + buildTrackView (the strip)
+src/data/{donations,donors,allocations,donor-periods,sessions}.repo.js
+tests/services/donations/             allocation, webhook, checkout, period-close
+tests/services/donors.service.test.js buildTrackView guarantees
+tests/lib/donation-credit.test.js     the ceil table — the tripwire
+```
 
 ---
 
@@ -214,3 +562,31 @@ Two separate SQL homes — both are correct, neither supersedes the other:
 | `src/schema/` | Domain-numbered | **Yes** — volunteer tables are live |
 
 Apply content migrations one at a time and announce before running — an `ALTER` mid-rehearsal breaks teammates.
+
+### Donation-track migrations on this branch
+
+| File | Contents | Destructive? |
+|---|---|---|
+| `20260801_1050_donations.sql` | `donors`, `donations`, `donor_periods` | No — but **drifted from live**, see below |
+| `20260802_1050_donations_stripe.sql` | Stripe columns, `events_credited`, `stripe_events` | No |
+| `20260803_1055_sessions_and_allocations.sql` | `sessions`, `donation_allocations`, `email_sent_at`, **service_role grants** | No |
+| `20260803_1060_donations_drop_programme.sql` | `drop column donations.programme` | **YES — needs sign-off** |
+
+> **`service_role` grants are not optional.** A table created through `apply_migration` lands
+> without DML grants. Enabling RLS blocks anon; without the explicit
+> `grant select, insert, update, delete … to service_role` the server's own writes fail with
+> `42501 permission denied`. `20260803_1055` includes them for both tables it creates — any
+> future donation-track migration must do the same.
+
+> **Live-vs-migration drift.** `20260801_1050_donations.sql` declares columns
+> (`stripe_session_id`, `stripe_payment_intent`, …) that were **not** on the live table when
+> last checked — the live tables came from elsewhere. `donations.repo.findByStripeSession()`
+> queries `stripe_session_id`, so if the live table is still missing it, **the webhook path
+> throws PostgREST 42703 on the first real payment.** Verify with `mcp__supabase__list_tables`
+> before the demo; `20260802_1050_donations_stripe.sql` is additive and closes the gap.
+
+> **The `programme` drop is safe today and unsafe later.** `donations` holds 0 rows, nothing
+> reads the column, and request bodies are `z.strictObject` so a client still sending it gets
+> a clean 400. After real donations exist the column carries historical intent and the answer
+> flips to "leave it defaulted". Split into its own file so the additive migration can be
+> applied without triggering it.
