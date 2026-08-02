@@ -45,9 +45,22 @@ async function submitVoice(body, actor) {
     throw ApiError.badRequest("photo_url must come from POST /api/uploads/community-photo.");
   }
 
+  // DEMO-ONLY: VOICES_AUTO_APPROVE=true publishes a submission straight to the wall,
+  // skipping the moderation queue, so the flow can be shown end to end without an
+  // admin login mid-demo. Real version must never set this — it is the only thing
+  // stopping anonymous text and images appearing on a public page unreviewed.
+  //
+  // Compared against the exact string "true" rather than tested for truthiness: an
+  // env var is always a string, so `if (process.env.X)` would treat "false" as on,
+  // which is how a demo flag quietly ships enabled.
+  const autoApprove = process.env.VOICES_AUTO_APPROVE === "true";
+
   return communityPostsRepo.create({
     ...postData,
     submitted_by: actor?.userId ?? null,
+    // Omitted rather than set to 'pending' when off, so the column default stays the
+    // single source of truth for what an unmoderated row looks like.
+    ...(autoApprove ? { status: "approved" } : {}),
   });
 }
 

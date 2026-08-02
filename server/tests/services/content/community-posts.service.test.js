@@ -188,3 +188,56 @@ test("submitVoice honeypot short-circuit ignores the actor argument", async (t) 
   assert.equal(createFn.mock.calls.length, 0, "honeypot must skip the DB even for signed-in callers");
   assert.equal(result.id, null);
 });
+
+test("submitVoice files a submission as pending by default", async (t) => {
+  let received;
+  mock.method(communityPostsRepo, "create", async (data) => {
+    received = data;
+    return { id: "1", submitted_at: "now" };
+  });
+  t.after(() => {
+    mock.restoreAll();
+    delete process.env.VOICES_AUTO_APPROVE;
+  });
+
+  delete process.env.VOICES_AUTO_APPROVE;
+  await submitVoice({ author_name: "A", relationship: "parent", story: "x", consent_given: true });
+
+  // No status passed at all — the column default decides, which is 'pending'.
+  assert.equal(received.status, undefined);
+});
+
+test("submitVoice can auto-approve when the demo flag is on", async (t) => {
+  let received;
+  mock.method(communityPostsRepo, "create", async (data) => {
+    received = data;
+    return { id: "1", submitted_at: "now" };
+  });
+  t.after(() => {
+    mock.restoreAll();
+    delete process.env.VOICES_AUTO_APPROVE;
+  });
+
+  process.env.VOICES_AUTO_APPROVE = "true";
+  await submitVoice({ author_name: "A", relationship: "parent", story: "x", consent_given: true });
+
+  assert.equal(received.status, "approved");
+});
+
+test("submitVoice treats any value other than 'true' as moderation on", async (t) => {
+  let received;
+  mock.method(communityPostsRepo, "create", async (data) => {
+    received = data;
+    return { id: "1", submitted_at: "now" };
+  });
+  t.after(() => {
+    mock.restoreAll();
+    delete process.env.VOICES_AUTO_APPROVE;
+  });
+
+  // "false" must not read as truthy — that is how a demo flag ships to production on.
+  process.env.VOICES_AUTO_APPROVE = "false";
+  await submitVoice({ author_name: "A", relationship: "parent", story: "x", consent_given: true });
+
+  assert.equal(received.status, undefined);
+});
