@@ -34,6 +34,8 @@ export function mapVoice(row) {
     source: 'community',
     author: row.author_name,
     relationship: row.relationship,
+    // Null for rows submitted before the field existed; those stay in "All" only.
+    type: row.activity_type ?? null,
     story: row.story,
     images: row.photo_url ? [row.photo_url] : [],
     accent: accentFor(row.id),

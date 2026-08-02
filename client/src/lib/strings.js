@@ -166,6 +166,8 @@ export const STRINGS = {
       shareLine: 'Your story',
       shareLinePlaceholder: 'e.g. Finished the race with the whole crew, high-fives all round.',
       shareLengthHint: 'At least {min} characters — {n} so far',
+      shareActivityLabel: 'What was it about?',
+      shareActivityHint: 'This is the tag on your card, and the tab it appears under.',
       shareRelationshipLabel: 'Your relationship to Love 21',
       relationships: {
         volunteer: 'Volunteer',
@@ -984,6 +986,8 @@ export const STRINGS = {
       shareLine: '你的故事',
       shareLinePlaceholder: '例如：與全隊一起完成比賽，互相擊掌慶祝。',
       shareLengthHint: '至少需要 {min} 個字——目前 {n} 個',
+      shareActivityLabel: '這是關於甚麼的？',
+      shareActivityHint: '這會成為卡片上的標籤，以及它所屬的分頁。',
       shareRelationshipLabel: '你與 Love 21 的關係',
       relationships: {
         volunteer: '義工',
@@ -1753,6 +1757,8 @@ export const STRINGS = {
       shareLine: '你的故事',
       shareLinePlaceholder: '例如：与全队一起完成比赛，互相击掌庆祝。',
       shareLengthHint: '至少需要 {min} 个字——目前 {n} 个',
+      shareActivityLabel: '这是关于什么的？',
+      shareActivityHint: '这会成为卡片上的标签，以及它所属的分页。',
       shareRelationshipLabel: '你与 Love 21 的关系',
       relationships: {
         volunteer: '志愿者',

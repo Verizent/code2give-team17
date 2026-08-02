@@ -66,17 +66,13 @@ function MomentsCounter() {
 }
 
 function buildFeed(filter, voices, embeds, page) {
-  const curated =
-    filter === 'all' ? stories : stories.filter((s) => s.type === filter)
-
-  // Submitted posts have no activity type, so they belong to the unfiltered wall only.
-  // Including them under a programme tab would assert a programme nobody recorded.
-  const ordered =
-    filter === 'all'
-      ? [...voices, ...curated].sort(
-          (a, b) => new Date(b.postedAt) - new Date(a.postedAt),
-        )
-      : curated
+  // A submission now carries its own activity type, so it filters exactly like a
+  // curated story. One submitted before the field existed has `type: null` and stays
+  // in "All" — filing it under a programme would assert one nobody recorded.
+  const all = [...voices, ...stories]
+  const ordered = (filter === 'all' ? all : all.filter((s) => s.type === filter)).sort(
+    (a, b) => new Date(b.postedAt) - new Date(a.postedAt),
+  )
 
   // A page counts stories, not cards: knowledge and Instagram cards are furniture
   // between them, so counting those would make later pages hold fewer actual stories.

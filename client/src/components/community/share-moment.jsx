@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { Camera, X } from 'lucide-react'
 import { useSite } from '@/components/site-provider'
 import { useAuth } from '@/features/auth/AuthProvider'
-import { RELATIONSHIP_OPTIONS } from '@/lib/mock'
+import { ACTIVITY_TYPES, RELATIONSHIP_OPTIONS } from '@/lib/mock'
 import { submitVoice, uploadCommunityPhoto } from '@/features/content/api'
 import { cn } from '@/lib/utils'
 
@@ -67,6 +67,7 @@ function ShareMomentDialog({ onClose }) {
   const [photoPreview, setPhotoPreview] = useState(null)
   const [photoError, setPhotoError] = useState(null)
   const [relationship, setRelationship] = useState(RELATIONSHIP_OPTIONS[0])
+  const [activityType, setActivityType] = useState(ACTIVITY_TYPES[0])
   const [consent, setConsent] = useState(false)
   // Honeypot for POST /api/community-posts — real users never see or fill this.
   const [website, setWebsite] = useState('')
@@ -189,6 +190,7 @@ function ShareMomentDialog({ onClose }) {
       await submitVoice({
         authorName: authorName.trim(),
         relationship,
+        activityType,
         story: line.trim(),
         contactEmail: emailTrimmed || undefined,
         photoUrl,
@@ -337,6 +339,26 @@ function ShareMomentDialog({ onClose }) {
               </p>
             )}
           </div>
+
+          {/* The tag on the finished card, and the tab it will be filed under. Without
+              this a submission can never appear under any filter. */}
+          <label className="block">
+            <span className="kicker text-teal">{t.community.shareActivityLabel}</span>
+            <select
+              value={activityType}
+              onChange={(e) => setActivityType(e.target.value)}
+              className="mt-2 min-h-[44px] w-full rounded-xl border border-border bg-card px-4 py-3 text-base text-ink outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              {ACTIVITY_TYPES.map((id) => (
+                <option key={id} value={id}>
+                  {t.community.filters[id]}
+                </option>
+              ))}
+            </select>
+            <span className="mt-1.5 block text-xs text-ink/50">
+              {t.community.shareActivityHint}
+            </span>
+          </label>
 
           <label className="block">
             <span className="kicker text-teal">{t.community.shareRelationshipLabel}</span>

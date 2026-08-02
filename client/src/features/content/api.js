@@ -30,6 +30,7 @@ export async function getImpact(locale = 'en') {
 export async function submitVoice({
   authorName,
   relationship,
+  activityType,
   story,
   contactEmail,
   photoUrl,
@@ -46,6 +47,7 @@ export async function submitVoice({
       relationship,
       story,
       consent_given: true,
+      ...(activityType ? { activity_type: activityType } : {}),
       ...(contactEmail ? { contact_email: contactEmail } : {}),
       ...(photoUrl ? { photo_url: photoUrl } : {}),
       ...(website ? { website } : {}),

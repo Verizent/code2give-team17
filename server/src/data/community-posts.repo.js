@@ -9,6 +9,7 @@ const PUBLIC_COLUMNS = [
   "id",
   "author_name",
   "relationship",
+  "activity_type",
   "story",
   "photo_url",
   "submitted_at",

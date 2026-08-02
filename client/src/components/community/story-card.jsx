@@ -149,9 +149,16 @@ export function StoryCard({ story }) {
 
   // `relationship` is any non-empty string server-side, so an unrecognised value
   // falls back to itself rather than rendering "undefined" on the card.
-  const tagLabel = isSubmitted
-    ? (t.community.relationships[story.relationship] ?? story.relationship)
-    : t.community.filters[story.type]
+  const relationshipLabel = t.community.relationships[story.relationship] ?? story.relationship
+
+  // The pill is the activity type on every card, submitted or curated, because that is
+  // what the filter tabs act on — a pill you cannot filter by is a lie about the wall.
+  // A submission without one (older rows) falls back to showing who wrote it.
+  const tagLabel = story.type
+    ? t.community.filters[story.type]
+    : isSubmitted
+      ? relationshipLabel
+      : null
 
   return (
     <article className="break-inside-avoid overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
@@ -168,13 +175,24 @@ export function StoryCard({ story }) {
           </span>
           <div>
             <p className="font-semibold text-navy">{story.author}</p>
-            {/* Secondary metadata — never competes with the achievement headline below. */}
-            <p className="text-xs text-navy/45">{timeAgo}</p>
+            {/* Secondary metadata — never competes with the achievement headline below.
+                Relationship moved here once the pill became the activity type, so a
+                submission still says who wrote it. */}
+            <p className="text-xs text-navy/45">
+              {isSubmitted && story.type ? `${timeAgo} · ${relationshipLabel}` : timeAgo}
+            </p>
           </div>
         </div>
-        <span className={cn('shrink-0 rounded-full px-3 py-1 text-xs font-semibold', tagStyle[story.accent])}>
-          {tagLabel}
-        </span>
+        {tagLabel && (
+          <span
+            className={cn(
+              'shrink-0 rounded-full px-3 py-1 text-xs font-semibold',
+              tagStyle[story.accent],
+            )}
+          >
+            {tagLabel}
+          </span>
+        )}
       </div>
 
       {story.images.length > 0 && (
