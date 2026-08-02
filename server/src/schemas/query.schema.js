@@ -70,6 +70,16 @@ const moderateSchema = z.strictObject({
   moderation_note: z.string().optional(),
 });
 
+/**
+ * `GET /api/admin/community-posts?status=` — which moderation tab to show.
+ *
+ * `pending` is included even though the service defaults to it, so the UI can name the
+ * tab it is on rather than relying on an omitted parameter meaning one particular thing.
+ */
+const voicesListQuerySchema = listQuerySchema.extend({
+  status: z.enum(["pending", "approved", "rejected"]).optional(),
+});
+
 module.exports = {
   listQuerySchema,
   localeQuerySchema,
@@ -77,4 +87,5 @@ module.exports = {
   slugParamSchema,
   idParamSchema,
   moderateSchema,
+  voicesListQuerySchema,
 };

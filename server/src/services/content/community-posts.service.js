@@ -70,9 +70,12 @@ async function submitVoice(body, actor) {
  * @param {{ page?: number, limit?: number }} query
  * @returns {Promise<{ items: object[], meta: { total: number, page: number, limit: number } }>}
  */
-async function listPendingVoices(query = {}) {
+async function listVoicesByStatus(query = {}) {
   const paging = parsePaging(query);
-  const { rows, total } = await communityPostsRepo.listPending({
+  const { rows, total } = await communityPostsRepo.listByStatus({
+    // Defaults to the pending queue: that is the moderation job, and the tab a
+    // moderator opens without choosing anything should be the one with work in it.
+    status: query.status ?? "pending",
     from: paging.from,
     to: paging.to,
   });
@@ -94,4 +97,28 @@ async function moderateVoice(id, body) {
   return row;
 }
 
-module.exports = { listVoices, submitVoice, listPendingVoices, moderateVoice };
+/**
+ * `DELETE /api/admin/community-posts/:id` — permanently remove a submission.
+ *
+ * Deliberately not restricted by status. Rejecting hides a post from the public wall,
+ * but a supporter who withdraws consent needs the row gone, and the status most likely
+ * to need that is `approved` — the one already on the Community page.
+ *
+ * @param {string} id
+ * @returns {Promise<{ id: string }>}
+ */
+async function deleteVoice(id) {
+  const row = await communityPostsRepo.remove(id);
+  if (!row) {
+    throw ApiError.notFound(`No community post with id "${id}"`);
+  }
+  return row;
+}
+
+module.exports = {
+  listVoices,
+  submitVoice,
+  listVoicesByStatus,
+  moderateVoice,
+  deleteVoice,
+};
