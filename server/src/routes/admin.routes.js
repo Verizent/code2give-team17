@@ -15,6 +15,7 @@ const { closeReadyPeriods } = require("../services/donations/period-close.servic
 const { getDashboard } = require("../services/admin/dashboard.service");
 const { getFunnel } = require("../services/admin/funnel.service");
 const { getAnalytics } = require("../services/admin/analytics.service");
+const { analyticsQuerySchema } = require("../schemas/analytics.schema");
 
 const router = express.Router();
 
@@ -40,13 +41,17 @@ router.get("/funnel", async (request, response, next) => {
   }
 });
 
-router.get("/analytics", async (request, response, next) => {
-  try {
-    response.json(envelope(await getAnalytics()));
-  } catch (error) {
-    next(error);
-  }
-});
+router.get(
+  "/analytics",
+  validate({ query: analyticsQuerySchema }),
+  async (request, response, next) => {
+    try {
+      response.json(envelope(await getAnalytics(request.validatedQuery.range)));
+    } catch (error) {
+      next(error);
+    }
+  },
+);
 
 router.get("/campaigns", async (request, response, next) => {
   try {

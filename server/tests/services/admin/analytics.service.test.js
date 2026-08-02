@@ -125,26 +125,36 @@ test("repeatGiftRate does not let a pending gift create a repeat donor", () => {
 
 // ── Capacity fill ─────────────────────────────────────────────────────────────
 
-test("capacityFill is null when no session offers any places", () => {
-  const result = capacityFill([{ programme: "sports", capacity: 0, attendance_count: 0 }]);
+test("capacityFill is null when no opportunity offers any places", () => {
+  const result = capacityFill([{ id: "o1", programme: "sports", capacity: 0 }], []);
   assert.equal(result.rate, null);
 });
 
-test("capacityFill is null — not zero — when sessions exist but nothing is recorded", () => {
-  // The live state today: 44 sessions, attendance_count never written.
-  const result = capacityFill([{ programme: "sports", capacity: 20, attendance_count: null }]);
+test("capacityFill is null — not zero — when signups exist but none is marked attended", () => {
+  // The live state: signups recorded, attended_at never written.
+  const result = capacityFill(
+    [{ id: "o1", programme: "sports", capacity: 20 }],
+    [{ opportunity_id: "o1", attended_at: null }],
+  );
   assert.equal(result.attended, 0);
   assert.equal(result.rate, null);
 });
 
-test("capacityFill sums attendance against capacity", () => {
-  const result = capacityFill([
-    { programme: "sports", capacity: 20, attendance_count: 10 },
-    { programme: "fitness", capacity: 30, attendance_count: 15 },
-  ]);
+test("capacityFill counts attended signups against opportunity capacity", () => {
+  const result = capacityFill(
+    [
+      { id: "o1", programme: "sports", capacity: 20 },
+      { id: "o2", programme: "fitness", capacity: 30 },
+    ],
+    [
+      { opportunity_id: "o1", attended_at: "2026-07-01T00:00:00Z" },
+      { opportunity_id: "o2", attended_at: "2026-07-01T00:00:00Z" },
+      { opportunity_id: "o2", attended_at: null },
+    ],
+  );
   assert.equal(result.capacity, 50);
-  assert.equal(result.attended, 25);
-  assert.equal(result.rate, 50);
+  assert.equal(result.attended, 2);
+  assert.equal(result.rate, 4);
 });
 
 // ── Satisfaction ──────────────────────────────────────────────────────────────
@@ -171,31 +181,54 @@ test("satisfaction averages only rows that actually submitted feedback", () => {
 // ── Programme demand ──────────────────────────────────────────────────────────
 
 test("popularProgrammes groups by programme and sorts by attendance", () => {
-  const rows = [
-    { programme: "sports", capacity: 10, attendance_count: 8 },
-    { programme: "sports", capacity: 10, attendance_count: 7 },
-    { programme: "nutrition", capacity: 5, attendance_count: 2 },
-  ];
-  const result = popularProgrammes(rows);
+  const result = popularProgrammes(
+    [
+      { id: "o1", programme: "sports", capacity: 10 },
+      { id: "o2", programme: "sports", capacity: 10 },
+      { id: "o3", programme: "nutrition", capacity: 5 },
+    ],
+    [
+      { opportunity_id: "o1", attended_at: "2026-07-01T00:00:00Z" },
+      { opportunity_id: "o2", attended_at: "2026-07-01T00:00:00Z" },
+      { opportunity_id: "o3", attended_at: "2026-07-01T00:00:00Z" },
+      { opportunity_id: "o1", attended_at: null },
+    ],
+  );
+
   assert.equal(result.length, 2);
   assert.equal(result[0].programme, "sports");
   assert.equal(result[0].capacity, 20);
-  assert.equal(result[0].attendance_count, 15);
+  assert.equal(result[0].signups, 3);
+  assert.equal(result[0].attended, 2);
   assert.equal(result[1].programme, "nutrition");
 });
 
 test("popularProgrammes gives a programme with no capacity a null fill rate", () => {
-  const result = popularProgrammes([{ programme: "family", capacity: 0, attendance_count: 0 }]);
+  const result = popularProgrammes([{ id: "o1", programme: "fitness", capacity: 0 }], []);
   assert.equal(result[0].fill_rate, null);
 });
 
-test("popularProgrammes skips rows with no programme rather than inventing a bucket", () => {
-  const result = popularProgrammes([
-    { programme: null, capacity: 10, attendance_count: 5 },
-    { programme: "sports", capacity: 10, attendance_count: 5 },
-  ]);
+test("popularProgrammes skips opportunities with no programme rather than inventing a bucket", () => {
+  const result = popularProgrammes(
+    [
+      { id: "o1", programme: null, capacity: 10 },
+      { id: "o2", programme: "sports", capacity: 10 },
+    ],
+    [],
+  );
   assert.equal(result.length, 1);
   assert.equal(result[0].programme, "sports");
+});
+
+test("popularProgrammes ignores a signup whose opportunity is outside the window", () => {
+  const result = popularProgrammes(
+    [{ id: "o1", programme: "sports", capacity: 10 }],
+    [
+      { opportunity_id: "o1", attended_at: "2026-07-01T00:00:00Z" },
+      { opportunity_id: "gone", attended_at: "2026-07-01T00:00:00Z" },
+    ],
+  );
+  assert.equal(result[0].signups, 1);
 });
 
 // ── Acquisition source ────────────────────────────────────────────────────────
@@ -222,8 +255,11 @@ test("acquisitionSource returns empty lists rather than throwing on no rows", ()
 
 test("getAnalytics composes every metric and never returns NaN over the wire", async (t) => {
   mock.method(analyticsRepo, "listDonations", async () => [gift("a", 1), gift("a", 14)]);
-  mock.method(analyticsRepo, "listSessions", async () => [
-    { programme: "sports", capacity: 10, attendance_count: 5 },
+  mock.method(analyticsRepo, "listOpportunities", async () => [
+    { id: "o1", programme: "sports", capacity: 10, starts_at: monthsAgo(1) },
+  ]);
+  mock.method(analyticsRepo, "listSignups", async () => [
+    { opportunity_id: "o1", attended_at: monthsAgo(1), created_at: monthsAgo(1) },
   ]);
   mock.method(analyticsRepo, "listSignupFeedback", async () => []);
   mock.method(analyticsRepo, "listAcquisitionSources", async () => ({
@@ -238,7 +274,7 @@ test("getAnalytics composes every metric and never returns NaN over the wire", a
   // JSON.stringify turns NaN into null silently — assert on the round trip, which is
   // what the client actually receives.
   assert.ok(!JSON.stringify(payload).includes("NaN"));
-  assert.equal(payload.capacity_fill.rate, 50);
+  assert.equal(payload.capacity_fill.rate, 10);
   assert.equal(payload.satisfaction.average_rating, null);
   assert.equal(payload.acquisition.available, false);
 });

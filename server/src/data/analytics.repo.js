@@ -32,7 +32,16 @@ const STUB_VOLUNTEER_SOURCES = [
 //            queries below are untouched and need no other change.
 const USE_STUB_ANALYTICS = true;
 
-const STUB_PROGRAMMES = ["family", "fitness", "nutrition", "sports", "where_needed"];
+// Volunteer programmes only. `where_needed` is a DONOR designation ("give where needed
+// most") and no volunteer can sign up for one, so it must never appear here.
+// Weights are deliberately uneven — live data has sports at 145 places against
+// community_education at 3, and four equal bars read as fabricated.
+const STUB_PROGRAMMES = [
+  { programme: "sports", opportunities: 26, capacity: [14, 26] },
+  { programme: "fitness", opportunities: 18, capacity: [8, 16] },
+  { programme: "nutrition", opportunities: 14, capacity: [6, 12] },
+  { programme: "community_education", opportunities: 8, capacity: [3, 6] },
+];
 
 /**
  * Deterministic PRNG (mulberry32), matching db/seed/analytics.seed.js.
@@ -133,24 +142,25 @@ function stubDonations() {
 }
 
 /**
- * 120 sessions, 24 per programme — roughly a fortnightly cadence across a year.
+ * Volunteer opportunities across 24 months, unevenly sized by programme.
  *
- * Never uniformly full: a chart where every bar is complete reads as fabricated, and the
- * gap between places offered and attendance is the insight the programme panel exists to
- * show.
+ * `starts_at` is what the range filter windows on, so every one of the last 12 months
+ * carries at least one opportunity — otherwise a narrow range empties the panel.
  */
-function stubSessions() {
+function stubOpportunities() {
   const rows = [];
 
-  for (const programme of STUB_PROGRAMMES) {
-    for (let i = 0; i < 24; i += 1) {
-      const random = makeRandom(hashToInt(`${programme}-${i}`));
-      const capacity = 8 + Math.floor(random() * 17);
-      const fill = 0.55 + random() * 0.4;
+  for (const spec of STUB_PROGRAMMES) {
+    for (let i = 0; i < spec.opportunities; i += 1) {
+      const id = `stub-opp-${spec.programme}-${i}`;
+      const random = makeRandom(hashToInt(id));
+      const [min, max] = spec.capacity;
+
       rows.push({
-        programme,
-        capacity,
-        attendance_count: Math.max(1, Math.round(capacity * fill)),
+        id,
+        programme: spec.programme,
+        capacity: min + Math.floor(random() * (max - min + 1)),
+        starts_at: monthStart(i % 24),
       });
     }
   }
@@ -159,19 +169,47 @@ function stubSessions() {
 }
 
 /**
- * 90 signups across a year, roughly 70% of which left feedback.
+ * Signups against those opportunities, ~75% of which were attended.
  *
- * Not all of them — a 100% response rate does not happen, and the response count on the
- * tile is there to show how thin the sample is.
+ * Never fills an opportunity to capacity and never marks every signup attended: the gap
+ * between places offered, signed up and turned up is the no-show story the programme
+ * panel exists to show, and closing it would erase the point of the third bar.
+ */
+function stubSignups() {
+  const rows = [];
+
+  for (const opportunity of stubOpportunities()) {
+    const random = makeRandom(hashToInt(`signups-${opportunity.id}`));
+    const signupCount = Math.max(1, Math.round(opportunity.capacity * (0.5 + random() * 0.4)));
+
+    for (let i = 0; i < signupCount; i += 1) {
+      const attended = random() < 0.75;
+      rows.push({
+        opportunity_id: opportunity.id,
+        // A signup is made before the session and attendance is marked at it, so both
+        // hang off the opportunity's own date rather than a free-floating one.
+        created_at: opportunity.starts_at,
+        attended_at: attended ? opportunity.starts_at : null,
+      });
+    }
+  }
+
+  return rows;
+}
+
+/**
+ * 90 pieces of volunteer feedback across a year, on roughly 70% of signups.
+ *
+ * Not all of them — a 100% response rate does not happen, and the response count beside
+ * the satisfaction score exists to show how thin the sample is.
  */
 function stubSignupFeedback() {
   const rows = [];
 
   for (let i = 0; i < 90; i += 1) {
     const random = makeRandom(hashToInt(`stub-signup-${i}`));
-    const answered = random() < 0.7;
 
-    if (!answered) {
+    if (random() > 0.7) {
       rows.push({ experience_rating: null, would_return: null, feedback_submitted_at: null });
       continue;
     }
@@ -188,7 +226,8 @@ function stubSignupFeedback() {
 }
 
 const DONATION_COLUMNS = ["donor_id", "amount_hkd", "status", "created_at", "frequency"].join(", ");
-const SESSION_COLUMNS = ["programme", "capacity", "attendance_count"].join(", ");
+const OPPORTUNITY_COLUMNS = ["id", "programme", "capacity", "starts_at"].join(", ");
+const SIGNUP_COLUMNS = ["opportunity_id", "attended_at", "created_at"].join(", ");
 const SIGNUP_FEEDBACK_COLUMNS = [
   "experience_rating",
   "would_return",
@@ -215,12 +254,34 @@ async function listDonations() {
 }
 
 /**
+ * Every volunteer opportunity, past and future.
+ *
+ * Deliberately not `opportunities.repo.listOpen`, which filters to open, upcoming rows
+ * for the public volunteer page — analytics is about what already happened, and reusing
+ * that query would silently drop exactly the history these metrics measure.
+ *
  * @returns {Promise<object[]>}
  */
-async function listSessions() {
-  if (USE_STUB_ANALYTICS) return stubSessions();
+async function listOpportunities() {
+  if (USE_STUB_ANALYTICS) return stubOpportunities();
 
-  const { data, error } = await getSupabase().from("sessions").select(SESSION_COLUMNS);
+  const { data, error } = await getSupabase()
+    .from("volunteer_opportunities")
+    .select(OPPORTUNITY_COLUMNS);
+
+  assertOk(error);
+  return data ?? [];
+}
+
+/**
+ * @returns {Promise<object[]>}
+ */
+async function listSignups() {
+  if (USE_STUB_ANALYTICS) return stubSignups();
+
+  const { data, error } = await getSupabase()
+    .from("volunteer_signups")
+    .select(SIGNUP_COLUMNS);
 
   assertOk(error);
   return data ?? [];
@@ -272,7 +333,8 @@ async function listAcquisitionSources() {
 
 module.exports = {
   listDonations,
-  listSessions,
+  listOpportunities,
+  listSignups,
   listSignupFeedback,
   listAcquisitionSources,
   // Exported so the stub test suite can skip itself rather than fail when someone flips

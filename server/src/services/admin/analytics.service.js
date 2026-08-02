@@ -8,6 +8,11 @@ const MONTHS_PER_WINDOW = 12;
 /** The giving chart spans a full year. */
 const CHART_MONTHS = 12;
 const SUCCEEDED = "succeeded";
+
+/** Window lengths in months. `all` is unbounded. */
+const RANGE_MONTHS = { all: null, "1y": 12, "6m": 6, "3m": 3, "1m": 1 };
+/** A one-bar chart is not a chart, so short ranges still draw three months. */
+const MIN_CHART_MONTHS = 3;
 const UNKNOWN_SOURCE = "unknown";
 
 /**
@@ -27,6 +32,41 @@ function rate(numerator, denominator) {
   if (!Number.isFinite(denominator) || denominator <= 0) return null;
   if (!Number.isFinite(numerator)) return null;
   return Math.round((numerator / denominator) * 1000) / 10;
+}
+
+/**
+ * Start of the selected window, or null for all-time.
+ *
+ * Inclusive at the boundary: a gift made at the exact cutoff instant belongs to the
+ * window. Excluding it would drop a real row for no reason a reader could infer.
+ *
+ * @param {string} range
+ * @param {Date} [now]
+ * @returns {Date | null}
+ */
+function windowFor(range, now = new Date()) {
+  const months = RANGE_MONTHS[range] ?? null;
+  return months === null ? null : shiftMonths(now, -months);
+}
+
+/**
+ * @param {object[]} rows
+ * @param {string} field
+ * @param {Date | null} start
+ */
+function within(rows, field, start) {
+  if (!start) return rows;
+
+  return rows.filter((row) => {
+    const at = new Date(row[field]);
+    return !Number.isNaN(at.getTime()) && at >= start;
+  });
+}
+
+/** Short human label for a window, e.g. "Mar–Aug 26". */
+function windowLabel(from, to) {
+  const month = (d) => d.toLocaleString("en-GB", { month: "short", timeZone: "UTC" });
+  return `${month(from)}–${month(to)} ${String(to.getUTCFullYear()).slice(2)}`;
 }
 
 /**
@@ -54,9 +94,9 @@ function succeededOnly(rows) {
  * @param {object[]} donations
  * @param {Date} [now]
  */
-function donorRetention(donations, now = new Date()) {
-  const currentStart = shiftMonths(now, -MONTHS_PER_WINDOW);
-  const priorStart = shiftMonths(now, -MONTHS_PER_WINDOW * 2);
+function donorRetention(donations, now = new Date(), months = MONTHS_PER_WINDOW) {
+  const currentStart = shiftMonths(now, -months);
+  const priorStart = shiftMonths(now, -months * 2);
 
   const current = new Set();
   const prior = new Set();
@@ -76,6 +116,14 @@ function donorRetention(donations, now = new Date()) {
     retained,
     prior_donors: prior.size,
     current_donors: current.size,
+    // The tile renders "N of M donors who gave <prior> gave again <current>". Naming both
+    // windows is what keeps the figure interpretable once the range stops being a year —
+    // without them a 3-month number looks exactly like an annual one.
+    prior_window_label: windowLabel(priorStart, currentStart),
+    current_window_label: windowLabel(currentStart, now),
+    // The published 40–45% benchmark is defined annually. Printed beside a 3-month figure
+    // it invites a comparison that is not valid, so the client withholds it.
+    benchmark_applies: months === MONTHS_PER_WINDOW,
   };
 }
 
@@ -101,21 +149,20 @@ function repeatGiftRate(donations) {
 }
 
 /**
- * Attendance against places offered, across every session.
+ * Volunteer attendance against the places offered on volunteer opportunities.
  *
- * @param {object[]} sessions
+ * Volunteers, not members: this used to read `sessions`, whose programme list includes
+ * `where_needed` — a donation designation nobody can volunteer for.
+ *
+ * @param {object[]} opportunities
+ * @param {object[]} signups
  */
-function capacityFill(sessions) {
-  let capacity = 0;
-  let attended = 0;
+function capacityFill(opportunities, signups) {
+  const capacity = opportunities.reduce((sum, row) => sum + (Number(row.capacity) || 0), 0);
+  const attended = signups.filter((row) => row.attended_at).length;
 
-  for (const row of sessions) {
-    capacity += Number(row.capacity) || 0;
-    attended += Number(row.attendance_count) || 0;
-  }
-
-  // A session roster that exists but has never been marked reads as attended === 0.
-  // That is absence of evidence, so it must not become a 0% finding.
+  // Signups that exist but were never marked attended read as attended === 0. That is
+  // absence of evidence, so it must not become a 0% finding.
   return {
     rate: attended > 0 ? rate(attended, capacity) : null,
     attended,
@@ -149,30 +196,47 @@ function satisfaction(signups) {
 }
 
 /**
- * Places offered against people who came, per programme, busiest first.
+ * Places offered, signed up and turned up, per volunteer programme, busiest first.
  *
- * @param {object[]} sessions
+ * Three numbers rather than two: the gap between signed up and attended is the no-show
+ * rate, the most actionable figure a volunteer manager has, and rendering it as a bar
+ * saves it needing a tile and an explanation of its own.
+ *
+ * @param {object[]} opportunities
+ * @param {object[]} signups
  */
-function popularProgrammes(sessions) {
+function popularProgrammes(opportunities, signups) {
   const byProgramme = new Map();
+  const programmeOf = new Map();
 
-  for (const row of sessions) {
+  for (const row of opportunities) {
     if (!row.programme) continue;
 
-    const entry = byProgramme.get(row.programme) ?? { capacity: 0, attendance_count: 0 };
+    programmeOf.set(row.id, row.programme);
+    const entry = byProgramme.get(row.programme) ?? { capacity: 0, signups: 0, attended: 0 };
     entry.capacity += Number(row.capacity) || 0;
-    entry.attendance_count += Number(row.attendance_count) || 0;
     byProgramme.set(row.programme, entry);
+  }
+
+  for (const row of signups) {
+    const programme = programmeOf.get(row.opportunity_id);
+    // A signup whose opportunity fell outside the window has no bar to join.
+    if (!programme) continue;
+
+    const entry = byProgramme.get(programme);
+    entry.signups += 1;
+    if (row.attended_at) entry.attended += 1;
   }
 
   return [...byProgramme]
     .map(([programme, entry]) => ({
       programme,
       capacity: entry.capacity,
-      attendance_count: entry.attendance_count,
-      fill_rate: entry.attendance_count > 0 ? rate(entry.attendance_count, entry.capacity) : null,
+      signups: entry.signups,
+      attended: entry.attended,
+      fill_rate: entry.attended > 0 ? rate(entry.attended, entry.capacity) : null,
     }))
-    .sort((a, b) => b.attendance_count - a.attendance_count || b.capacity - a.capacity);
+    .sort((a, b) => b.attended - a.attended || b.capacity - a.capacity);
 }
 
 /**
@@ -184,7 +248,7 @@ function popularProgrammes(sessions) {
  * @param {object[]} donations
  * @param {Date} [now]
  */
-function donationsByMonth(donations, now = new Date()) {
+function donationsByMonth(donations, now = new Date(), months = CHART_MONTHS) {
   const totals = new Map();
 
   for (const row of succeededOnly(donations)) {
@@ -197,7 +261,7 @@ function donationsByMonth(donations, now = new Date()) {
 
   const live = [...totals].map(([month, amount_hkd]) => ({ month, amount_hkd }));
 
-  return fillMonthSeries(live, lastNMonths(CHART_MONTHS, now), (row, month) => ({
+  return fillMonthSeries(live, lastNMonths(months, now), (row, month) => ({
     month,
     amount_hkd: row?.amount_hkd ?? 0,
   }));
@@ -236,21 +300,39 @@ function acquisitionSource({ donors = [], volunteers = [] }) {
  *
  * @returns {Promise<object>}
  */
-async function getAnalytics(now = new Date()) {
-  const [donations, sessions, signups, sources] = await Promise.all([
+async function getAnalytics(range = "all", now = new Date()) {
+  const [donations, opportunities, signups, feedback, sources] = await Promise.all([
     analyticsRepo.listDonations(),
-    analyticsRepo.listSessions(),
+    analyticsRepo.listOpportunities(),
+    analyticsRepo.listSignups(),
     analyticsRepo.listSignupFeedback(),
     analyticsRepo.listAcquisitionSources(),
   ]);
 
+  const start = windowFor(range, now);
+  const months = RANGE_MONTHS[range] ?? CHART_MONTHS;
+
+  const windowedDonations = within(donations, "created_at", start);
+  const windowedOpportunities = within(opportunities, "starts_at", start);
+  const windowedSignups = within(signups, "created_at", start);
+  const windowedFeedback = within(feedback, "feedback_submitted_at", start);
+
   return {
-    donor_retention: donorRetention(donations, now),
-    repeat_gift: repeatGiftRate(donations),
-    capacity_fill: capacityFill(sessions),
-    satisfaction: satisfaction(signups),
-    donations_by_month: donationsByMonth(donations, now),
-    programmes: popularProgrammes(sessions),
+    range,
+    // Retention re-bases BOTH of its windows to the selected length and reports which two
+    // periods it compared, so the number stays interpretable at any range. It reads the
+    // unwindowed donations on purpose — it needs the prior period, which by definition
+    // sits outside the selected window.
+    donor_retention: donorRetention(donations, now, months),
+    repeat_gift: repeatGiftRate(windowedDonations),
+    capacity_fill: capacityFill(windowedOpportunities, windowedSignups),
+    satisfaction: satisfaction(windowedFeedback),
+    donations_by_month: donationsByMonth(
+      windowedDonations,
+      now,
+      Math.max(MIN_CHART_MONTHS, Math.min(months, CHART_MONTHS)),
+    ),
+    programmes: popularProgrammes(windowedOpportunities, windowedSignups),
     acquisition: {
       ...acquisitionSource(sources),
       available: sources.available !== false,
@@ -260,6 +342,7 @@ async function getAnalytics(now = new Date()) {
 
 module.exports = {
   getAnalytics,
+  windowFor,
   rate,
   donorRetention,
   repeatGiftRate,

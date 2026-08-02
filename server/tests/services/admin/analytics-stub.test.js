@@ -13,7 +13,9 @@ const assert = require("node:assert/strict");
 const analyticsRepo = require("../../../src/data/analytics.repo");
 const { getAnalytics } = require("../../../src/services/admin/analytics.service");
 
-const PROGRAMMES = ["family", "fitness", "nutrition", "sports", "where_needed"];
+// Volunteer programmes. `where_needed` is a DONOR designation and must never appear —
+// no volunteer can sign up for "give where needed most".
+const PROGRAMMES = ["community_education", "fitness", "nutrition", "sports"];
 
 // These describe the stub path only. With the flag off the repo queries Supabase, and
 // this whole tree is the OFFLINE suite — it must never start needing credentials to be
@@ -83,11 +85,9 @@ test("every programme appears and none reports an unknown fill rate", { skip }, 
 
   for (const row of programmes) {
     assert.ok(Number.isFinite(row.fill_rate), `${row.programme} has no fill rate`);
-    assert.ok(row.attendance_count > 0);
-    assert.ok(
-      row.attendance_count <= row.capacity,
-      `${row.programme} reports more attendance than places`,
-    );
+    assert.ok(row.attended > 0);
+    assert.ok(row.attended <= row.signups, `${row.programme} shows more attended than signups`);
+    assert.ok(row.signups <= row.capacity, `${row.programme} shows more signups than places`);
   }
 });
 
@@ -135,26 +135,27 @@ test("the stub is deterministic — the demo cannot change between rehearsal and
   const second = await analyticsRepo.listDonations();
   assert.deepEqual(first, second);
 
-  const sessionsA = await analyticsRepo.listSessions();
-  const sessionsB = await analyticsRepo.listSessions();
-  assert.deepEqual(sessionsA, sessionsB);
+  const opportunitiesA = await analyticsRepo.listOpportunities();
+  const opportunitiesB = await analyticsRepo.listOpportunities();
+  assert.deepEqual(opportunitiesA, opportunitiesB);
+
+  const signupsA = await analyticsRepo.listSignups();
+  const signupsB = await analyticsRepo.listSignups();
+  assert.deepEqual(signupsA, signupsB);
 
   const payloadA = await getAnalytics();
   const payloadB = await getAnalytics();
   assert.deepEqual(payloadA, payloadB);
 });
 
-test("a year of sessions, not a fortnight of them", { skip }, async () => {
+test("a year of volunteer opportunities, not a fortnight of them", { skip }, async () => {
   const { programmes, capacity_fill } = await getAnalytics();
 
-  assert.equal(programmes.length, 5);
-  for (const row of programmes) {
-    assert.ok(
-      row.capacity >= 200,
-      `${row.programme} offers only ${row.capacity} places — too thin to read as a year`,
-    );
-  }
-  assert.ok(capacity_fill.capacity > 1500);
+  assert.equal(programmes.length, 4);
+  assert.ok(
+    capacity_fill.capacity > 500,
+    `only ${capacity_fill.capacity} places offered — too thin to read as a year`,
+  );
 });
 
 test("a year of feedback, not a handful", { skip }, async () => {
