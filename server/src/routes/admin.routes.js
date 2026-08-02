@@ -14,6 +14,7 @@ const sessionsRepo = require("../data/sessions.repo");
 const { closeReadyPeriods } = require("../services/donations/period-close.service");
 const { getDashboard } = require("../services/admin/dashboard.service");
 const { getFunnel } = require("../services/admin/funnel.service");
+const { getAnalytics } = require("../services/admin/analytics.service");
 
 const router = express.Router();
 
@@ -34,6 +35,14 @@ router.get("/dashboard", async (request, response, next) => {
 router.get("/funnel", async (request, response, next) => {
   try {
     response.json(envelope(await getFunnel()));
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get("/analytics", async (request, response, next) => {
+  try {
+    response.json(envelope(await getAnalytics()));
   } catch (error) {
     next(error);
   }
