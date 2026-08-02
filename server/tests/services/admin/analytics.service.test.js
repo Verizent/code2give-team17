@@ -3,6 +3,7 @@ const assert = require("node:assert/strict");
 const analyticsRepo = require("../../../src/data/analytics.repo");
 const {
   getAnalytics,
+  windowFor,
   rate,
   donorRetention,
   repeatGiftRate,
@@ -62,6 +63,37 @@ test("rate returns a percentage rounded to one decimal place", () => {
   assert.equal(rate(1, 3), 33.3);
   assert.equal(rate(2, 3), 66.7);
   assert.equal(rate(1, 1), 100);
+});
+
+// ── Range windows ────────────────────────────────────────────────────────────
+
+test("windowFor includes a row exactly at the cutoff and excludes one before it", () => {
+  const start = windowFor("3m", NOW);
+
+  assert.equal(start.toISOString(), "2026-05-02T00:00:00.000Z");
+  assert.ok(new Date(start.getTime()) >= start);
+  assert.ok(new Date(start.getTime() - 1) < start);
+});
+
+test("windowFor returns null for all-time so nothing is filtered out", () => {
+  assert.equal(windowFor("all", NOW), null);
+});
+
+test("windowFor sizes each range correctly", () => {
+  const months = { "1y": 12, "6m": 6, "3m": 3, "1m": 1 };
+
+  for (const [range, n] of Object.entries(months)) {
+    const start = windowFor(range, NOW);
+    const expected = new Date(NOW);
+    expected.setUTCMonth(expected.getUTCMonth() - n);
+    assert.equal(start.toISOString(), expected.toISOString(), `range=${range}`);
+  }
+});
+
+test("windowFor treats an unknown range as all-time rather than throwing", () => {
+  // The zod schema rejects these before they reach here, so this is defence in depth for
+  // any internal caller — silently returning "everything" beats a 500.
+  assert.equal(windowFor("banana", NOW), null);
 });
 
 // ── Donor retention ───────────────────────────────────────────────────────────

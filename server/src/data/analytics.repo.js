@@ -24,13 +24,20 @@ const STUB_VOLUNTEER_SOURCES = [
   { source: null },
 ];
 
-// DEMO-ONLY: generated supporter history so the tab demos populated without writing to
-//            the shared Supabase project — real version needs recorded data (§19, §26).
-//            Chosen over running db/seed/analytics.seed.js because that seed upserts 24
-//            invented donors into `donors`, which teammates would then see listed in the
-//            donations UI with no explanation. Flip to false to read the real tables; the
-//            queries below are untouched and need no other change.
-const USE_STUB_ANALYTICS = true;
+// DEMO-ONLY: generated DONOR history — real version needs recorded giving (§19, §26).
+//            Still stubbed because the only way to populate it is db/seed/analytics.seed.js,
+//            which upserts 24 invented donors that the donations track would then see
+//            listed in their UI with no explanation.
+const USE_STUB_DONATIONS = true;
+
+// Volunteer figures are LIVE. db/seed/volunteer-history.seed.js backfilled 48 completed
+// opportunities and 343 signups, so capacity fill, programme demand and satisfaction are
+// now computed from real rows. The history itself was seeded and is still labelled
+// DEMO-ONLY where it is displayed — but these metrics read the database, not a generator.
+const USE_STUB_VOLUNTEERS = false;
+
+// Retained so the stub test suite can state which path it covers.
+const USE_STUB_ANALYTICS = USE_STUB_DONATIONS;
 
 // Volunteer programmes only. `where_needed` is a DONOR designation ("give where needed
 // most") and no volunteer can sign up for one, so it must never appear here.
@@ -260,7 +267,7 @@ const SIGNUP_FEEDBACK_COLUMNS = [
  * @returns {Promise<object[]>}
  */
 async function listDonations() {
-  if (USE_STUB_ANALYTICS) return stubDonations();
+  if (USE_STUB_DONATIONS) return stubDonations();
 
   const { data, error } = await getSupabase().from("donations").select(DONATION_COLUMNS);
 
@@ -278,7 +285,7 @@ async function listDonations() {
  * @returns {Promise<object[]>}
  */
 async function listOpportunities() {
-  if (USE_STUB_ANALYTICS) return stubOpportunities();
+  if (USE_STUB_VOLUNTEERS) return stubOpportunities();
 
   const { data, error } = await getSupabase()
     .from("volunteer_opportunities")
@@ -292,7 +299,7 @@ async function listOpportunities() {
  * @returns {Promise<object[]>}
  */
 async function listSignups() {
-  if (USE_STUB_ANALYTICS) return stubSignups();
+  if (USE_STUB_VOLUNTEERS) return stubSignups();
 
   const { data, error } = await getSupabase()
     .from("volunteer_signups")
@@ -306,7 +313,7 @@ async function listSignups() {
  * @returns {Promise<object[]>}
  */
 async function listSignupFeedback() {
-  if (USE_STUB_ANALYTICS) return stubSignupFeedback();
+  if (USE_STUB_VOLUNTEERS) return stubSignupFeedback();
 
   const { data, error } = await getSupabase()
     .from("volunteer_signups")
@@ -352,7 +359,9 @@ module.exports = {
   listSignups,
   listSignupFeedback,
   listAcquisitionSources,
-  // Exported so the stub test suite can skip itself rather than fail when someone flips
-  // the flag off — those tests need no database, and must not start needing one.
+  // Exported so each test suite can skip itself rather than fail when a flag flips —
+  // the offline tree must never start needing credentials to be green.
   USE_STUB_ANALYTICS,
+  USE_STUB_DONATIONS,
+  USE_STUB_VOLUNTEERS,
 };

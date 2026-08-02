@@ -163,10 +163,11 @@ export function AdminDashboardPage() {
       </section>
 
       {/*
-        3 — Illustrative. The provenance is structural, not a banner: the heading itself
-        says the figures are generated, and a heavy amber rule separates it from the real
-        counts above. A notice at the top of the page is invisible once scrolled past,
-        and this page mixes real and fabricated numbers. Love 21 staff judge this.
+        3 — Analytics. Volunteer figures are REAL (seeded history, but read from the
+        database); giving figures are generated. So the provenance label sits on each
+        GROUP rather than on the section: marking the whole section illustrative would
+        understate the volunteer numbers, and marking none of it would overstate the
+        giving ones. Love 21 staff judge this.
       */}
       <section aria-labelledby="hub-illustrative" className="mt-16 border-t-4 border-amber/50 pt-10">
         <h2 id="hub-illustrative" className="font-display text-2xl font-semibold text-navy">
@@ -196,7 +197,52 @@ export function AdminDashboardPage() {
           <p className="mt-6 text-sm text-navy/55">{analyticsFailed ? a.hubSectionError : '…'}</p>
         ) : (
           <>
-            <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <h3 className="mt-10 font-display text-xl font-semibold text-navy">
+              {a.hubVolunteerGroup}
+            </h3>
+            <p className="mt-1 max-w-2xl text-sm text-navy/65">{a.hubVolunteerGroupIntro}</p>
+
+            <div className="mt-5 grid gap-4 sm:grid-cols-2">
+              <RateTile
+                title={a.analyticsCapacityFill}
+                hint={a.analyticsCapacityFillHint}
+                value={analytics.capacity_fill.rate}
+                detail={`${analytics.capacity_fill.attended} of ${analytics.capacity_fill.capacity} places`}
+                emptyLabel={a.analyticsNoData}
+              />
+              <RateTile
+                title={a.analyticsSatisfaction}
+                hint={a.analyticsSatisfactionHint}
+                value={analytics.satisfaction.average_rating}
+                unit="/ 5"
+                detail={`${analytics.satisfaction.would_return_rate}% ${a.analyticsWouldReturn} · ${analytics.satisfaction.responses} ${a.analyticsResponses}`}
+                emptyLabel={a.analyticsNoData}
+              />
+            </div>
+
+            <div className="mt-12">
+              <h3 className="font-display text-xl font-semibold text-navy">
+                {a.analyticsProgrammes}
+              </h3>
+              <p className="mt-1 max-w-2xl text-sm leading-relaxed text-navy/65">
+                {a.analyticsProgrammesIntro}
+              </p>
+              <ProgrammeBars
+                rows={analytics.programmes}
+                capacityLabel={a.analyticsCapacityLabel}
+                signedUpLabel={a.analyticsSignedUpLabel}
+                attendedLabel={a.analyticsAttendedLabel}
+                emptyLabel={a.analyticsNoData}
+              />
+            </div>
+
+            {/* Everything below the amber rule is generated. The volunteer figures above
+                are read from the database, so the marker belongs here, not on the section. */}
+            <h3 className="mt-14 border-t border-amber/40 pt-8 font-display text-xl font-semibold text-navy">
+              {a.hubGivingGroup}
+            </h3>
+
+            <div className="mt-5 grid gap-4 sm:grid-cols-2">
               {/* The 40–45% benchmark is annual. At shorter windows it would invite a
                   comparison that is not valid, so the hint is withheld entirely. */}
               <RateTile
@@ -219,21 +265,6 @@ export function AdminDashboardPage() {
                 detail={`${analytics.repeat_gift.repeat_donors} of ${analytics.repeat_gift.total_donors} donors`}
                 emptyLabel={a.analyticsNoData}
               />
-              <RateTile
-                title={a.analyticsCapacityFill}
-                hint={a.analyticsCapacityFillHint}
-                value={analytics.capacity_fill.rate}
-                detail={`${analytics.capacity_fill.attended} of ${analytics.capacity_fill.capacity} places`}
-                emptyLabel={a.analyticsNoData}
-              />
-              <RateTile
-                title={a.analyticsSatisfaction}
-                hint={a.analyticsSatisfactionHint}
-                value={analytics.satisfaction.average_rating}
-                unit="/ 5"
-                detail={`${analytics.satisfaction.would_return_rate}% ${a.analyticsWouldReturn} · ${analytics.satisfaction.responses} ${a.analyticsResponses}`}
-                emptyLabel={a.analyticsNoData}
-              />
             </div>
 
             {/* Full width: twelve bars are unreadable in a max-w-2xl column. */}
@@ -247,22 +278,6 @@ export function AdminDashboardPage() {
                 values={analytics.donations_by_month}
                 valueKey="amount_hkd"
                 formatValue={formatHkd}
-              />
-            </div>
-
-            <div className="mt-12">
-              <h3 className="font-display text-xl font-semibold text-navy">
-                {a.analyticsProgrammes}
-              </h3>
-              <p className="mt-1 max-w-2xl text-sm leading-relaxed text-navy/65">
-                {a.analyticsProgrammesIntro}
-              </p>
-              <ProgrammeBars
-                rows={analytics.programmes}
-                capacityLabel={a.analyticsCapacityLabel}
-                signedUpLabel={a.analyticsSignedUpLabel}
-                attendedLabel={a.analyticsAttendedLabel}
-                emptyLabel={a.analyticsNoData}
               />
             </div>
 

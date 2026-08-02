@@ -17,9 +17,15 @@ const RANGES = ["all", "1y", "6m", "3m", "1m"];
 /** Volunteer programmes. `where_needed` is a DONOR designation and must never appear. */
 const VOLUNTEER_PROGRAMMES = ["community_education", "fitness", "nutrition", "sports"];
 
-const skip = analyticsRepo.USE_STUB_ANALYTICS
-  ? false
-  : "USE_STUB_ANALYTICS is off — these cover the stub path only";
+// Every assertion here goes end to end through getAnalytics, so it needs whichever
+// sources are stubbed to ALL be stubbed. With volunteers reading live Supabase this
+// suite would need credentials, and this is the offline tree — it must never start
+// needing them. windowFor and the metric maths stay covered in analytics.service.test.js,
+// which passes rows directly and touches no repo.
+const skip =
+  analyticsRepo.USE_STUB_DONATIONS && analyticsRepo.USE_STUB_VOLUNTEERS
+    ? false
+    : "volunteer analytics read live Supabase — end-to-end stub coverage does not apply";
 
 test("every range returns a populated payload — an empty window on stage is the failure", { skip }, async () => {
   for (const range of RANGES) {
