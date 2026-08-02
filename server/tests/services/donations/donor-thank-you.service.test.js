@@ -8,7 +8,11 @@ const {
 } = require("../../../src/services/donations/donor-thank-you.service");
 
 const ORIGIN = "http://localhost:5173";
-const TOKEN = "83f0def4656b02a64f97fb38efb0c35ae1f6575a5a94840824daa9f6ba901a93";
+// Synthetic, and deliberately unmistakable as such. A real `donors.access_token` was pasted
+// here while developing: it is a bearer credential — whoever holds it opens that donor's
+// tracking page and reads their full giving history — and this repository is public.
+// Fixtures must never carry a value that works against the live database.
+const TOKEN = `tok_test_${"0".repeat(56)}`;
 
 function mockSend(t) {
   const sent = mock.method(emailLib, "sendEmail", async () => ({ mode: "log", delivered: true }));
