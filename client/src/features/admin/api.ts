@@ -405,6 +405,27 @@ export async function fetchAdminOpportunities(): Promise<{
   return { items: res.data ?? [], total: res.meta?.total ?? (res.data?.length ?? 0) }
 }
 
+/**
+ * Ratings and would-return are computed from ATTENDED signups only, server-side. `null`
+ * means the denominator was empty — render "no responses yet", never 0.
+ */
+export type OpportunityFeedback = {
+  total_signups: number
+  attended_count: number
+  no_show_count: number
+  feedback_submitted_count: number
+  average_rating: number | null
+  would_return_percent: number | null
+  discovery_breakdown: Record<string, number>
+}
+
+export async function fetchOpportunityFeedback(id: string): Promise<OpportunityFeedback> {
+  const { data } = await apiData<OpportunityFeedback>(
+    `/api/admin/postings/${encodeURIComponent(id)}/feedback`,
+  )
+  return data
+}
+
 export async function fetchOpportunitySignups(id: string): Promise<OpportunitySignup[]> {
   const res = await apiClient<Envelope<OpportunitySignup[]>>(
     `/api/admin/postings/${encodeURIComponent(id)}/signups`,
