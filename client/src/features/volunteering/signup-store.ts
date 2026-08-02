@@ -3,6 +3,13 @@ import type {
   VolunteerOpportunity,
 } from '@/features/volunteering/fixtures'
 
+export type VolunteerSignupStatus =
+  | 'applied'
+  | 'confirmed'
+  | 'attended'
+  | 'cancelled'
+  | 'no_show'
+
 export type VolunteerSignup = {
   id: string
   opportunity_id: string
@@ -12,8 +19,12 @@ export type VolunteerSignup = {
   age_group: VolunteerAgeGroup
   emergency_name?: string
   emergency_phone?: string
-  status: 'confirmed'
+  status: VolunteerSignupStatus
   created_at: string
+  experience_rating?: number | null
+  would_return?: boolean | null
+  improvement_note?: string | null
+  feedback_submitted_at?: string | null
 }
 
 const SIGNUPS_KEY = 'love21-volunteer-signups'
