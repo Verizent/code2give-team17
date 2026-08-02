@@ -38,6 +38,18 @@ test("every range returns a populated payload — an empty window on stage is th
   }
 });
 
+test("no rate collapses to zero at a narrow range", { skip }, async () => {
+  // `Number.isFinite(0)` is true, so the test above passes on a tile reading 0%. A real
+  // charity has recurring donors giving inside every window, so a flat zero here means
+  // the generator has no short-cycle givers rather than that supporters stopped giving.
+  for (const range of RANGES) {
+    const { donor_retention, repeat_gift } = await getAnalytics(range);
+
+    assert.ok(donor_retention.rate > 0, `range=${range}: retention collapsed to 0%`);
+    assert.ok(repeat_gift.rate > 0, `range=${range}: repeat giving collapsed to 0%`);
+  }
+});
+
 test("windowFor includes a row exactly at the cutoff and excludes one before it", () => {
   const now = new Date("2026-08-02T00:00:00Z");
   const start = windowFor("3m", now);

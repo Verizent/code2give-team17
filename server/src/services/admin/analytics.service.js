@@ -63,10 +63,18 @@ function within(rows, field, start) {
   });
 }
 
-/** Short human label for a window, e.g. "Mar–Aug 26". */
+/**
+ * Short human label for a window, e.g. "Aug 24–Aug 25".
+ *
+ * Both years are always shown. A 12-month window starts and ends in the same month, so
+ * omitting the years rendered as "Aug–Aug 25", which reads as a typo rather than a year.
+ */
 function windowLabel(from, to) {
-  const month = (d) => d.toLocaleString("en-GB", { month: "short", timeZone: "UTC" });
-  return `${month(from)}–${month(to)} ${String(to.getUTCFullYear()).slice(2)}`;
+  const stamp = (d) =>
+    `${d.toLocaleString("en-GB", { month: "short", timeZone: "UTC" })} ${String(
+      d.getUTCFullYear(),
+    ).slice(2)}`;
+  return `${stamp(from)}–${stamp(to)}`;
 }
 
 /**

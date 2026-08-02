@@ -13,6 +13,8 @@ import { FunnelPanel } from '@/features/admin/components/funnel-panel'
 import { MetricTiles } from '@/features/admin/components/metric-tiles'
 import { ProgrammeBars } from '@/features/admin/components/programme-bars'
 import { RateTile } from '@/features/admin/components/rate-tile'
+import { RangeFilter } from '@/features/admin/components/range-filter'
+import type { AnalyticsRange } from '@/features/admin/components/labels'
 import { SourceList } from '@/features/admin/components/source-list'
 import { WorkQueue } from '@/features/admin/components/work-queue'
 
@@ -37,6 +39,8 @@ export function AdminDashboardPage() {
   const [analytics, setAnalytics] = useState<AnalyticsPayload | null>(null)
   const [dashboardFailed, setDashboardFailed] = useState(false)
   const [analyticsFailed, setAnalyticsFailed] = useState(false)
+  const [range, setRange] = useState<AnalyticsRange>('all')
+  const [rangeLoading, setRangeLoading] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -49,14 +53,28 @@ export function AdminDashboardPage() {
       .catch(() => {
         /* Supplementary — its absence should not raise an error on the page. */
       })
-    void fetchAdminAnalytics()
-      .then((data) => !cancelled && setAnalytics(data))
-      .catch(() => !cancelled && setAnalyticsFailed(true))
-
     return () => {
       cancelled = true
     }
   }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    setRangeLoading(true)
+
+    void fetchAdminAnalytics(range)
+      .then((data) => {
+        if (cancelled) return
+        setAnalytics(data)
+        setAnalyticsFailed(false)
+      })
+      .catch(() => !cancelled && setAnalyticsFailed(true))
+      .finally(() => !cancelled && setRangeLoading(false))
+
+    return () => {
+      cancelled = true
+    }
+  }, [range])
 
   const metrics = dashboard?.metrics
   const tiles = metrics
@@ -158,16 +176,40 @@ export function AdminDashboardPage() {
           {a.hubIllustrativeIntro}
         </p>
 
+        <div className="mt-5">
+          <RangeFilter
+            value={range}
+            onChange={setRange}
+            busy={rangeLoading}
+            legend={a.hubRangeLegend}
+            labels={{
+              all: a.hubRangeAll,
+              '1y': a.hubRange1y,
+              '6m': a.hubRange6m,
+              '3m': a.hubRange3m,
+              '1m': a.hubRange1m,
+            }}
+          />
+        </div>
+
         {analyticsFailed || !analytics ? (
           <p className="mt-6 text-sm text-navy/55">{analyticsFailed ? a.hubSectionError : '…'}</p>
         ) : (
           <>
             <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {/* The 40–45% benchmark is annual. At shorter windows it would invite a
+                  comparison that is not valid, so the hint is withheld entirely. */}
               <RateTile
                 title={a.analyticsDonorRetention}
-                hint={a.analyticsDonorRetentionHint}
+                hint={
+                  analytics.donor_retention.benchmark_applies ? a.analyticsDonorRetentionHint : ''
+                }
                 value={analytics.donor_retention.rate}
-                detail={`${analytics.donor_retention.retained} of ${analytics.donor_retention.prior_donors} gave again`}
+                detail={a.analyticsRetentionWindow
+                  .replace('{n}', String(analytics.donor_retention.retained))
+                  .replace('{m}', String(analytics.donor_retention.prior_donors))
+                  .replace('{prior}', analytics.donor_retention.prior_window_label)
+                  .replace('{current}', analytics.donor_retention.current_window_label)}
                 emptyLabel={a.analyticsNoData}
               />
               <RateTile
@@ -218,7 +260,9 @@ export function AdminDashboardPage() {
               <ProgrammeBars
                 rows={analytics.programmes}
                 capacityLabel={a.analyticsCapacityLabel}
+                signedUpLabel={a.analyticsSignedUpLabel}
                 attendedLabel={a.analyticsAttendedLabel}
+                emptyLabel={a.analyticsNoData}
               />
             </div>
 

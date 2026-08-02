@@ -1,3 +1,7 @@
+/** Window options offered by the analytics range control. Mirrors the server enum. */
+export const ANALYTICS_RANGES = ['all', '1y', '6m', '3m', '1m'] as const
+export type AnalyticsRange = (typeof ANALYTICS_RANGES)[number]
+
 /**
  * Programme keys, staff-facing English.
  *

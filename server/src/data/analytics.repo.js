@@ -136,6 +136,21 @@ function stubDonations() {
       // Acquired this year.
       push(donorId, recentMonth, random() < 0.35 ? "monthly" : "once", amount());
     }
+
+    // Recurring givers. Without them every window shorter than a year showed 0%
+    // retention and 0% repeat giving, because the cohorts above give at most once on
+    // each side of a 12-month boundary. A real charity's monthly donors give inside
+    // every window, and they are exactly who a retention metric exists to surface.
+    //
+    // Drawn from the newly-acquired cohort on purpose: taken from `i < 18` they would
+    // also land in the prior 12-month window and push annual retention to 55%, outside
+    // the published 40–45% band the headline figure is calibrated against. Months 0–8
+    // so that the 6-month window has gifts on both sides of its boundary too.
+    if (i >= 18 && i % 3 === 0) {
+      for (let month = 0; month <= 8; month += 1) {
+        push(donorId, month, "monthly", amount());
+      }
+    }
   }
 
   return rows;
