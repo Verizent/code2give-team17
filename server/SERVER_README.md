@@ -487,6 +487,27 @@ npm run dev
 Watch the batch email land in the server terminal (`EMAIL_MODE=log`) after
 `POST /api/admin/cron/close-periods`.
 
+### Items from the team's PLAN.md / HANDOFF.md not carried into this branch
+
+Audited 2026-08-02 against the donate-track PLAN.md and the outgoing teammate's HANDOFF.md.
+These were specified there and are **not** in this branch. Listed so they are decisions rather
+than oversights.
+
+| # | Specified in | What's missing | Severity |
+|---|---|---|---|
+| 1 | PLAN §3 A5 | **`GET /api/donations/session/:session_id` does not return `tracking_token`.** PLAN: *"`tracking_token` present only once `succeeded` **and** `tracking_opt_in`."* The route's own comment claims it does; the response body omits it. **The thanks page therefore has no way to link a donor to their tracking page** — the token exists in `donors` the moment the webhook fires, but nothing exposes it. | 🔴 demo-blocking |
+| 2 | HANDOFF | **`content_events` has no `service_role` DML grants** — verified: only `REFERENCES, TRIGGER, TRUNCATE`. Any repo touching it 500s. The handoff called this out explicitly and it was never applied. `donations` and `donors` *are* correctly granted. | 🔴 breaks §23 analytics |
+| 3 | PLAN §4 | **Stale `20260801_1050_donations.sql` was not deleted.** PLAN: *"delete the stale, never-applied file in the same PR, or it stays a second source of truth that contradicts the live DB — which is exactly how the `stripe_session_id` bug got in."* Still present. | 🟠 repeats a known failure |
+| 4 | PLAN §7 | **Envelope drift in wishlist/campaigns/admin not flagged in the PR.** Six sites bypass `envelope()`: `wishlist.routes.js:13,23`, `campaigns.routes.js:40,47`, `admin.routes.js:23,32` — raw `{items, meta}` and hand-rolled `response.status(404).json(...)`. PLAN deliberately did *not* rewrite them (another track's working code) but required the drift be flagged with the one-line fix offered as follow-up. | 🟡 contract drift |
+| 5 | PLAN §2 | **The whole Stripe mock-gateway design is absent.** No `src/lib/stripe/{mock,live}.driver.js`, no `STRIPE_MODE` env var (absent from `.env.example` and all code), no `/api/mock/stripe/checkout/:id` pages. This branch calls the real Stripe SDK, so a demo needs live `stripe listen` — which is exactly the per-session `STRIPE_WEBHOOK_SECRET` footgun the mock was designed to remove. | 🟠 demo fragility |
+| 6 | HANDOFF + PLAN §Phase B | **No demo-donor seed.** Both documents asked for donors at three lifecycle points — gave yesterday (all upcoming), mid-window (mixed), edition closed (all completed) — so three tracking pages show three states without pressing a force button. `db/seed/sessions.seed.js` seeds sessions only. | 🟠 weakens the demo |
+| 7 | PLAN §3 A1 | Checkout minimum is **`amount_hkd ≥ 4`**; PLAN specifies **≥ 10**. `4` is Stripe's floor, `10` was the product choice. Trivial to change, worth a deliberate decision. | 🟢 minor |
+| 8 | PLAN §Phase B | **Cancelled sessions are not substituted.** PLAN's credit model re-runs a display query, so a cancelled session drops out and the next one slides up *for free*. This branch **stores** allocations, so a cancelled session just sits in the donor's list until someone `PATCH`es it. The "swap is silent, no reassignment job needed" property was a stated payoff of the model this branch diverged from. | 🟠 behavioural divergence |
+
+Items 1, 2 and 3 are small and self-contained. Items 5, 6 and 8 are design-level and follow
+from this branch keeping `donation_allocations` where PLAN.md had deleted it — see the
+reconciliation note in the branch's plan artefact.
+
 ### DEMO-ONLY gaps in donor tracking
 
 | What is faked / missing | Real version needs |
