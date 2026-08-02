@@ -1,11 +1,5 @@
 import { apiData } from '@/lib/apiClient'
 import { COVER_IMAGE_OPTIONS } from '@/features/donations/fixtures'
-import {
-  ADMIN_STUB,
-  campaigns as stubCampaigns,
-  stubList,
-  stubUpdate,
-} from '@/features/admin/fixtures'
 
 /** Matches live Supabase `campaigns_status_check`. */
 export type CampaignStatus = 'pending_approval' | 'approved' | 'rejected'
@@ -139,9 +133,6 @@ export function addDemoDonation(_slug: string, _amount: number) {
 }
 
 export async function listPendingCampaigns(): Promise<Campaign[]> {
-  if (ADMIN_STUB) {
-    return stubList(stubCampaigns).filter((c) => c.status === 'pending_approval')
-  }
   const { data } = await apiData<ApiCampaign[]>(
     '/api/admin/campaigns?status=pending_approval',
   )
@@ -152,7 +143,6 @@ export async function moderateCampaign(
   id: string,
   status: 'approved' | 'rejected',
 ): Promise<Campaign> {
-  if (ADMIN_STUB) return stubUpdate(stubCampaigns, id, { status })
   const { data } = await apiData<ApiCampaign>(
     `/api/admin/campaigns/${encodeURIComponent(id)}/moderate`,
     {
