@@ -18,6 +18,7 @@ import {
   type VolunteerGender,
   type VolunteerRole,
 } from '@/features/volunteering/profile-prefs'
+import { MEMBER_LOGIN_URL } from '@/lib/member-portal'
 import { cn } from '@/lib/utils'
 
 type Mode = 'signin' | 'signup'
@@ -375,6 +376,18 @@ export function LoginPage() {
                 : t.login.signUpCta}
           </button>
         </form>
+
+        <div className="mt-10 border-t border-navy/10 pt-6 text-center">
+          <p className="text-sm text-navy/60">{t.login.memberHandoffNote}</p>
+          <a
+            href={MEMBER_LOGIN_URL}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-2 inline-flex items-center justify-center gap-1 text-sm font-semibold text-teal underline-offset-4 hover:underline"
+          >
+            {t.login.memberHandoffCta}
+          </a>
+        </div>
 
         <p className="mt-8 text-center text-sm text-navy/60">
           <Link to="/me" className="font-semibold text-navy underline-offset-4 hover:underline">
