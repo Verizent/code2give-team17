@@ -18,9 +18,13 @@ coverage/
 playwright-report/
 test-results/
 
-# Claude Code local state — per-machine permission grants, not shared.
-# .claude/rules/ IS tracked; only this file is ignored.
-.claude/settings.local.json
+# Claude Code local state and per-teammate operator context.
+# CLAUDE.md, CONTEXT.md and everything under .claude/ are per-machine only —
+# they carry agent scratch state and operator preferences, and tracking them
+# creates merge noise on every session. Persistent shared docs live under docs/.
+CLAUDE.md
+CONTEXT.md
+.claude/
 
 # OS cruft
 .DS_Store
