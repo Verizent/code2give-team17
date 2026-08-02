@@ -27,7 +27,14 @@ export async function getImpact(locale = 'en') {
  * fake URL into a real table. Mock mode just resolves — no pending queue.
  * Throws ApiError on failure; the dialog is responsible for showing it.
  */
-export async function submitVoice({ authorName, relationship, story, contactEmail, website }) {
+export async function submitVoice({
+  authorName,
+  relationship,
+  story,
+  contactEmail,
+  photoUrl,
+  website,
+}) {
   if (API_MODE !== 'real') {
     return { id: 'mock-post', submitted_at: new Date().toISOString() }
   }
@@ -40,10 +47,34 @@ export async function submitVoice({ authorName, relationship, story, contactEmai
       story,
       consent_given: true,
       ...(contactEmail ? { contact_email: contactEmail } : {}),
+      ...(photoUrl ? { photo_url: photoUrl } : {}),
       ...(website ? { website } : {}),
     }),
   })
   return data
+}
+
+/**
+ * POST /api/uploads/community-photo — store a Voices photo, get back its public URL.
+ *
+ * Sends the File as a raw body, not multipart: the endpoint takes exactly one image and
+ * no other fields. The Content-Type is the browser's guess and the server does not trust
+ * it — it sniffs the bytes — so a wrong guess is rejected rather than believed.
+ *
+ * Throws ApiError; the dialog shows the message.
+ *
+ * @param {File} file
+ * @returns {Promise<string>} public URL
+ */
+export async function uploadCommunityPhoto(file) {
+  if (API_MODE !== 'real') return null
+
+  const { data } = await apiClient('/api/uploads/community-photo', {
+    method: 'POST',
+    headers: { 'Content-Type': file.type },
+    body: file,
+  })
+  return data.photo_url
 }
 
 /**
