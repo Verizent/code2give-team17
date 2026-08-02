@@ -668,6 +668,9 @@ export const STRINGS = {
       backHome: 'Back to home',
     },
     admin: {
+      articlesCoverHint: 'Or upload a JPEG, PNG or WebP up to 5 MB.',
+      articlesCoverUploading: 'Uploading…',
+      articlesCoverUploadError: 'Could not upload that image.',
       igTitle: 'Instagram on the Community page',
       igIntro: 'Paste a post link to pin it to the public Community page. Shown as a card that opens Instagram — no tracking script is added to our site.',
       igUrlLabel: 'Instagram post link',
@@ -1473,6 +1476,9 @@ export const STRINGS = {
       backHome: '返回首頁',
     },
     admin: {
+      articlesCoverHint: '或上傳 JPEG、PNG 或 WebP，檔案不超過 5 MB。',
+      articlesCoverUploading: '上傳中…',
+      articlesCoverUploadError: '無法上傳該圖片。',
       igTitle: '社群頁面的 Instagram',
       igIntro: '貼上貼文連結即可置於公開社群頁面。以卡片形式顯示並連結至 Instagram，不會在本站加入追蹤程式。',
       igUrlLabel: 'Instagram 貼文連結',
@@ -2268,6 +2274,9 @@ export const STRINGS = {
       backHome: '返回首页',
     },
     admin: {
+      articlesCoverHint: '或上传 JPEG、PNG 或 WebP，文件不超过 5 MB。',
+      articlesCoverUploading: '上传中…',
+      articlesCoverUploadError: '无法上传该图片。',
       igTitle: '社群页面的 Instagram',
       igIntro: '贴上贴文链接即可置于公开社群页面。以卡片形式显示并链接至 Instagram，不会在本站加入追踪程式。',
       igUrlLabel: 'Instagram 贴文链接',

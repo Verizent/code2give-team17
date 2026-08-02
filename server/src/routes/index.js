@@ -12,6 +12,7 @@ const adminImpactRoutes = require("./admin/impact.routes");
 const adminInstagramRoutes = require("./admin/instagram.routes");
 const adminPostingsRoutes = require("./admin/postings.routes");
 const adminSessionsRoutes = require("./admin/sessions.routes");
+const adminUploadsRoutes = require("./admin/uploads.routes");
 const adminWishlistRoutes = require("./admin/wishlist.routes");
 const articlesRoutes = require("./articles.routes");
 const campaignsRoutes = require("./campaigns.routes");
@@ -57,6 +58,7 @@ router.use("/api/admin/impact", adminGuard, adminImpactRoutes);
 router.use("/api/admin/instagram", adminGuard, adminInstagramRoutes);
 router.use("/api/admin/postings", adminGuard, adminPostingsRoutes);
 router.use("/api/admin/sessions", adminGuard, adminSessionsRoutes);
+router.use("/api/admin/uploads", adminGuard, adminUploadsRoutes);
 router.use("/api/admin/wishlist", adminGuard, adminWishlistRoutes);
 // Out of alphabetical order on purpose: this one is a bare "/api/admin" prefix, so it
 // matches everything the specific mounts above match. Express would still fall through

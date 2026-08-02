@@ -257,3 +257,20 @@ export async function updateInstagramEmbed(
 export async function deleteInstagramEmbed(id: string): Promise<void> {
   await apiClient(`/api/admin/instagram/${encodeURIComponent(id)}`, { method: 'DELETE' })
 }
+
+/**
+ * Uploads a cover image and returns its public URL.
+ *
+ * Sends raw bytes with the file's own Content-Type — the server mounts express.raw on
+ * this route only. FormData would have needed a multipart parser added as a shared
+ * dependency; base64 would inflate every upload by a third.
+ */
+export async function uploadCoverImage(file: File): Promise<string> {
+  const { data } = await apiData<{ url: string }>('/api/admin/uploads/cover', {
+    method: 'POST',
+    body: file,
+    // Overrides apiClient's JSON default; the body is the image itself.
+    headers: { 'Content-Type': file.type },
+  })
+  return data.url
+}
